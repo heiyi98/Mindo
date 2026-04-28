@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+@layer base {
+  :root {
+    --background: 240 5% 96%;
+    --foreground: 240 3% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 3% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 3% 12%;
+    --primary: 240 3% 12%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 92%;
+    --secondary-foreground: 240 3% 30%;
+    --muted: 240 5% 90%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 4% 92%;
+    --accent-foreground: 240 3% 12%;
+    --destructive: 348 100% 54%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 83%;
+    --input: 240 6% 83%;
+    --ring: 240 3% 12%;
+    --radius: 1rem;
+    --glow: 240 5% 90%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 240 5% 96%;
+    --card: 240 4% 11%;
+    --card-foreground: 240 5% 96%;
+    --popover: 240 4% 11%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 240 5% 96%;
+    --primary-foreground: 240 3% 12%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 240 5% 70%;
+    --muted: 240 4% 20%;
+    --muted-foreground: 240 5% 60%;
+    --accent: 240 4% 16%;
+    --accent-foreground: 240 5% 96%;
+    --destructive: 353 100% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 4% 22%;
+    --input: 240 4% 22%;
+    --ring: 240 5% 96%;
+    --radius: 1rem;
+    --glow: 240 4% 22%;
+
+    /* 毛玻璃系统 */
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: 24px;
+
+    /* 呼吸光晕 */
+    --glow-soft: 0 0 40px rgba(123, 156, 255, 0.08);
+    --glow-medium: 0 0 80px rgba(123, 156, 255, 0.12);
+
+    /* 强调色 */
+    --color-accent: #7b9cff;
+    --color-accent-dim: rgba(123, 156, 255, 0.15);
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "SF Pro Display", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(var(--glass-blur));
+  }
+  .glow-soft {
+    box-shadow: var(--glow-soft);
+  }
+  .glow-medium {
+    box-shadow: var(--glow-medium);
+  }
+}

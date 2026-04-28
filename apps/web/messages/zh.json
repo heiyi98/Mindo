@@ -1,0 +1,290 @@
+{
+  "landing": {
+    "slogan": "以宇宙精度，导航你的命运",
+    "startButton": "开始",
+    "loginLink": "已有账号？登录"
+  },
+  "nav": {
+    "home": "主页",
+    "divination": "测算",
+    "forum": "论坛",
+    "shop": "商城",
+    "messages": "消息",
+    "profile": "我的"
+  },
+  "common": {
+    "loading": "加载中",
+    "error": "出错了",
+    "retry": "重试"
+  },
+  "auth": {
+    "login": {
+      "title": "登录 Mindo",
+      "emailPlaceholder": "请输入邮箱",
+      "sendLink": "发送登录链接",
+      "sending": "发送中...",
+      "checkEmail": "请查收邮件中的登录链接",
+      "continueWithGoogle": "使用 Google 账号登录",
+      "or": "或"
+    },
+    "error": {
+      "message": "认证失败，请重试"
+    }
+  },
+  "onboarding": {
+    "datePicker": {
+      "title": "你的出生日期是？",
+      "year": "年",
+      "month": "月",
+      "day": "日",
+      "confirm": "下一步"
+    },
+    "timePicker": {
+      "title": "你的出生时间是？",
+      "description": "出生时辰用于推算时柱，使命盘更精准。若不清楚可以跳过。",
+      "hourLabel": "时",
+      "hourPlaceholder": "不知道出生时间",
+      "minuteLabel": "分",
+      "minutePlaceholder": "选择分钟",
+      "confirm": "下一步",
+      "next": "下一步",
+      "skip": "跳过"
+    },
+    "cityPicker": {
+      "title": "你出生在哪里？",
+      "description": "出生城市用于计算真太阳时，影响时柱的精确度。若不清楚可以跳过。",
+      "placeholder": "搜索城市...",
+      "error": "搜索失败，请重试。",
+      "noResults": "未找到相关城市。",
+      "confirm": "下一步",
+      "next": "下一步",
+      "skip": "跳过"
+    },
+    "genderPicker": {
+      "title": "你的出生性别是？",
+      "description": "出生性别用于推算大运方向。",
+      "subdescription": "指出生时的生理性别，与性别认同无关。",
+      "male": "男",
+      "female": "女",
+      "decline": "暂不提供",
+      "confirm": "下一步",
+      "next": "下一步",
+      "skip": "跳过"
+    },
+    "teaser": {
+      "sameCore": "与你同为{core}命主的人",
+      "loginButton": "登录以解锁完整命盘"
+    },
+    "next": "下一步",
+    "skip": "跳过",
+    "teaserPlaceholder": "你的命盘已生成。",
+    "loginToSave": "登录以保存命盘"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "account": {
+    "title": "账户",
+    "email": "邮箱",
+    "manageProfiles": "管理档案",
+    "assetsLabel": "我的资产",
+    "language": "语言",
+    "signOut": "退出登录",
+    "deleteAccount": "注销账户",
+    "deleteConfirmTitle": "确认注销账户？",
+    "deleteConfirmDesc": "此操作将永久删除你的账户和所有数据。输入 DELETE 以确认。",
+    "cancel": "取消",
+    "confirmDelete": "永久删除",
+    "profiles": {
+      "title": "档案管理",
+      "self": "我",
+      "add": "添加档案",
+      "deleteConfirm": "删除此档案？此操作不可撤销。"
+    },
+    "profileModal": {
+      "createTitle": "添加档案",
+      "editTitle": "编辑档案",
+      "name": "名称",
+      "namePlaceholder": "如：伴侣、父母...",
+      "birthDate": "出生日期",
+      "birthTime": "出生时间（选填）",
+      "birthCity": "出生城市（选填）",
+      "gender": "出生性别（选填）",
+      "male": "男",
+      "female": "女",
+      "genderNote": "用于推算大运方向",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "assets": {
+      "title": "我的资产",
+      "empty": "暂无已购报告。",
+      "basedOn": "基于",
+      "types": {
+        "bazi": "四柱命盘解读",
+        "ziwei": "紫微斗数解读",
+        "western": "西洋星盘解读",
+        "bigfive": "大五人格分析",
+        "mbti": "MBTI分析",
+        "enneagram": "九型人格分析"
+      }
+    }
+  },
+  "dashboard": {
+    "loadError": "加载失败，请刷新页面。",
+    "bazi": {
+      "title": "命盘",
+      "year": "年",
+      "month": "月",
+      "day": "日",
+      "hour": "时",
+      "daymaster": "日主",
+      "shishen": {
+        "BiJian": "比肩",
+        "JieCai": "劫财",
+        "ShiShen": "食神",
+        "ShangGuan": "伤官",
+        "PianCai": "偏财",
+        "ZhengCai": "正财",
+        "QiSha": "七杀",
+        "ZhengGuan": "正官",
+        "PianYin": "偏印",
+        "ZhengYin": "正印",
+        "DayMaster": "日主",
+        "Unknown": ""
+      }
+    },
+    "fortune": {
+      "title": "今日运势",
+      "comingSoon": "即将推出"
+    },
+    "energy": {
+      "title": "五行能量"
+    },
+    "profiles": {
+      "addProfile": "添加档案",
+      "manageProfiles": "管理档案"
+    }
+  },
+  "divination": {
+    "title": "测算中心",
+    "destiny": "命理测算",
+    "psychology": "心理测量",
+    "comingSoon": "即将推出",
+    "minutes": " 分钟"
+  },
+  "assessments": {
+    "bazi": {
+      "name": "四柱八字",
+      "description": "基于出生年月日时的命理排盘"
+    },
+    "ziwei": {
+      "name": "紫微斗数",
+      "description": "以出生信息为基础的古典星命学"
+    },
+    "western": {
+      "name": "西洋星盘",
+      "description": "基于出生时刻行星位置的占星分析"
+    },
+    "bigfive": {
+      "name": "大五人格",
+      "description": "五大维度的科学人格测量"
+    },
+    "mbti": {
+      "name": "MBTI",
+      "description": "迈尔斯-布里格斯人格类型指标"
+    },
+    "enneagram": {
+      "name": "九型人格",
+      "description": "九种人格类型系统"
+    }
+  },
+  "bigfive": {
+    "title": "大五人格测量",
+    "resultTitle": "你的人格图谱",
+    "prev": "上一页",
+    "next": "下一页",
+    "submit": "查看结果",
+    "retake": "重新测量",
+    "scale": {
+      "disagree": "不符合",
+      "agree": "符合"
+    },
+    "domains": {
+      "O": "开放性",
+      "C": "尽责性",
+      "E": "外向性",
+      "A": "宜人性",
+      "N": "神经质"
+    },
+    "facets": {
+      "Anxiety": "焦虑",
+      "Anger": "愤怒",
+      "Depression": "抑郁",
+      "SelfConsciousness": "自我意识",
+      "Immoderation": "缺乏节制",
+      "Vulnerability": "脆弱性",
+      "Friendliness": "亲和力",
+      "Gregariousness": "合群性",
+      "Assertiveness": "独断性",
+      "ActivityLevel": "活力",
+      "ExcitementSeeking": "寻求刺激",
+      "Cheerfulness": "积极情绪",
+      "Imagination": "想象力",
+      "ArtisticInterests": "艺术兴趣",
+      "Emotionality": "情感丰富",
+      "Adventurousness": "冒险性",
+      "Intellect": "求知欲",
+      "Liberalism": "开明性",
+      "Trust": "信任",
+      "Morality": "道德感",
+      "Altruism": "利他",
+      "Cooperation": "合作性",
+      "Modesty": "谦逊",
+      "Sympathy": "同理心",
+      "SelfEfficacy": "自我效能",
+      "Orderliness": "条理性",
+      "Dutifulness": "责任感",
+      "AchievementStriving": "追求成就",
+      "SelfDiscipline": "自律",
+      "Cautiousness": "审慎"
+    }
+  },
+  "western": {
+    "title": "西洋星盘",
+    "fullMode": "完整星盘",
+    "dateMode": "仅日期模式",
+    "dateModeNote": "添加出生时间和城市以获得完整星盘（含宫位）。",
+    "moonWarning": "你的月亮可能在{sign1}或{sign2}——需要出生时间才能确定。",
+    "planets": "行星",
+    "houses": "宫位",
+    "planetNames": {
+      "Sun": "太阳",
+      "Moon": "月亮",
+      "Mercury": "水星",
+      "Venus": "金星",
+      "Mars": "火星",
+      "Jupiter": "木星",
+      "Saturn": "土星",
+      "Uranus": "天王星",
+      "Neptune": "海王星",
+      "Pluto": "冥王星"
+    },
+    "signs": {
+      "Aries": "白羊座",
+      "Taurus": "金牛座",
+      "Gemini": "双子座",
+      "Cancer": "巨蟹座",
+      "Leo": "狮子座",
+      "Virgo": "处女座",
+      "Libra": "天秤座",
+      "Scorpio": "天蝎座",
+      "Sagittarius": "射手座",
+      "Capricorn": "摩羯座",
+      "Aquarius": "水瓶座",
+      "Pisces": "双鱼座"
+    }
+  }
+}

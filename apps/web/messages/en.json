@@ -1,0 +1,290 @@
+{
+  "landing": {
+    "slogan": "Navigate your destiny with cosmic precision",
+    "startButton": "Begin",
+    "loginLink": "Already have an account? Sign in"
+  },
+  "nav": {
+    "home": "Home",
+    "divination": "Divination",
+    "forum": "Forum",
+    "shop": "Shop",
+    "messages": "Messages",
+    "profile": "Profile"
+  },
+  "common": {
+    "loading": "Loading",
+    "error": "Something went wrong",
+    "retry": "Retry"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to Mindo",
+      "emailPlaceholder": "Enter your email",
+      "sendLink": "Send magic link",
+      "sending": "Sending...",
+      "checkEmail": "Check your email for a sign-in link",
+      "continueWithGoogle": "Continue with Google",
+      "or": "or"
+    },
+    "error": {
+      "message": "Authentication error. Please try again."
+    }
+  },
+  "onboarding": {
+    "datePicker": {
+      "title": "When were you born?",
+      "year": "Year",
+      "month": "Month",
+      "day": "Day",
+      "confirm": "Next"
+    },
+    "timePicker": {
+      "title": "What time were you born?",
+      "description": "Your birth hour helps calculate your hour pillar for a more precise reading. You can skip this.",
+      "hourLabel": "Hour",
+      "hourPlaceholder": "Unknown birth time",
+      "minuteLabel": "Minute",
+      "minutePlaceholder": "Select minute",
+      "confirm": "Next",
+      "next": "Next",
+      "skip": "Skip"
+    },
+    "cityPicker": {
+      "title": "Where were you born?",
+      "description": "Your birth city is used to calculate true solar time, which affects your birth hour. You can skip this.",
+      "placeholder": "Search for a city...",
+      "error": "Search failed. Please try again.",
+      "noResults": "No cities found.",
+      "confirm": "Next",
+      "next": "Next",
+      "skip": "Skip"
+    },
+    "genderPicker": {
+      "title": "What is your birth gender?",
+      "description": "Birth gender is used to calculate your destiny cycle direction.",
+      "subdescription": "This refers to biological sex at birth, not gender identity.",
+      "male": "Male",
+      "female": "Female",
+      "decline": "Prefer not to say",
+      "confirm": "Next",
+      "next": "Next",
+      "skip": "Skip"
+    },
+    "teaser": {
+      "sameCore": "People who share your {core} core",
+      "loginButton": "Sign in to unlock your full destiny chart"
+    },
+    "next": "Next",
+    "skip": "Skip",
+    "teaserPlaceholder": "Your destiny chart is ready.",
+    "loginToSave": "Sign in to save your chart"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "account": {
+    "title": "Account",
+    "email": "Email",
+    "manageProfiles": "Manage Profiles",
+    "assetsLabel": "My Assets",
+    "language": "Language",
+    "signOut": "Sign Out",
+    "deleteAccount": "Delete Account",
+    "deleteConfirmTitle": "Delete your account?",
+    "deleteConfirmDesc": "This will permanently delete your account and all data. Type DELETE to confirm.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete Forever",
+    "profiles": {
+      "title": "Profiles",
+      "self": "Me",
+      "add": "Add Profile",
+      "deleteConfirm": "Delete this profile? This cannot be undone."
+    },
+    "profileModal": {
+      "createTitle": "Add Profile",
+      "editTitle": "Edit Profile",
+      "name": "Name",
+      "namePlaceholder": "e.g. Partner, Parent...",
+      "birthDate": "Birth Date",
+      "birthTime": "Birth Time (optional)",
+      "birthCity": "Birth City (optional)",
+      "gender": "Birth Gender (optional)",
+      "male": "Male",
+      "female": "Female",
+      "genderNote": "Used to calculate destiny cycle direction",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "assets": {
+      "title": "My Assets",
+      "empty": "No purchased reports yet.",
+      "basedOn": "Based on",
+      "types": {
+        "bazi": "Four Pillars Reading",
+        "ziwei": "Purple Star Astrology",
+        "western": "Western Astrology",
+        "bigfive": "Big Five Analysis",
+        "mbti": "MBTI Analysis",
+        "enneagram": "Enneagram Analysis"
+      }
+    }
+  },
+  "dashboard": {
+    "loadError": "Failed to load your chart. Please refresh.",
+    "bazi": {
+      "title": "Birth Chart",
+      "year": "Year",
+      "month": "Month",
+      "day": "Day",
+      "hour": "Hour",
+      "daymaster": "Day Master",
+      "shishen": {
+        "BiJian": "Friend",
+        "JieCai": "Rival",
+        "ShiShen": "Output",
+        "ShangGuan": "Talent",
+        "PianCai": "Wealth",
+        "ZhengCai": "Wealth+",
+        "QiSha": "Power",
+        "ZhengGuan": "Status",
+        "PianYin": "Resource",
+        "ZhengYin": "Support",
+        "DayMaster": "Self",
+        "Unknown": ""
+      }
+    },
+    "fortune": {
+      "title": "Today's Fortune",
+      "comingSoon": "Coming soon"
+    },
+    "energy": {
+      "title": "Five Element Energy"
+    },
+    "profiles": {
+      "addProfile": "Add Profile",
+      "manageProfiles": "Manage Profiles"
+    }
+  },
+  "divination": {
+    "title": "Assessments",
+    "destiny": "Destiny",
+    "psychology": "Psychology",
+    "comingSoon": "Coming soon",
+    "minutes": " min"
+  },
+  "assessments": {
+    "bazi": {
+      "name": "Four Pillars",
+      "description": "Your birth chart based on year, month, day and hour pillars"
+    },
+    "ziwei": {
+      "name": "Purple Star Astrology",
+      "description": "Ancient Chinese astrological system based on birth data"
+    },
+    "western": {
+      "name": "Western Astrology",
+      "description": "Birth chart based on planetary positions at time of birth"
+    },
+    "bigfive": {
+      "name": "Big Five Personality",
+      "description": "Scientific personality assessment across five dimensions"
+    },
+    "mbti": {
+      "name": "MBTI",
+      "description": "Myers-Briggs Type Indicator personality framework"
+    },
+    "enneagram": {
+      "name": "Enneagram",
+      "description": "Nine-type personality system"
+    }
+  },
+  "bigfive": {
+    "title": "Big Five Personality",
+    "resultTitle": "Your Personality Profile",
+    "prev": "Previous",
+    "next": "Next",
+    "submit": "View Results",
+    "retake": "Retake",
+    "scale": {
+      "disagree": "Disagree",
+      "agree": "Agree"
+    },
+    "domains": {
+      "O": "Openness",
+      "C": "Conscientiousness",
+      "E": "Extraversion",
+      "A": "Agreeableness",
+      "N": "Neuroticism"
+    },
+    "facets": {
+      "Anxiety": "Anxiety",
+      "Anger": "Anger",
+      "Depression": "Depression",
+      "SelfConsciousness": "Self-Consciousness",
+      "Immoderation": "Immoderation",
+      "Vulnerability": "Vulnerability",
+      "Friendliness": "Friendliness",
+      "Gregariousness": "Gregariousness",
+      "Assertiveness": "Assertiveness",
+      "ActivityLevel": "Activity Level",
+      "ExcitementSeeking": "Excitement-Seeking",
+      "Cheerfulness": "Cheerfulness",
+      "Imagination": "Imagination",
+      "ArtisticInterests": "Artistic Interests",
+      "Emotionality": "Emotionality",
+      "Adventurousness": "Adventurousness",
+      "Intellect": "Intellect",
+      "Liberalism": "Liberalism",
+      "Trust": "Trust",
+      "Morality": "Morality",
+      "Altruism": "Altruism",
+      "Cooperation": "Cooperation",
+      "Modesty": "Modesty",
+      "Sympathy": "Sympathy",
+      "SelfEfficacy": "Self-Efficacy",
+      "Orderliness": "Orderliness",
+      "Dutifulness": "Dutifulness",
+      "AchievementStriving": "Achievement-Striving",
+      "SelfDiscipline": "Self-Discipline",
+      "Cautiousness": "Cautiousness"
+    }
+  },
+  "western": {
+    "title": "Western Astrology",
+    "fullMode": "Full Chart",
+    "dateMode": "Date Only",
+    "dateModeNote": "Add your birth time and location for a complete chart with house placements.",
+    "moonWarning": "Your Moon may be in {sign1} or {sign2} — birth time needed for certainty.",
+    "planets": "Planets",
+    "houses": "Houses",
+    "planetNames": {
+      "Sun": "Sun",
+      "Moon": "Moon",
+      "Mercury": "Mercury",
+      "Venus": "Venus",
+      "Mars": "Mars",
+      "Jupiter": "Jupiter",
+      "Saturn": "Saturn",
+      "Uranus": "Uranus",
+      "Neptune": "Neptune",
+      "Pluto": "Pluto"
+    },
+    "signs": {
+      "Aries": "Aries",
+      "Taurus": "Taurus",
+      "Gemini": "Gemini",
+      "Cancer": "Cancer",
+      "Leo": "Leo",
+      "Virgo": "Virgo",
+      "Libra": "Libra",
+      "Scorpio": "Scorpio",
+      "Sagittarius": "Sagittarius",
+      "Capricorn": "Capricorn",
+      "Aquarius": "Aquarius",
+      "Pisces": "Pisces"
+    }
+  }
+}
