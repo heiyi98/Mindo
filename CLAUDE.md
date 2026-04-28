@@ -5,6 +5,9 @@
 ## 项目简介
 全球化赛博玄学Web App，集命理测算、心理测量、社区论坛、社交匹配、周边商城于一体。
 
+- 生产环境URL：https://mindo-web.vercel.app
+- GitHub仓库：https://github.com/heiyi98/Mindo
+
 ## 当前技术栈
 - Monorepo工具：pnpm workspace + Turborepo
 - 前端：Next.js 16 + TypeScript + Tailwind CSS v4 + Framer Motion
@@ -98,6 +101,8 @@ packages/config/   ← 共享TypeScript/ESLint配置
 - [x] 西洋星盘模块（astronomy-engine MIT协议，日期/时分双模式，Placidus宫位+高纬度自动降级Whole Sign，月亮薛定谔机制）
 - [x] 西洋星盘前端（圆形星盘图SVG、行星列表、宫位列表）
 - [x] 量表类切换档案自动进入答题流程
+- [x] 部署到Vercel（https://mindo-web.vercel.app）
+- [x] Supabase Auth配置（Google OAuth + Magic Link）
 
 ## 架构决策记录（已锁定，不得随意更改）
 
