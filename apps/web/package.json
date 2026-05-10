@@ -9,27 +9,29 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@mindo/core": "workspace:*",
-    "next": "^16.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next-intl": "^4.9.0",
-    "@supabase/supabase-js": "^2.103.0",
     "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
-    "clsx": "^2.1.1",
+    "next": "^16.2.3",
+    "next-intl": "^4.9.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5",
-    "tailwindcss": "^4",
-    "@tailwindcss/postcss": "^4",
     "postcss": "^8",
     "prettier": "^3.8.2",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

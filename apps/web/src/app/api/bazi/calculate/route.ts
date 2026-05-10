@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { engine } from '@mindo/core';
-import { energyEngine } from '@mindo/core';
+import { engine, analyzeBazi } from '@mindo/core';
+import type { TianGan, DiZhi, Wuxing } from '@mindo/core';
 
 export async function POST(request: Request) {
   try {
@@ -21,20 +21,27 @@ export async function POST(request: Request) {
 
     const baziResult = engine.calculate({ dateStr, lat, lng, timeUnknown });
 
-    const energyScores = energyEngine.calculateStaticEnergy({
-      year: { stem: baziResult.pillars.year.stem, branch: baziResult.pillars.year.branch },
-      month: { stem: baziResult.pillars.month.stem, branch: baziResult.pillars.month.branch },
-      day: { stem: baziResult.pillars.day.stem, branch: baziResult.pillars.day.branch },
-      hour: { stem: baziResult.pillars.hour.stem || 'Jia', branch: baziResult.pillars.hour.branch || 'Zi' },
+    const analysis = analyzeBazi({
+      year:  { stem: baziResult.pillars.year.stem as TianGan,  branch: baziResult.pillars.year.branch as DiZhi  },
+      month: { stem: baziResult.pillars.month.stem as TianGan, branch: baziResult.pillars.month.branch as DiZhi },
+      day:   { stem: baziResult.pillars.day.stem as TianGan,   branch: baziResult.pillars.day.branch as DiZhi   },
+      hour:  {
+        stem:   (baziResult.pillars.hour.stem || 'Jia') as TianGan,
+        branch: (baziResult.pillars.hour.branch || 'Zi') as DiZhi,
+      },
     });
 
-    const dayStem = baziResult.pillars.day.stem;
+    const energyScores: Record<Wuxing, number> = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
+    for (const node of analysis.energyNodes) {
+      if (node.outputEnabled) energyScores[node.wuxing] += node.energy;
+    }
 
     return NextResponse.json({
-      dayStem,
+      dayStem: baziResult.pillars.day.stem,
       pillars: baziResult.pillars,
       energyScores,
       meta: baziResult.meta,
+      analysis,
     });
   } catch (error) {
     console.error('Bazi calculate error:', error);

@@ -252,6 +252,11 @@
       "Cautiousness": "审慎"
     }
   },
+  "payment": {
+    "buyReading": "解锁AI解读 · $19.99",
+    "readingUnlocked": "AI解读已解锁",
+    "loading": "加载中..."
+  },
   "western": {
     "title": "西洋星盘",
     "fullMode": "完整星盘",

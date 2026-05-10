@@ -252,6 +252,11 @@
       "Cautiousness": "Cautiousness"
     }
   },
+  "payment": {
+    "buyReading": "Unlock AI Reading · $19.99",
+    "readingUnlocked": "AI Reading Unlocked",
+    "loading": "Loading..."
+  },
   "western": {
     "title": "Western Astrology",
     "fullMode": "Full Chart",

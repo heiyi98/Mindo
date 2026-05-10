@@ -99,7 +99,7 @@ export const engine = {
         day: buildPillar(baziDay.getDayGan(), baziDay.getDayZhi(), baziDay.getDayNaYin(), '日主', baziDay.getDayShiShenZhi(), baziDay.getDayHideGan()),
         hour: input.timeUnknown
           ? { stem: 'Unknown', branch: 'Unknown', element: { stem: 'gray', branch: 'gray' } }
-          : buildPillar(baziHour.getTimeGan(), baziHour.getTimeZhi(), baziHour.getTimeNaYin(), baziHour.getTimeShiShenGan(), baziHour.getTimeShiShenZhi(), baziHour.getTimeHideGan())
+          : buildPillar(baziHour.getTimeGan(), baziHour.getTimeZhi(), baziHour.getTimeNaYin(), baziHour.getTimeShiShenGan(), baziHour.getTimeShiShenZhi(), baziHour.getTimeShiShenZhi())
       },
       extras: {
         taiyuan: baziDay.getTaiYuan(),

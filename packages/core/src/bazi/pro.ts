@@ -1,8 +1,5 @@
-// packages/core/src/pro-engine.ts
-// 专业模式入口：面向命理专业人士，返回完整原始数据
-
 import { engine } from './engine';
-import { generateDestinyTimeline } from './destiny-timeline';
+import { generateDestinyTimeline } from './timeline';
 
 export const proEngine = {
   calculate: (

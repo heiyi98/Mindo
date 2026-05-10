@@ -55,12 +55,14 @@ packages/config/   ← 共享TypeScript/ESLint配置
 - [x] 顶部状态栏Context系统（各页面可独立注入内容）
 - [x] 数据库Schema（5张表：users/profiles/snapshots/subscriptions/purchases，已部署到Supabase）
 - [x] Supabase项目连接（环境变量已配置）
-- [x] packages/core 算法引擎归档完成
-  - engine.ts（八字排盘 + 真太阳时）
-  - energy-engine.ts（五行能量计算）
-  - destiny-timeline.ts（大运流年时间轴）
-  - relations.ts（刑冲合害关系引擎）
-  - pro-engine.ts（专业模式入口）
+- [x] packages/core 架构重构（bazi/、psychology/、astrology/ 三模块分离）
+  - 删除旧文件（engine.ts、energy-engine.ts、relations.ts、destiny-timeline.ts、pro-engine.ts）
+  - bazi/engine.ts（八字排盘 + 真太阳时）
+  - bazi/analysis.ts（七步分析引擎：天干五合/相冲、地支关系、透根、能量计算、十神挂载、影响力汇总）
+  - bazi/timeline.ts（大运流年时间轴）
+  - bazi/pro.ts（专业模式入口）
+  - bazi/types.ts（19个类型定义：TianGan/DiZhi/BaziAnalysis等）
+- [x] 八字分析引擎 bazi/analysis.ts（analyzeBazi 函数，输出 BaziAnalysis 完整结构）
 - [x] 身份认证（Magic Link邮件登录 + Google OAuth，Supabase Auth）
 - [x] 认证回调路由（/api/auth/confirm 处理OTP，/api/auth/callback 处理OAuth）
 - [x] Onboarding流程（DatePicker/TimePicker/CityPicker/GenderPicker四步骤）
@@ -103,6 +105,15 @@ packages/config/   ← 共享TypeScript/ESLint配置
 - [x] 量表类切换档案自动进入答题流程
 - [x] 部署到Vercel（https://mindo-web.vercel.app）
 - [x] Supabase Auth配置（Google OAuth + Magic Link）
+- [x] Lemon Squeezy付费系统（checkout API、webhook处理，/api/payments/checkout + /api/payments/webhook）
+- [x] AI解读生成API（Gemini 1.5 Pro，内部调用，/api/ai/reading）
+- [x] products表（测算产品注册表，含RLS）
+- [x] BuyReadingButton组件（购买入口，src/components/dashboard/BuyReadingButton.tsx）
+- [x] purchases表扩展（status、snapshot_id字段）
+- [x] BaziSnapshot 七段式存储结构（meta/pillars/relations/tougen/energy/shishen/influence）
+- [x] toBaziSnapshot 转换函数
+- [x] formatBaziDataSheet 格式化函数（供 Gemini API 使用）
+- [x] formatBaziDataSheet 全面汉化（天干、地支、五行、宫位、十神、关系类型）
 
 ## 架构决策记录（已锁定，不得随意更改）
 
@@ -117,6 +128,11 @@ packages/config/   ← 共享TypeScript/ESLint配置
 9. 支付渠道：provider字段不枚举，国际版/中国版各自管理
 10. 双区完全隔离：账号/VIP/内容三层全部独立，不跨区同步
 11. 软内容管理：十天干人格内容、名人数据存数据库，按locale区分语言，现阶段直接在Supabase Table Editor编辑，后台管理系统待开发
+12. packages/core 目录结构（已锁定）：
+    packages/core/src/
+    ├── bazi/          ← 八字命理（engine、analysis、timeline、pro、types）
+    ├── psychology/    ← 心理测量（bigfive/）
+    └── astrology/     ← 星象（western/）
 
 ## 待完成模块
 - [ ] 主题系统（浅色/深色/跟随系统，苹果配色规范，与用户设置模块一起实现）

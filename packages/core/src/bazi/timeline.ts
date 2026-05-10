@@ -1,5 +1,3 @@
-// packages/core/src/destiny-timeline.ts
-
 import { Solar } from 'lunar-typescript';
 
 export interface ChapterSection {

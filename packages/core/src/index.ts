@@ -1,22 +1,28 @@
-export { engine } from './engine';
-export { energyEngine } from './energy-engine';
-export type { BaziGridInput, Wuxing } from './energy-engine';
-export { generateDestinyTimeline } from './destiny-timeline';
-export type { DestinyTimeline, LifeChapter, ChapterSection } from './destiny-timeline';
-export type { RelationEvent, RelationCategory, PillarContext } from './types';
-export { analyzeRelations } from './relations';
-export { proEngine } from './pro-engine';
-export { calculateBigFive, calculateBigFiveWithLocale, getQuestionCount, ipipNeo120Dictionary } from './psychology/bigfive';
+// 八字命理
+export { analyzeBazi, toBaziSnapshot } from './bazi/analysis';
+export type {
+  BaziAnalysis,
+  BaziSnapshot,
+  BaziMeta,
+  Wuxing, TianGan, DiZhi, ShiShen, EnergyNode, ShiShenInfluenceGroup,
+} from './bazi/types';
+export * from './bazi/engine';
+export * from './bazi/timeline';
+
+// 心理测量
+export { calculateBigFive, calculateBigFiveWithLocale, getQuestionCount } from './psychology/bigfive';
+export { getAlheimsinsItems, getQuestionItemsForLocale } from './psychology/bigfive/alheimsins';
 export type {
   BigFiveDomain,
   BigFiveFacet,
   UserAnswer as BigFiveUserAnswer,
-  QuestionItem as BigFiveQuestionItem,
   BigFiveReport,
   DomainResult as BigFiveDomainResult,
   FacetResult as BigFiveFacetResult,
-} from './psychology/bigfive';
+} from './psychology/bigfive/types';
+export { ipipNeo120Dictionary } from './psychology/bigfive/dictionary';
 
+// 西洋星盘
 export { calculateStarChart, calculateDateMode, calculateFullMode } from './astrology/western';
 export type {
   StarChartResult,
@@ -29,7 +35,7 @@ export type {
   ZodiacSign,
   PlanetName,
   HouseSystem,
-  MoonShiftWarning,
   DateModeInput as WesternDateModeInput,
   FullModeInput as WesternFullModeInput,
-} from './astrology/western';
+  MoonShiftWarning,
+} from './astrology/western/types';

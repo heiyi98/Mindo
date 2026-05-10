@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { engine } from '@mindo/core';
-import { energyEngine } from '@mindo/core';
+import { engine, analyzeBazi, toBaziSnapshot } from '@mindo/core';
+import type { TianGan, DiZhi, BaziSnapshot } from '@mindo/core';
 
 export async function GET(request: Request) {
   try {
@@ -48,11 +48,31 @@ export async function GET(request: Request) {
     console.log('[dashboard API] existingSnapshot:', !!existingSnapshot);
 
     if (existingSnapshot) {
-      return NextResponse.json({
-        profile,
-        bazi: existingSnapshot.calculation_result,
-        fromCache: true,
+      console.log('[dashboard API] format check:', {
+        pillars_yuelingWuxing: existingSnapshot.calculation_result?.pillars?.yuelingWuxing,
+        has_relations: existingSnapshot.calculation_result?.relations !== undefined,
+        has_influence: existingSnapshot.calculation_result?.influence !== undefined,
+        pillars_keys: existingSnapshot.calculation_result?.pillars
+          ? Object.keys(existingSnapshot.calculation_result.pillars)
+          : null,
       });
+      const isNewFormat =
+        existingSnapshot.calculation_result?.pillars?.yuelingWuxing !== undefined &&
+        existingSnapshot.calculation_result?.relations !== undefined &&
+        existingSnapshot.calculation_result?.influence !== undefined;
+      if (isNewFormat) {
+        return NextResponse.json({
+          profile,
+          bazi: existingSnapshot.calculation_result as BaziSnapshot,
+          fromCache: true,
+        });
+      }
+      // 旧格式：继续往下重新计算，会覆盖旧快照
+      await supabase
+        .from('snapshots')
+        .delete()
+        .eq('profile_id', profile.id)
+        .eq('snapshot_type', 'bazi');
     }
 
     // 计算八字
@@ -74,22 +94,32 @@ export async function GET(request: Request) {
       throw e;
     }
 
-    const energyScores = energyEngine.calculateStaticEnergy({
-      year: { stem: baziResult.pillars.year.stem, branch: baziResult.pillars.year.branch },
-      month: { stem: baziResult.pillars.month.stem, branch: baziResult.pillars.month.branch },
-      day: { stem: baziResult.pillars.day.stem, branch: baziResult.pillars.day.branch },
-      hour: {
-        stem: baziResult.pillars.hour.stem || 'Jia',
-        branch: baziResult.pillars.hour.branch || 'Zi'
+    const analysis = analyzeBazi({
+      year:  { stem: baziResult.pillars.year.stem as TianGan,  branch: baziResult.pillars.year.branch as DiZhi  },
+      month: { stem: baziResult.pillars.month.stem as TianGan, branch: baziResult.pillars.month.branch as DiZhi },
+      day:   { stem: baziResult.pillars.day.stem as TianGan,   branch: baziResult.pillars.day.branch as DiZhi   },
+      hour:  {
+        stem:   (baziResult.pillars.hour.stem || 'Jia') as TianGan,
+        branch: (baziResult.pillars.hour.branch || 'Zi') as DiZhi,
       },
     });
 
-    const calculationResult = {
-      dayStem: baziResult.pillars.day.stem,
-      pillars: baziResult.pillars,
-      energyScores,
-      meta: baziResult.meta,
+    const meta = {
+      solarTime: baziResult.meta?.solar_time || '',
+      lunarTime: baziResult.meta?.lunar_time || '',
+      jieQi:     baziResult.meta?.jie_qi || '',
     };
+
+    const energyScores: Record<string, number> = {
+      Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0
+    };
+    for (const node of analysis.energyNodes) {
+      if (node.outputEnabled) {
+        energyScores[node.wuxing] = (energyScores[node.wuxing] || 0) + node.energy;
+      }
+    }
+
+    const calculationResult = toBaziSnapshot(analysis, meta, energyScores as any);
 
     // 存入快照
     await supabase

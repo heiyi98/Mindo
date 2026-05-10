@@ -222,3 +222,29 @@ add column if not exists birth_place_name text,
 add column if not exists user_id uuid references public.users(id) on delete cascade;
 
 create index if not exists snapshots_user_id_idx on public.snapshots(user_id);
+
+-- ============================================
+-- 2026-05-01: products表（付费产品目录）
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.products (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  assessment_type text NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text,
+  lemon_variant_id text NOT NULL,
+  price_usd numeric(10,2) NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Products are viewable by everyone" ON public.products
+  FOR SELECT USING (true);
+
+-- ============================================
+-- 2026-05-01: purchases表扩展
+-- 添加 status 字段和 snapshot_id 外键
+-- ============================================
+ALTER TABLE public.purchases
+ADD COLUMN IF NOT EXISTS status text DEFAULT 'completed',
+ADD COLUMN IF NOT EXISTS snapshot_id uuid REFERENCES public.snapshots(id) ON DELETE SET NULL;
