@@ -96,6 +96,9 @@ importers:
       lunar-typescript:
         specifier: ^1.8.6
         version: 1.8.6
+      tzlookup:
+        specifier: ^1.4.0
+        version: 1.4.0
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1254,6 +1257,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  tzlookup@1.4.0:
+    resolution: {integrity: sha512-JIsOUO5HqtJ73KOee87Ui7UunYHq0AXxW2BhqyIZlkxRrBH1bscyVPnO/GspFUJHPBhkml/mTUAZzcBMBNLdQQ==}
+
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -2119,6 +2125,8 @@ snapshots:
       '@turbo/windows-arm64': 2.9.5
 
   typescript@5.9.3: {}
+
+  tzlookup@1.4.0: {}
 
   undici-types@6.21.0: {}
 

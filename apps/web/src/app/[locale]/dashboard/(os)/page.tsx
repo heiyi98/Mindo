@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import type { Wuxing } from '@mindo/core';
 import BaziChart from '@/components/dashboard/BaziChart';
+import ProfileCard from '@/components/dashboard/ProfileCard';
 import EnergyRadar from '@/components/onboarding/teaser/EnergyRadar';
 import DailyFortunePlaceholder from '@/components/dashboard/DailyFortunePlaceholder';
 import ProfileSwitcher from '@/components/dashboard/ProfileSwitcher';
@@ -61,6 +62,9 @@ export default function DashboardPage() {
   const { bazi, profile } = data;
   const energyScores = bazi.energyScores as Record<Wuxing, number>;
   const dayStem = bazi.dayStem as string;
+  const solarTimeDisplay = data?.bazi?.meta?.solarTime
+    ? data.bazi.meta.solarTime.split(' ')[1]?.slice(0, 5)
+    : null;
 
   const STEM_TO_ELEMENT: Record<string, Wuxing> = {
     Jia: 'Wood', Yi: 'Wood', Bing: 'Fire', Ding: 'Fire',
@@ -71,17 +75,13 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <p
-          className="text-xs tracking-[0.3em] uppercase"
-          style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
-        >
-          {profile.display_name}
-        </p>
-      </motion.div>
+      <ProfileCard
+        displayName={profile.display_name}
+        birthDate={profile.birth_date}
+        birthTime={profile.birth_time}
+        birthPlaceName={profile.birth_place_name}
+        solarTime={solarTimeDisplay}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div

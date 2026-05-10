@@ -54,7 +54,9 @@
       "Bash(packages/core/node_modules/.bin/tsx scripts/print-bazi-datasheet.ts)",
       "Bash(pnpm run *)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in d.get\\('scripts',{}\\).items\\(\\)]\")",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "PowerShell(pnpm info *)"
     ]
   }
 }

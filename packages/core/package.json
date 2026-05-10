@@ -11,6 +11,7 @@
     "@alheimsins/b5-johnson-120-ipip-neo-pi-r": "^6.0.13",
     "astronomy-engine": "^2.1.19",
     "lunar-typescript": "^1.8.6",
+    "tzlookup": "^1.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

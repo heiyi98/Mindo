@@ -134,6 +134,10 @@
   },
   "dashboard": {
     "loadError": "Failed to load your chart. Please refresh.",
+    "profileCard": {
+      "yearsOld": "years old",
+      "solarTime": "Solar time"
+    },
     "bazi": {
       "title": "Birth Chart",
       "year": "Year",

@@ -252,14 +252,8 @@ function formatBaziDataSheet(snap: any, profile: any): string {
   }
   lines.push('');
 
-  // 八、宫位距离权重
-  lines.push('【八、宫位距离权重】');
-  lines.push('  年干0.50 | 年支0.45 | 月干1.00 | 月支0.71');
-  lines.push('  日支1.00 | 时干1.00 | 时支0.71');
-  lines.push('');
-
-  // 九、十神影响力总值
-  lines.push('【九、十神影响力总值】');
+  // 八、十神影响力总值
+  lines.push('【八、十神影响力总值】');
   const sorted = [...snap.influence.shishenInfluence]
     .sort((a: any, b: any) => b.totalInfluence - a.totalInfluence);
   for (const group of sorted) {

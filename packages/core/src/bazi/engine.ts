@@ -1,4 +1,6 @@
+/// <reference path="./tzlookup.d.ts" />
 import { Solar } from 'lunar-typescript';
+import tzlookup from 'tzlookup';
 
 const STEM_MAP: Record<string, string> = {
   '甲': 'Jia', '乙': 'Yi', '丙': 'Bing', '丁': 'Ding', '戊': 'Wu',
@@ -40,20 +42,57 @@ export const engine = {
     let h = parseInt(hm[0]);
     let min = parseInt(hm[1]);
 
-    if (!input.timeUnknown && input.lng) {
+    if (!input.timeUnknown && input.lng && input.lat) {
+      // 第一步：用经纬度查行政时区（处理新疆/印度等特殊时区）
+      let utcOffsetMinutes = 480; // 默认UTC+8
+      try {
+        const tzName = tzlookup(input.lat, input.lng);
+        // 用Intl获取该时区在出生日期的UTC偏移
+        const testDate = new Date(Date.UTC(y, m - 1, d, h, min));
+        const formatter = new Intl.DateTimeFormat('en', {
+          timeZone: tzName,
+          timeZoneName: 'shortOffset'
+        });
+        const parts = formatter.formatToParts(testDate);
+        const tzPart = parts.find(p => p.type === 'timeZoneName')?.value || '';
+        // 解析 "GMT+8" 或 "GMT+5:30" 格式
+        const match = tzPart.match(/GMT([+-])(\d+)(?::(\d+))?/);
+        if (match) {
+          const sign = match[1] === '+' ? 1 : -1;
+          const hours = parseInt(match[2]);
+          const minutes = parseInt(match[3] || '0');
+          utcOffsetMinutes = sign * (hours * 60 + minutes);
+        }
+      } catch (e) {
+        // tzlookup失败时fallback到经度推算
+        utcOffsetMinutes = Math.round(input.lng / 15) * 60;
+      }
+
+      // 第二步：用户输入时间（行政时间）转UTC
+      const localMinutes = h * 60 + min;
+      const utcMinutes = localMinutes - utcOffsetMinutes;
+
+      // 第三步：均时差（Equation of Time）
       const current = new Date(Date.UTC(y, m - 1, d));
       const start = new Date(Date.UTC(y, 0, 0));
-      const dayOfYear = Math.floor((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
+      const dayOfYear = Math.floor(
+        (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
       const B = (2 * Math.PI / 364) * (dayOfYear - 81);
       const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
 
-      const tz = Math.round(input.lng / 15);
-      const centralMeridian = tz * 15;
-      const lngTimeDiff = (input.lng - centralMeridian) * 4;
+      // 第四步：经度修正（真太阳时 = 地理经度对应的时间）
+      // 真太阳时基准是本地经度，不是时区中央子午线
+      const solarLngOffset = (input.lng * 4); // 经度每度=4分钟
 
-      const totalDiffMinutes = Math.round(eot + lngTimeDiff);
-      const tstDate = new Date(Date.UTC(y, m - 1, d, h, min + totalDiffMinutes));
+      // 第五步：合并计算真太阳时（UTC基础上加太阳时修正）
+      const solarUtcMinutes = utcMinutes + solarLngOffset + eot;
+
+      // 转回本地显示时间（用于排盘）
+      const totalMinutes = solarUtcMinutes + utcOffsetMinutes;
+
+      const tstDate = new Date(Date.UTC(y, m - 1, d));
+      tstDate.setUTCMinutes(Math.round(totalMinutes));
 
       y = tstDate.getUTCFullYear();
       m = tstDate.getUTCMonth() + 1;
