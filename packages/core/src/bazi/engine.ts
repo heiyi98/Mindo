@@ -42,7 +42,7 @@ export const engine = {
     let min = parseInt(hm[1]);
 
     if (!input.timeUnknown && input.lng && input.lat) {
-      // 第一步：用经纬度查行政时区（处理新疆/印度等特殊时区）
+      // 第一步：查行政时区，获取UTC偏移
       let utcOffsetMinutes = 480; // 默认UTC+8
       try {
         const tzNames = find(input.lat, input.lng);
@@ -67,11 +67,7 @@ export const engine = {
         utcOffsetMinutes = Math.round(input.lng / 15) * 60;
       }
 
-      // 第二步：用户输入时间（行政时间）转UTC
-      const localMinutes = h * 60 + min;
-      const utcMinutes = localMinutes - utcOffsetMinutes;
-
-      // 第三步：均时差（Equation of Time）
+      // 第二步：均时差（Equation of Time）
       const current = new Date(Date.UTC(y, m - 1, d));
       const start = new Date(Date.UTC(y, 0, 0));
       const dayOfYear = Math.floor(
@@ -80,24 +76,25 @@ export const engine = {
       const B = (2 * Math.PI / 364) * (dayOfYear - 81);
       const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
 
-      // 第四步：经度修正（真太阳时 = 地理经度对应的时间）
-      // 真太阳时基准是本地经度，不是时区中央子午线
-      const solarLngOffset = (input.lng * 4); // 经度每度=4分钟
+      // 第三步：经度修正
+      // 时区中央子午线 = UTC偏移小时数 × 15
+      const centralMeridian = (utcOffsetMinutes / 60) * 15;
+      const lngDiff = input.lng - centralMeridian;
+      const lngOffsetMinutes = lngDiff * 4;
 
-      // 第五步：合并计算真太阳时（UTC基础上加太阳时修正）
-      const solarUtcMinutes = utcMinutes + solarLngOffset + eot;
+      // 第四步：真太阳时 = 本地行政时间 + 经度修正 + 均时差
+      const localMinutes = h * 60 + min;
+      const solarMinutes = localMinutes + lngOffsetMinutes + eot;
 
-      // 转回本地显示时间（用于排盘）
-      const totalMinutes = solarUtcMinutes + utcOffsetMinutes;
+      // 第五步：更新时间用于排盘
+      const baseDate = new Date(Date.UTC(y, m - 1, d, 0, 0));
+      baseDate.setUTCMinutes(Math.round(solarMinutes));
 
-      const tstDate = new Date(Date.UTC(y, m - 1, d));
-      tstDate.setUTCMinutes(Math.round(totalMinutes));
-
-      y = tstDate.getUTCFullYear();
-      m = tstDate.getUTCMonth() + 1;
-      d = tstDate.getUTCDate();
-      h = tstDate.getUTCHours();
-      min = tstDate.getUTCMinutes();
+      y = baseDate.getUTCFullYear();
+      m = baseDate.getUTCMonth() + 1;
+      d = baseDate.getUTCDate();
+      h = baseDate.getUTCHours();
+      min = baseDate.getUTCMinutes();
     }
 
     // 日柱路线：用正午12:00锁定公历日期，避免子时（23:xx）被lunar-typescript推进到次日
