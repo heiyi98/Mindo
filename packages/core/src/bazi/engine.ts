@@ -1,6 +1,5 @@
-/// <reference path="./tzlookup.d.ts" />
 import { Solar } from 'lunar-typescript';
-import tzlookup from 'tzlookup';
+import { find } from 'geo-tz';
 
 const STEM_MAP: Record<string, string> = {
   '甲': 'Jia', '乙': 'Yi', '丙': 'Bing', '丁': 'Ding', '戊': 'Wu',
@@ -46,25 +45,25 @@ export const engine = {
       // 第一步：用经纬度查行政时区（处理新疆/印度等特殊时区）
       let utcOffsetMinutes = 480; // 默认UTC+8
       try {
-        const tzName = tzlookup(input.lat, input.lng);
-        // 用Intl获取该时区在出生日期的UTC偏移
-        const testDate = new Date(Date.UTC(y, m - 1, d, h, min));
-        const formatter = new Intl.DateTimeFormat('en', {
-          timeZone: tzName,
-          timeZoneName: 'shortOffset'
-        });
-        const parts = formatter.formatToParts(testDate);
-        const tzPart = parts.find(p => p.type === 'timeZoneName')?.value || '';
-        // 解析 "GMT+8" 或 "GMT+5:30" 格式
-        const match = tzPart.match(/GMT([+-])(\d+)(?::(\d+))?/);
-        if (match) {
-          const sign = match[1] === '+' ? 1 : -1;
-          const hours = parseInt(match[2]);
-          const minutes = parseInt(match[3] || '0');
-          utcOffsetMinutes = sign * (hours * 60 + minutes);
+        const tzNames = find(input.lat, input.lng);
+        const tzName = tzNames[0];
+        if (tzName) {
+          const testDate = new Date(Date.UTC(y, m - 1, d, h, min));
+          const formatter = new Intl.DateTimeFormat('en', {
+            timeZone: tzName,
+            timeZoneName: 'shortOffset'
+          });
+          const parts = formatter.formatToParts(testDate);
+          const tzPart = parts.find(p => p.type === 'timeZoneName')?.value || '';
+          const match = tzPart.match(/GMT([+-])(\d+)(?::(\d+))?/);
+          if (match) {
+            const sign = match[1] === '+' ? 1 : -1;
+            const hours = parseInt(match[2]);
+            const minutes = parseInt(match[3] || '0');
+            utcOffsetMinutes = sign * (hours * 60 + minutes);
+          }
         }
       } catch (e) {
-        // tzlookup失败时fallback到经度推算
         utcOffsetMinutes = Math.round(input.lng / 15) * 60;
       }
 
