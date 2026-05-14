@@ -30,7 +30,7 @@ function getElement(char: string): string {
 }
 
 export const engine = {
-  calculate: (input: { dateStr: string; lat: number; lng: number; timeUnknown?: boolean }) => {
+  calculate: (input: { dateStr: string; lat: number; lng: number; timeUnknown?: boolean; timezone?: string }) => {
     const dateParts = input.dateStr.split('T');
     const ymd = dateParts[0].split('-');
     const hm = dateParts[1].split(':');
@@ -41,30 +41,47 @@ export const engine = {
     let h = parseInt(hm[0]);
     let min = parseInt(hm[1]);
 
+    const birthY = y, birthM = m, birthD = d;
+    // solarMinutes 通过 setUTCMinutes 已编码为本地时钟读数（lng*4 ≈ utcOffset 相消）
+    let solarDisplayMinutes = h * 60 + min;
+
     if (!input.timeUnknown && input.lng && input.lat) {
-      // 第一步：查行政时区，获取UTC偏移
+      // 第一步：查行政时区，获取UTC偏移（优先使用档案存储的时区，避免重复查询）
       let utcOffsetMinutes = 480; // 默认UTC+8
-      try {
-        const tzNames = find(input.lat, input.lng);
-        const tzName = tzNames[0];
-        if (tzName) {
-          const testDate = new Date(Date.UTC(y, m - 1, d, h, min));
-          const formatter = new Intl.DateTimeFormat('en', {
-            timeZone: tzName,
-            timeZoneName: 'shortOffset'
-          });
-          const parts = formatter.formatToParts(testDate);
-          const tzPart = parts.find(p => p.type === 'timeZoneName')?.value || '';
-          const match = tzPart.match(/GMT([+-])(\d+)(?::(\d+))?/);
-          if (match) {
-            const sign = match[1] === '+' ? 1 : -1;
-            const hours = parseInt(match[2]);
-            const minutes = parseInt(match[3] || '0');
-            utcOffsetMinutes = sign * (hours * 60 + minutes);
-          }
+
+      const tzName = input.timezone || (() => {
+        try {
+          const tzNames = find(input.lat, input.lng);
+          return tzNames[0] || null;
+        } catch {
+          return null;
         }
-      } catch (e) {
-        utcOffsetMinutes = Math.round(input.lng / 15) * 60;
+      })();
+
+      if (tzName) {
+        try {
+          const testDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+          const localParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tzName,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }).formatToParts(testDate);
+          const get = (type: string) =>
+            parseInt(localParts.find(p => p.type === type)?.value || '0');
+          const localH = get('hour');
+          const localMin = get('minute');
+          const localTotalMin = localH * 60 + localMin;
+          let offsetMin = localTotalMin - 720;
+          if (offsetMin > 720) offsetMin -= 1440;
+          if (offsetMin < -720) offsetMin += 1440;
+          utcOffsetMinutes = offsetMin;
+        } catch {
+          utcOffsetMinutes = Math.round(input.lng / 15) * 60;
+        }
       }
 
       // 第二步：均时差（Equation of Time）
@@ -76,17 +93,18 @@ export const engine = {
       const B = (2 * Math.PI / 364) * (dayOfYear - 81);
       const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
 
-      // 第三步：经度修正
-      // 时区中央子午线 = UTC偏移小时数 × 15
-      const centralMeridian = (utcOffsetMinutes / 60) * 15;
-      const lngDiff = input.lng - centralMeridian;
-      const lngOffsetMinutes = lngDiff * 4;
-
-      // 第四步：真太阳时 = 本地行政时间 + 经度修正 + 均时差
+      // 第三步：行政时间转UTC
       const localMinutes = h * 60 + min;
-      const solarMinutes = localMinutes + lngOffsetMinutes + eot;
+      const utcMinutes = localMinutes - utcOffsetMinutes;
 
-      // 第五步：更新时间用于排盘
+      // 第四步：真太阳时（基于UTC + 地理经度）
+      const solarMinutes = utcMinutes + (input.lng * 4) + eot;
+
+      solarDisplayMinutes = solarMinutes;
+
+      // 第五步：真太阳时直接用于排盘
+      // solarMinutes 是基于UTC+地理经度的真太阳时（分钟数，从当天0点起算）
+      // 不需要转回行政时间，直接传给 lunar-typescript
       const baseDate = new Date(Date.UTC(y, m - 1, d, 0, 0));
       baseDate.setUTCMinutes(Math.round(solarMinutes));
 
@@ -96,6 +114,16 @@ export const engine = {
       h = baseDate.getUTCHours();
       min = baseDate.getUTCMinutes();
     }
+
+    // solar_time 显示：solarMinutes 通过 setUTCMinutes 已编码为本地时钟读数，直接格式化
+    const solarDisplayDate = new Date(Date.UTC(birthY, birthM - 1, birthD, 0, 0));
+    solarDisplayDate.setUTCMinutes(Math.round(solarDisplayMinutes));
+    const sdY = solarDisplayDate.getUTCFullYear();
+    const sdM = String(solarDisplayDate.getUTCMonth() + 1).padStart(2, '0');
+    const sdD = String(solarDisplayDate.getUTCDate()).padStart(2, '0');
+    const sdH = String(solarDisplayDate.getUTCHours()).padStart(2, '0');
+    const sdMin = String(solarDisplayDate.getUTCMinutes()).padStart(2, '0');
+    const solarTimeStr = `${sdY}-${sdM}-${sdD} ${sdH}:${sdMin}:00`;
 
     // 日柱路线：用正午12:00锁定公历日期，避免子时（23:xx）被lunar-typescript推进到次日
     const solarDay = Solar.fromYmdHms(y, m, d, 12, 0, 0);
@@ -124,7 +152,7 @@ export const engine = {
 
     return {
       meta: {
-        solar_time: solarHour.toYmdHms(),
+        solar_time: solarTimeStr,
         lunar_time: lunarDay.toString(),
         jie_qi: lunarDay.getJieQi()
       },

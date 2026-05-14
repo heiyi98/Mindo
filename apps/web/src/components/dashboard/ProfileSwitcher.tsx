@@ -48,24 +48,26 @@ export default function ProfileSwitcher() {
               border: '1px solid hsl(var(--border))',
             }}
           >
-            {profiles.map(profile => (
-              <button
-                key={profile.id}
-                onClick={() => { setCurrentProfile(profile); setOpen(false); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors hover:bg-muted/50"
-                style={{ color: 'hsl(var(--foreground))' }}
-              >
-                <div>
-                  <div className="font-light">{profile.display_name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    {profile.birth_date}
+            <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+              {profiles.map(profile => (
+                <button
+                  key={profile.id}
+                  onClick={() => { setCurrentProfile(profile); setOpen(false); }}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors hover:bg-muted/50"
+                  style={{ color: 'hsl(var(--foreground))' }}
+                >
+                  <div>
+                    <div className="font-light">{profile.display_name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      {profile.birth_date}
+                    </div>
                   </div>
-                </div>
-                {profile.id === currentProfile.id && (
-                  <Check size={14} style={{ color: 'hsl(var(--foreground))' }} />
-                )}
-              </button>
-            ))}
+                  {profile.id === currentProfile.id && (
+                    <Check size={14} style={{ color: 'hsl(var(--foreground))' }} />
+                  )}
+                </button>
+              ))}
+            </div>
 
             <div style={{ height: 1, background: 'hsl(var(--border))' }} />
 

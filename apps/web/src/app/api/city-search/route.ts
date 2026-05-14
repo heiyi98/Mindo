@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { find } from 'geo-tz';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,15 +19,26 @@ export async function GET(request: Request) {
         }
       }
     );
-
     if (!res.ok) throw new Error('OSM API Error');
-
     const data = await res.json();
-    const results = data.map((item: any) => ({
-      name: item.display_name,
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon)
-    }));
+
+    const results = data.map((item: any) => {
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      let timezone = 'UTC';
+      try {
+        const tzNames = find(lat, lng);
+        timezone = tzNames[0] || 'UTC';
+      } catch {
+        timezone = 'UTC';
+      }
+      return {
+        name: item.display_name,
+        lat,
+        lng,
+        timezone,
+      };
+    });
 
     return NextResponse.json({ results });
   } catch (error) {

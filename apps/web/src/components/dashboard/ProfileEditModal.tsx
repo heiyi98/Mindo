@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import DatePicker from '@/components/onboarding/steps/DatePicker';
 import TimePicker from '@/components/onboarding/steps/TimePicker';
 import CityPicker from '@/components/onboarding/steps/CityPicker';
+import TimezoneSelector from '@/components/onboarding/steps/TimezoneSelector';
+import { matchTimezoneOption, findTimezoneByIana, type TimezoneOption } from '@/lib/timezones';
 
 interface ProfileEditModalProps {
   profile?: {
@@ -14,6 +16,10 @@ interface ProfileEditModalProps {
     birth_date: string;
     birth_time: string | null;
     birth_place_name: string | null;
+    birth_lat?: number | null;
+    birth_lng?: number | null;
+    birth_timezone?: string | null;
+    gender?: 'M' | 'F' | null;
     is_self: boolean;
   };
   onClose: () => void;
@@ -46,12 +52,23 @@ export default function ProfileEditModal({
   const [birthMinute, setBirthMinute] = useState<number | null>(
     profile?.birth_time ? parseInt(profile.birth_time.split(':')[1]) : null
   );
-  const [birthLat, setBirthLat] = useState<number | null>(null);
-  const [birthLng, setBirthLng] = useState<number | null>(null);
+  const [birthLat, setBirthLat] = useState<number | null>(
+    profile?.birth_lat ?? null
+  );
+  const [birthLng, setBirthLng] = useState<number | null>(
+    profile?.birth_lng ?? null
+  );
   const [birthPlaceName, setBirthPlaceName] = useState<string | null>(
     profile?.birth_place_name || null
   );
-  const [gender, setGender] = useState<'M' | 'F' | null>(null);
+  const [selectedTimezone, setSelectedTimezone] = useState<TimezoneOption | null>(
+    profile?.birth_timezone
+      ? (findTimezoneByIana(profile.birth_timezone) ?? matchTimezoneOption(profile.birth_timezone))
+      : null
+  );
+  const [gender, setGender] = useState<'M' | 'F' | null>(
+    profile?.gender ?? null
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -70,6 +87,7 @@ export default function ProfileEditModal({
       birth_lat: birthLat,
       birth_lng: birthLng,
       birth_place_name: birthPlaceName,
+      birth_timezone: selectedTimezone?.ianaName ?? null,
       gender,
     };
 
@@ -191,6 +209,8 @@ export default function ProfileEditModal({
                 <TimePicker
                   hideConfirm={true}
                   autoConfirm={true}
+                  initialHour={birthHour}
+                  initialMinute={birthMinute}
                   onSelect={(h, m) => {
                     setBirthHour(h);
                     setBirthMinute(m);
@@ -210,12 +230,55 @@ export default function ProfileEditModal({
                 <CityPicker
                   hideTitle={true}
                   hideConfirm={true}
+                  initialCity={
+                    birthPlaceName && birthLat && birthLng
+                      ? {
+                          name: birthPlaceName,
+                          lat: birthLat,
+                          lng: birthLng,
+                          timezone: selectedTimezone?.ianaName ?? undefined,
+                        }
+                      : null
+                  }
                   onSelect={(city) => {
                     setBirthLat(city?.lat || null);
                     setBirthLng(city?.lng || null);
                     setBirthPlaceName(city?.name || null);
+                    if (city?.timezone) {
+                      setSelectedTimezone(matchTimezoneOption(city.timezone));
+                    } else if (!city) {
+                      setSelectedTimezone(null);
+                    }
                   }}
                 />
+              </div>
+
+              <Divider />
+
+              <div>
+                <label
+                  className="block text-xs mb-3 tracking-wider"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t('timezone')}
+                </label>
+                {selectedTimezone ? (
+                  <TimezoneSelector
+                    selectedIana={selectedTimezone.ianaName}
+                    onChange={(tz) => setSelectedTimezone(tz)}
+                  />
+                ) : (
+                  <div
+                    className="w-full px-6 py-4 rounded-2xl text-lg font-medium"
+                    style={{
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      color: 'hsl(var(--muted-foreground) / 0.5)',
+                    }}
+                  >
+                    {t('unknown')}
+                  </div>
+                )}
               </div>
 
               <Divider />

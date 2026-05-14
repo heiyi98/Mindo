@@ -1,1 +1,22 @@
-{}
+{
+  "onboarding": {
+    "cityPicker": {
+      "label": "Città di nascita"
+    },
+    "timecity": {
+      "title": "Ora e luogo di nascita",
+      "description": "Più è preciso, più accurata è la lettura",
+      "next": "Continua"
+    },
+    "timezonePicker": {
+      "label": "Fuso orario",
+      "dstNote": "Ora legale"
+    }
+  },
+  "account": {
+    "profileModal": {
+      "timezone": "Fuso orario",
+      "unknown": "Sconosciuto"
+    }
+  }
+}

@@ -9,24 +9,26 @@ interface CityData {
   name: string;
   lat: number;
   lng: number;
+  timezone?: string;
 }
 
 interface CityPickerProps {
   onSelect: (cityData: CityData | null) => void;
   hideTitle?: boolean;
   hideConfirm?: boolean;
+  initialCity?: { name: string; lat: number; lng: number; timezone?: string } | null;
 }
 
-export default function CityPicker({ onSelect, hideTitle, hideConfirm }: CityPickerProps) {
+export default function CityPicker({ onSelect, hideTitle, hideConfirm, initialCity }: CityPickerProps) {
   const t = useTranslations('onboarding.cityPicker');
   const locale = useLocale();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialCity?.name ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<CityData[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<CityData | null>(null);
+  const [selectedCity, setSelectedCity] = useState<CityData | null>(initialCity ?? null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 500);

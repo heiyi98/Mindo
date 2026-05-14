@@ -53,12 +53,22 @@
     "cityPicker": {
       "title": "Where were you born?",
       "description": "Your birth city is used to calculate true solar time, which affects your birth hour. You can skip this.",
+      "label": "Birth City",
       "placeholder": "Search for a city...",
       "error": "Search failed. Please try again.",
       "noResults": "No cities found.",
       "confirm": "Next",
       "next": "Next",
       "skip": "Skip"
+    },
+    "timecity": {
+      "title": "Birth Time & Place",
+      "description": "The more precise, the more accurate your reading",
+      "next": "Continue"
+    },
+    "timezonePicker": {
+      "label": "Timezone",
+      "dstNote": "DST"
     },
     "genderPicker": {
       "title": "What is your birth gender?",
@@ -115,6 +125,8 @@
       "male": "Male",
       "female": "Female",
       "genderNote": "Used to calculate destiny cycle direction",
+      "timezone": "Timezone",
+      "unknown": "Unknown",
       "cancel": "Cancel",
       "save": "Save"
     },

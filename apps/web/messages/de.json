@@ -1,1 +1,22 @@
-{}
+{
+  "onboarding": {
+    "cityPicker": {
+      "label": "Geburtsstadt"
+    },
+    "timecity": {
+      "title": "Geburtszeit und -ort",
+      "description": "Je genauer, desto präziser die Deutung",
+      "next": "Weiter"
+    },
+    "timezonePicker": {
+      "label": "Zeitzone",
+      "dstNote": "Sommerzeit"
+    }
+  },
+  "account": {
+    "profileModal": {
+      "timezone": "Zeitzone",
+      "unknown": "Unbekannt"
+    }
+  }
+}

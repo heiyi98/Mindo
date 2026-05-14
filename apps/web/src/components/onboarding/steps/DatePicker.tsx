@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -21,6 +21,13 @@ export default function DatePicker({ onSelect, hideConfirm, autoConfirm, initial
   const [year, setYear] = useState<number>(initialYear ?? currentYear - 30);
   const [month, setMonth] = useState<number>(initialMonth ?? 1);
   const [day, setDay] = useState<number>(initialDay ?? 1);
+
+  useEffect(() => {
+    if (autoConfirm) {
+      onSelect(year, month, day);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);

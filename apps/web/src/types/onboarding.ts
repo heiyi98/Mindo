@@ -7,6 +7,7 @@ export interface OnboardingState {
   birthLat: number | null;
   birthLng: number | null;
   birthPlaceName: string | null;
+  birthTimezone: string | null;
   gender: 'M' | 'F' | null;
 }
 
@@ -19,6 +20,7 @@ export const EMPTY_ONBOARDING_STATE: OnboardingState = {
   birthLat: null,
   birthLng: null,
   birthPlaceName: null,
+  birthTimezone: null,
   gender: null,
 };
 

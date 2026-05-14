@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { birth_date, birth_time, birth_lat, birth_lng, birth_place_name, gender } = body;
+    const { birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone, gender } = body;
 
     if (!birth_date) {
       return NextResponse.json({ error: 'birth_date is required' }, { status: 400 });
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
         birth_lat: birth_lat || null,
         birth_lng: birth_lng || null,
         birth_place_name: birth_place_name || null,
+        birth_timezone: birth_timezone || null,
         is_self: true,
       }, {
         onConflict: 'user_id',

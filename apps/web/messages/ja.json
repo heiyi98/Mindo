@@ -1,1 +1,22 @@
-{}
+{
+  "onboarding": {
+    "cityPicker": {
+      "label": "出生地"
+    },
+    "timecity": {
+      "title": "出生時刻と場所",
+      "description": "正確なほど、より精密な読みができます",
+      "next": "続ける"
+    },
+    "timezonePicker": {
+      "label": "タイムゾーン",
+      "dstNote": "夏時間"
+    }
+  },
+  "account": {
+    "profileModal": {
+      "timezone": "タイムゾーン",
+      "unknown": "不明"
+    }
+  }
+}

@@ -11,6 +11,10 @@ interface Profile {
   birth_date: string;
   birth_time: string | null;
   birth_place_name: string | null;
+  birth_lat: number | null;
+  birth_lng: number | null;
+  birth_timezone: string | null;
+  gender: 'M' | 'F' | null;
   is_self: boolean;
 }
 
@@ -23,8 +27,14 @@ export default function ProfilesPage() {
 
   const fetchProfiles = () => {
     fetch('/api/profiles')
-      .then(res => res.json())
-      .then(data => setProfiles(data.profiles || []))
+      .then(res => {
+        console.log('[profiles] status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('[profiles] data:', data);
+        setProfiles(data.profiles || []);
+      })
       .finally(() => setLoading(false));
   };
 

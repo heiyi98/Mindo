@@ -9,15 +9,17 @@ interface TimePickerProps {
   onSelect: (hour: number | null, minute: number | null) => void;
   hideConfirm?: boolean;
   autoConfirm?: boolean;
+  initialHour?: number | null;
+  initialMinute?: number | null;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: i, label: i.toString().padStart(2, "0") }));
 const MINUTES = Array.from({ length: 60 }, (_, i) => ({ value: i, label: i.toString().padStart(2, "0") }));
 
-export default function TimePicker({ onSelect, hideConfirm, autoConfirm }: TimePickerProps) {
+export default function TimePicker({ onSelect, hideConfirm, autoConfirm, initialHour, initialMinute }: TimePickerProps) {
   const t = useTranslations('onboarding.timePicker');
-  const [h, setH] = useState<number | null>(null);
-  const [m, setM] = useState<number | null>(null);
+  const [h, setH] = useState<number | null>(initialHour ?? null);
+  const [m, setM] = useState<number | null>(initialMinute ?? null);
 
   const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;

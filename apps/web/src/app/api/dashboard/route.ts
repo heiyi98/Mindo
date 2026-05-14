@@ -88,7 +88,7 @@ export async function GET(request: Request) {
 
     let baziResult: ReturnType<typeof engine.calculate>;
     try {
-      baziResult = engine.calculate({ dateStr, lat, lng, timeUnknown });
+      baziResult = engine.calculate({ dateStr, lat, lng, timeUnknown, timezone: profile.birth_timezone || undefined });
     } catch (e: any) {
       console.log('[dashboard API] engine error:', e.message);
       throw e;

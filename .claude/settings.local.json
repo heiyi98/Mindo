@@ -57,7 +57,9 @@
       "Bash(git commit *)",
       "Bash(git config *)",
       "PowerShell(pnpm info *)",
-      "Bash(pnpm remove *)"
+      "Bash(pnpm remove *)",
+      "Bash(pnpm -r exec tsc --noEmit)",
+      "Bash(npx tsc *)"
     ]
   }
 }

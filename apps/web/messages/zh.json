@@ -53,12 +53,22 @@
     "cityPicker": {
       "title": "你出生在哪里？",
       "description": "出生城市用于计算真太阳时，影响时柱的精确度。若不清楚可以跳过。",
+      "label": "出生城市",
       "placeholder": "搜索城市...",
       "error": "搜索失败，请重试。",
       "noResults": "未找到相关城市。",
       "confirm": "下一步",
       "next": "下一步",
       "skip": "跳过"
+    },
+    "timecity": {
+      "title": "出生时间与地点",
+      "description": "尽量精确，这将影响命盘的准确性",
+      "next": "继续"
+    },
+    "timezonePicker": {
+      "label": "时区",
+      "dstNote": "含夏令时"
     },
     "genderPicker": {
       "title": "你的出生性别是？",
@@ -115,6 +125,8 @@
       "male": "男",
       "female": "女",
       "genderNote": "用于推算大运方向",
+      "timezone": "时区",
+      "unknown": "未知",
       "cancel": "取消",
       "save": "保存"
     },

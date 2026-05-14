@@ -12,7 +12,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name } = body;
+  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone, gender } = body;
 
   // 确认档案属于该用户
   const { data: existing } = await supabase
@@ -40,6 +40,8 @@ export async function PATCH(
       birth_lat: birth_lat || null,
       birth_lng: birth_lng || null,
       birth_place_name: birth_place_name || null,
+      birth_timezone: birth_timezone || null,
+      gender: gender ?? null,
     })
     .eq('id', id);
 

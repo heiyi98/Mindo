@@ -114,6 +114,13 @@ packages/config/   ← 共享TypeScript/ESLint配置
 - [x] toBaziSnapshot 转换函数
 - [x] formatBaziDataSheet 格式化函数（供 Gemini API 使用）
 - [x] formatBaziDataSheet 全面汉化（天干、地支、五行、宫位、十神、关系类型）
+- [x] Onboarding时间+城市合并为一步，添加时区选择器（TimezoneSelector，38条，含夏令时标注）
+- [x] ProfileEditModal预填修复（城市/时区/性别/经纬度）
+- [x] ProfileSwitcher支持全部档案滚动显示
+- [x] profiles表补充gender列，PATCH handler修复gender保存
+- [x] DatePicker autoConfirm挂载时立即同步初始值
+- [x] 真太阳时修复（geo-tz行政时区查询，支持印度+5:30、尼泊尔+5:45等特殊时区）
+- [x] ProfileCard组件（顶部显示姓名、生日、年龄、真太阳时）
 
 ## 架构决策记录（已锁定，不得随意更改）
 

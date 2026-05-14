@@ -4,15 +4,18 @@ import { createClient } from '@/lib/supabase/server';
 // 获取用户所有档案
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log('[profiles GET] user:', user?.id, 'authError:', authError?.message);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, display_name, birth_date, birth_time, birth_place_name, is_self, created_at')
+    .select('id, display_name, birth_date, birth_time, birth_place_name, birth_lat, birth_lng, birth_timezone, gender, is_self, created_at')
     .eq('user_id', user.id)
     .order('is_self', { ascending: false })
     .order('created_at', { ascending: true });
+
+  console.log('[profiles GET] profiles:', profiles?.length, 'error:', profilesError?.message, 'code:', profilesError?.code);
 
   return NextResponse.json({ profiles: profiles || [] });
 }
@@ -24,7 +27,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name } = body;
+  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone } = body;
 
   if (!display_name || !birth_date) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -56,6 +59,7 @@ export async function POST(request: Request) {
       birth_lat: birth_lat || null,
       birth_lng: birth_lng || null,
       birth_place_name: birth_place_name || null,
+      birth_timezone: birth_timezone || null,
       is_self: false,
     })
     .select()
