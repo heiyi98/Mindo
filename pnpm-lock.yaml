@@ -38,9 +38,6 @@ importers:
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      geo-tz:
-        specifier: ^8.1.7
-        version: 8.1.7
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)

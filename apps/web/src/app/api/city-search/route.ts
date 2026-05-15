@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { find } from 'geo-tz';
+import { getAdministrativeTimezone } from '@/lib/administrative-timezones';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=${lang}&limit=5`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=${lang}&limit=5&addressdetails=1`,
       {
         headers: {
           'User-Agent': 'Mindo-Quantum-Engine/1.0',
@@ -25,13 +25,14 @@ export async function GET(request: Request) {
     const results = data.map((item: any) => {
       const lat = parseFloat(item.lat);
       const lng = parseFloat(item.lon);
-      let timezone = 'UTC';
-      try {
-        const tzNames = find(lat, lng);
-        timezone = tzNames[0] || 'UTC';
-      } catch {
-        timezone = 'UTC';
-      }
+
+      // 从addressdetails读取国家代码和省级代码
+      const countryCode = item.address?.country_code || '';
+      const stateCode = item.address?.['ISO3166-2-lvl4'] || '';
+
+      // 查行政时区映射表
+      const timezone = getAdministrativeTimezone(countryCode, stateCode);
+
       return {
         name: item.display_name,
         lat,
