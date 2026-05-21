@@ -1,4 +1,3 @@
-import { getItems } from '@alheimsins/b5-johnson-120-ipip-neo-pi-r';
 import type { QuestionItem } from './types';
 
 const FACET_MAP: Record<string, Record<number, string>> = {
@@ -9,44 +8,46 @@ const FACET_MAP: Record<string, Record<number, string>> = {
   C: { 1: 'SelfEfficacy', 2: 'Orderliness', 3: 'Dutifulness', 4: 'AchievementStriving', 5: 'SelfDiscipline', 6: 'Cautiousness' },
 };
 
-// 语言代码映射：zh→zh-cn（包不支持vi，降级为en）
-const LANG_MAP: Record<string, string> = {
-  zh: 'zh-cn',
-  en: 'en',
-  fr: 'fr',
-  es: 'es',
-  ja: 'ja',
-  ko: 'ko',
-  it: 'it',
-  de: 'de',
-};
+// 题目逻辑顺序：N(1-24), E(25-48), O(49-72), A(73-96), C(97-120)
+// 每个domain 6个facet，每个facet 4道题（交替正反向）
+const QUESTION_ORDER: { domain: string; facet: number; direction: number }[] = [];
 
-export interface AlheimsinsQuestion {
-  id: string;
-  text: string;
-  domain: string;
-  facet: number;
-  keyed: string;
-}
-
-export function getAlheimsinsItems(locale: string): AlheimsinsQuestion[] {
-  const lang = LANG_MAP[locale] || 'en';
-  try {
-    return getItems(lang) as AlheimsinsQuestion[];
-  } catch {
-    return getItems('en') as AlheimsinsQuestion[];
+const DOMAIN_ORDER = ['N', 'E', 'O', 'A', 'C'];
+for (const domain of DOMAIN_ORDER) {
+  for (let facet = 1; facet <= 6; facet++) {
+    QUESTION_ORDER.push({ domain, facet, direction: 1 });
+    QUESTION_ORDER.push({ domain, facet, direction: -1 });
+    QUESTION_ORDER.push({ domain, facet, direction: 1 });
+    QUESTION_ORDER.push({ domain, facet, direction: -1 });
   }
 }
 
-export function convertToQuestionItems(items: AlheimsinsQuestion[]): QuestionItem[] {
-  return items.map(item => ({
-    id: item.id,
-    domain: item.domain as any,
-    facet: FACET_MAP[item.domain]?.[item.facet] as any,
-    direction: item.keyed === 'plus' ? 1 : -1,
-  }));
+export interface BigFiveQuestion {
+  id: string;
+  text: string;
+  domain: string;
+  facet: string;
+  direction: number;
 }
 
-export function getQuestionItemsForLocale(locale: string): QuestionItem[] {
-  return convertToQuestionItems(getAlheimsinsItems(locale));
+export function buildQuestions(
+  questionTexts: Record<string, string>
+): BigFiveQuestion[] {
+  return QUESTION_ORDER.map((meta, index) => {
+    const id = `q${String(index + 1).padStart(3, '0')}`;
+    const facetName = FACET_MAP[meta.domain][meta.facet];
+    return {
+      id,
+      text: questionTexts[id] || id,
+      domain: meta.domain,
+      facet: facetName,
+      direction: meta.direction,
+    };
+  });
+}
+
+// 保留向后兼容的导出
+export function getQuestionItemsForLocale(_locale: string): QuestionItem[] {
+  // 此函数不再使用，题目文本由前端从翻译文件读取
+  return [];
 }

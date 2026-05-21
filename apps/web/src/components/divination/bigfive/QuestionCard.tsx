@@ -1,5 +1,4 @@
 'use client';
-import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
 interface QuestionCardProps {
@@ -21,10 +20,7 @@ export default function QuestionCard({
   const tScale = useTranslations('bigfive.scale');
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+    <div
       className="p-5 rounded-2xl"
       style={{
         background: 'hsl(var(--card))',
@@ -80,6 +76,6 @@ export default function QuestionCard({
           {tScale('agree')}
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 }

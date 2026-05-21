@@ -1,6 +1,6 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
-import { useLocale } from 'next-intl';
+import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import type { BigFiveUserAnswer } from '@mindo/core';
 
 interface Question {
@@ -8,52 +8,52 @@ interface Question {
   text: string;
 }
 
-const QUESTIONS_PER_PAGE = 5;
 const TOTAL_QUESTIONS = 120;
 
 export function useBigFiveQuiz() {
-  const locale = useLocale();
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [loadingQuestions, setLoadingQuestions] = useState(true);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [currentPage, setCurrentPage] = useState(0);
+  const tQuestions = useTranslations('bigfive.questions');
 
-  useEffect(() => {
-    setLoadingQuestions(true);
-    fetch(`/api/psychology/bigfive/questions?locale=${locale}`)
-      .then(res => res.json())
-      .then(data => setQuestions(data.questions || []))
-      .catch(() => {
-        fetch('/api/psychology/bigfive/questions?locale=en')
-          .then(res => res.json())
-          .then(data => setQuestions(data.questions || []));
-      })
-      .finally(() => setLoadingQuestions(false));
-  }, [locale]);
-
-  const totalPages = Math.ceil(TOTAL_QUESTIONS / QUESTIONS_PER_PAGE);
-
-  const currentQuestions = questions.slice(
-    currentPage * QUESTIONS_PER_PAGE,
-    (currentPage + 1) * QUESTIONS_PER_PAGE
+  const questions: Question[] = Array.from(
+    { length: TOTAL_QUESTIONS },
+    (_, i) => {
+      const id = `q${String(i + 1).padStart(3, '0')}`;
+      return { id, text: tQuestions(id) };
+    }
   );
 
+  const [answers, setAnswersState] = useState<Record<string, number>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const currentQuestion = questions[currentIndex];
+
   const setAnswer = useCallback((questionId: string, score: number) => {
-    setAnswers(prev => ({ ...prev, [questionId]: score }));
+    // 先记录答案（立即显示选中效果）
+    setAnswersState(prev => ({ ...prev, [questionId]: score }));
+    // 150ms后跳下一题（用户能看到选中效果，又感觉流畅）
+    setTimeout(() => {
+      setCurrentIndex(prev => {
+        if (prev < TOTAL_QUESTIONS - 1) return prev + 1;
+        return prev;
+      });
+    }, 150);
   }, []);
 
-  const currentPageAnswered = currentQuestions.length > 0 &&
-    currentQuestions.every(q => answers[q.id] !== undefined);
+  const goNext = useCallback(() => {
+    setCurrentIndex(prev => Math.min(prev + 1, TOTAL_QUESTIONS - 1));
+  }, []);
 
-  const nextPage = useCallback(() => {
-    if (currentPage < totalPages - 1) setCurrentPage(p => p + 1);
-  }, [currentPage, totalPages]);
+  const goPrev = useCallback(() => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0));
+  }, []);
 
-  const prevPage = useCallback(() => {
-    if (currentPage > 0) setCurrentPage(p => p - 1);
-  }, [currentPage]);
+  const isComplete = Object.keys(answers).length === TOTAL_QUESTIONS;
+  const isLastQuestion = currentIndex === TOTAL_QUESTIONS - 1;
+  const currentAnswered = answers[currentQuestion?.id] !== undefined;
+  const nextAnswered = currentIndex < TOTAL_QUESTIONS - 1
+    ? answers[questions[currentIndex + 1]?.id] !== undefined
+    : false;
 
-  const getFormattedAnswers = useCallback((): BigFiveUserAnswer[] => {
+  const getAnswersArray = useCallback((): BigFiveUserAnswer[] => {
     return Object.entries(answers).map(([questionId, score]) => ({
       questionId,
       score,
@@ -61,28 +61,25 @@ export function useBigFiveQuiz() {
   }, [answers]);
 
   const reset = useCallback(() => {
-    setAnswers({});
-    setCurrentPage(0);
+    setAnswersState({});
+    setCurrentIndex(0);
   }, []);
 
-  const progress = Math.round(
-    (Object.keys(answers).length / TOTAL_QUESTIONS) * 100
-  );
-
   return {
-    currentPage,
-    totalPages,
-    currentQuestions,
     questions,
-    loadingQuestions,
+    currentQuestion,
+    currentIndex,
+    totalQuestions: TOTAL_QUESTIONS,
     answers,
     setAnswer,
-    currentPageAnswered,
-    nextPage,
-    prevPage,
-    getFormattedAnswers,
+    goNext,
+    goPrev,
+    isComplete,
+    isLastQuestion,
+    currentAnswered,
+    nextAnswered,
+    getAnswersArray,
     reset,
-    progress,
-    isComplete: Object.keys(answers).length === TOTAL_QUESTIONS,
+    loadingQuestions: false,
   };
 }

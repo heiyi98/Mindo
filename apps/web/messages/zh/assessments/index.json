@@ -1,0 +1,26 @@
+{
+  "bazi": {
+    "name": "四柱八字",
+    "description": "基于出生年月日时的命理排盘"
+  },
+  "ziwei": {
+    "name": "紫微斗数",
+    "description": "以出生信息为基础的古典星命学"
+  },
+  "western": {
+    "name": "西洋星盘",
+    "description": "基于出生时刻行星位置的占星分析"
+  },
+  "bigfive": {
+    "name": "大五人格",
+    "description": "五大维度的科学人格测量"
+  },
+  "mbti": {
+    "name": "MBTI",
+    "description": "迈尔斯-布里格斯人格类型指标"
+  },
+  "enneagram": {
+    "name": "九型人格",
+    "description": "九种人格类型系统"
+  }
+}

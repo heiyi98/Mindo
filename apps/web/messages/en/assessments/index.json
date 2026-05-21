@@ -1,0 +1,26 @@
+{
+  "bazi": {
+    "name": "Four Pillars",
+    "description": "Your birth chart based on year, month, day and hour pillars"
+  },
+  "ziwei": {
+    "name": "Purple Star Astrology",
+    "description": "Ancient Chinese astrological system based on birth data"
+  },
+  "western": {
+    "name": "Western Astrology",
+    "description": "Birth chart based on planetary positions at time of birth"
+  },
+  "bigfive": {
+    "name": "Big Five Personality",
+    "description": "Scientific personality assessment across five dimensions"
+  },
+  "mbti": {
+    "name": "MBTI",
+    "description": "Myers-Briggs Type Indicator personality framework"
+  },
+  "enneagram": {
+    "name": "Enneagram",
+    "description": "Nine-type personality system"
+  }
+}

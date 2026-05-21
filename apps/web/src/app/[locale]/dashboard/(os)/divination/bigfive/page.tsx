@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
 import QuestionCard from '@/components/divination/bigfive/QuestionCard';
@@ -31,19 +31,20 @@ export default function BigFivePage() {
   }, [setContent]);
 
   const {
-    currentPage,
-    totalPages,
-    currentQuestions,
+    currentQuestion,
+    currentIndex,
+    totalQuestions,
     loadingQuestions,
     answers,
     setAnswer,
-    currentPageAnswered,
-    nextPage,
-    prevPage,
-    getFormattedAnswers,
+    goNext,
+    goPrev,
+    getAnswersArray,
     reset,
-    progress,
     isComplete,
+    isLastQuestion,
+    currentAnswered,
+    nextAnswered,
   } = useBigFiveQuiz();
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function BigFivePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          answers: getFormattedAnswers(),
+          answers: getAnswersArray(),
           profile_id: currentProfile.id,
           locale,
         }),
@@ -209,7 +210,7 @@ export default function BigFivePage() {
           className="text-xs font-light"
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
-          {currentPage + 1} / {totalPages}
+          {currentIndex + 1} / {totalQuestions}
         </span>
       </div>
 
@@ -217,35 +218,25 @@ export default function BigFivePage() {
         className="w-full h-1 rounded-full mb-8 overflow-hidden"
         style={{ background: 'hsl(var(--muted))' }}
       >
-        <motion.div
-          className="h-full rounded-full"
-          style={{ background: 'hsl(var(--foreground) / 0.4)' }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3 }}
+        <div
+          className="h-full rounded-full transition-none"
+          style={{
+            background: 'hsl(var(--foreground) / 0.4)',
+            width: `${Math.round(Object.keys(answers).length / 120 * 100)}%`,
+          }}
         />
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentPage}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-3 mb-8"
-        >
-          {currentQuestions.map((q, idx) => (
-            <QuestionCard
-              key={q.id}
-              questionId={q.id}
-              questionText={q.text}
-              index={idx}
-              currentScore={answers[q.id]}
-              onAnswer={(score) => setAnswer(q.id, score)}
-            />
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      <div className="space-y-3 mb-8">
+        <QuestionCard
+          key={currentQuestion.id}
+          questionId={currentQuestion.id}
+          questionText={currentQuestion.text}
+          index={0}
+          currentScore={answers[currentQuestion.id]}
+          onAnswer={(score) => setAnswer(currentQuestion.id, score)}
+        />
+      </div>
 
       {error && (
         <p className="text-sm mb-4" style={{ color: 'hsl(var(--destructive))' }}>
@@ -255,8 +246,8 @@ export default function BigFivePage() {
 
       <div className="flex items-center justify-between">
         <button
-          onClick={prevPage}
-          disabled={currentPage === 0}
+          onClick={goPrev}
+          disabled={currentIndex === 0}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-light disabled:opacity-30 transition-opacity"
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
@@ -264,7 +255,7 @@ export default function BigFivePage() {
           {t('prev')}
         </button>
 
-        {isComplete ? (
+        {isLastQuestion && currentAnswered ? (
           <button
             onClick={handleSubmit}
             className="px-8 py-3 rounded-full text-sm font-light transition-all"
@@ -277,8 +268,8 @@ export default function BigFivePage() {
           </button>
         ) : (
           <button
-            onClick={nextPage}
-            disabled={!currentPageAnswered || currentPage === totalPages - 1}
+            onClick={goNext}
+            disabled={!nextAnswered && !currentAnswered}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-light disabled:opacity-30 transition-opacity"
             style={{ color: 'hsl(var(--foreground))' }}
           >

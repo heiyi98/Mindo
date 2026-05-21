@@ -11,7 +11,8 @@ export * from './bazi/timeline';
 
 // 心理测量
 export { calculateBigFive, calculateBigFiveWithLocale, getQuestionCount } from './psychology/bigfive';
-export { getAlheimsinsItems, getQuestionItemsForLocale } from './psychology/bigfive/alheimsins';
+export { buildQuestions, getQuestionItemsForLocale } from './psychology/bigfive/alheimsins';
+export type { BigFiveQuestion } from './psychology/bigfive/alheimsins';
 export type {
   BigFiveDomain,
   BigFiveFacet,

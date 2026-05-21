@@ -1,5 +1,6 @@
 export { calculateBigFive, calculateBigFiveWithLocale, getQuestionCount } from './engine';
-export { getAlheimsinsItems, getQuestionItemsForLocale } from './alheimsins';
+export { buildQuestions, getQuestionItemsForLocale } from './alheimsins';
+export type { BigFiveQuestion } from './alheimsins';
 export type {
   BigFiveDomain,
   BigFiveFacet,

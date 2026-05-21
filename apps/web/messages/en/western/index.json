@@ -1,0 +1,35 @@
+{
+  "title": "Western Astrology",
+  "fullMode": "Full Chart",
+  "dateMode": "Date Only",
+  "dateModeNote": "Add your birth time and location for a complete chart with house placements.",
+  "moonWarning": "Your Moon may be in {sign1} or {sign2} — birth time needed for certainty.",
+  "planets": "Planets",
+  "houses": "Houses",
+  "planetNames": {
+    "Sun": "Sun",
+    "Moon": "Moon",
+    "Mercury": "Mercury",
+    "Venus": "Venus",
+    "Mars": "Mars",
+    "Jupiter": "Jupiter",
+    "Saturn": "Saturn",
+    "Uranus": "Uranus",
+    "Neptune": "Neptune",
+    "Pluto": "Pluto"
+  },
+  "signs": {
+    "Aries": "Aries",
+    "Taurus": "Taurus",
+    "Gemini": "Gemini",
+    "Cancer": "Cancer",
+    "Leo": "Leo",
+    "Virgo": "Virgo",
+    "Libra": "Libra",
+    "Scorpio": "Scorpio",
+    "Sagittarius": "Sagittarius",
+    "Capricorn": "Capricorn",
+    "Aquarius": "Aquarius",
+    "Pisces": "Pisces"
+  }
+}

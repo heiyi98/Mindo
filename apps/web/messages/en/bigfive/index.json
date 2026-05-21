@@ -1,0 +1,51 @@
+{
+  "title": "Big Five Personality",
+  "resultTitle": "Your Personality Profile",
+  "prev": "Previous",
+  "next": "Next",
+  "submit": "View Results",
+  "retake": "Retake",
+  "scale": {
+    "disagree": "Disagree",
+    "agree": "Agree"
+  },
+  "domains": {
+    "O": "Openness",
+    "C": "Conscientiousness",
+    "E": "Extraversion",
+    "A": "Agreeableness",
+    "N": "Neuroticism"
+  },
+  "facets": {
+    "Anxiety": "Anxiety",
+    "Anger": "Anger",
+    "Depression": "Depression",
+    "SelfConsciousness": "Self-Consciousness",
+    "Immoderation": "Immoderation",
+    "Vulnerability": "Vulnerability",
+    "Friendliness": "Friendliness",
+    "Gregariousness": "Gregariousness",
+    "Assertiveness": "Assertiveness",
+    "ActivityLevel": "Activity Level",
+    "ExcitementSeeking": "Excitement-Seeking",
+    "Cheerfulness": "Cheerfulness",
+    "Imagination": "Imagination",
+    "ArtisticInterests": "Artistic Interests",
+    "Emotionality": "Emotionality",
+    "Adventurousness": "Adventurousness",
+    "Intellect": "Intellect",
+    "Liberalism": "Liberalism",
+    "Trust": "Trust",
+    "Morality": "Morality",
+    "Altruism": "Altruism",
+    "Cooperation": "Cooperation",
+    "Modesty": "Modesty",
+    "Sympathy": "Sympathy",
+    "SelfEfficacy": "Self-Efficacy",
+    "Orderliness": "Orderliness",
+    "Dutifulness": "Dutifulness",
+    "AchievementStriving": "Achievement-Striving",
+    "SelfDiscipline": "Self-Discipline",
+    "Cautiousness": "Cautiousness"
+  }
+}

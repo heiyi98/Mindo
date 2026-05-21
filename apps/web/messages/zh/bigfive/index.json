@@ -1,0 +1,51 @@
+{
+  "title": "大五人格测量",
+  "resultTitle": "你的人格图谱",
+  "prev": "上一页",
+  "next": "下一页",
+  "submit": "查看结果",
+  "retake": "重新测量",
+  "scale": {
+    "disagree": "不符合",
+    "agree": "符合"
+  },
+  "domains": {
+    "O": "开放性",
+    "C": "尽责性",
+    "E": "外向性",
+    "A": "宜人性",
+    "N": "神经质"
+  },
+  "facets": {
+    "Anxiety": "焦虑",
+    "Anger": "愤怒",
+    "Depression": "抑郁",
+    "SelfConsciousness": "自我意识",
+    "Immoderation": "缺乏节制",
+    "Vulnerability": "脆弱性",
+    "Friendliness": "亲和力",
+    "Gregariousness": "合群性",
+    "Assertiveness": "独断性",
+    "ActivityLevel": "活力",
+    "ExcitementSeeking": "寻求刺激",
+    "Cheerfulness": "积极情绪",
+    "Imagination": "想象力",
+    "ArtisticInterests": "艺术兴趣",
+    "Emotionality": "情感丰富",
+    "Adventurousness": "冒险性",
+    "Intellect": "求知欲",
+    "Liberalism": "开明性",
+    "Trust": "信任",
+    "Morality": "道德感",
+    "Altruism": "利他",
+    "Cooperation": "合作性",
+    "Modesty": "谦逊",
+    "Sympathy": "同理心",
+    "SelfEfficacy": "自我效能",
+    "Orderliness": "条理性",
+    "Dutifulness": "责任感",
+    "AchievementStriving": "追求成就",
+    "SelfDiscipline": "自律",
+    "Cautiousness": "审慎"
+  }
+}

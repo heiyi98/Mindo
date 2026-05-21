@@ -8,7 +8,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@alheimsins/b5-johnson-120-ipip-neo-pi-r": "^6.0.13",
     "astronomy-engine": "^2.1.19",
     "geo-tz": "^8.1.7",
     "lunar-typescript": "^1.8.6",
