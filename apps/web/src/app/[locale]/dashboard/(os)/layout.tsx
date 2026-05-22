@@ -1,7 +1,7 @@
 import { TopBarProvider } from '@/components/os/TopBarContext';
 import { TopBar } from '@/components/os/TopBar';
 import { Dock } from '@/components/os/Dock';
-import { requireAuth } from '@/lib/auth/requireAuth';
+import { requireProfile } from '@/lib/auth/requireAuth';
 import { CurrentProfileProvider } from '@/components/os/CurrentProfileContext';
 
 export default async function OSLayout({
@@ -12,7 +12,7 @@ export default async function OSLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  await requireAuth(locale);
+  await requireProfile(locale);
 
   return (
     <CurrentProfileProvider>

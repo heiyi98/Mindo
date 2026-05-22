@@ -209,7 +209,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     { pos: 'YearStem',  stem: pillars.year.stem  },
     { pos: 'MonthStem', stem: pillars.month.stem },
     { pos: 'DayStem',   stem: pillars.day.stem   },
-    { pos: 'HourStem',  stem: pillars.hour.stem  },
+    ...(pillars.hour ? [{ pos: 'HourStem' as GongWeiPos, stem: pillars.hour.stem }] : []),
   ];
 
   const tianGanNodes: TianGanNode[] = posMap.map(({ pos, stem }) => ({
@@ -225,12 +225,14 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     { pos: 'YearBranch',  branch: pillars.year.branch  },
     { pos: 'MonthBranch', branch: pillars.month.branch },
     { pos: 'DayBranch',   branch: pillars.day.branch   },
-    { pos: 'HourBranch',  branch: pillars.hour.branch  },
+    ...(pillars.hour ? [{ pos: 'HourBranch' as GongWeiPos, branch: pillars.hour.branch }] : []),
   ];
 
   const cangGanNodes: CangGanNode[] = [];
   for (const { pos, branch } of branchPosMap) {
-    for (const { stem, qi, score } of DIZHI_CANGGAN[branch]) {
+    const cangGanList = DIZHI_CANGGAN[branch];
+    if (!cangGanList) continue;
+    for (const { stem, qi, score } of cangGanList) {
       cangGanNodes.push({
         id: `${pos}_${stem}_${qi}`,
         branchPos: pos,
@@ -319,7 +321,8 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   const diZhiRelations: DiZhiRelation[] = [];
   const branches = [
     pillars.year.branch, pillars.month.branch,
-    pillars.day.branch, pillars.hour.branch
+    pillars.day.branch,
+    ...(pillars.hour ? [pillars.hour.branch] : []),
   ];
   const branchSet = new Set(branches);
 

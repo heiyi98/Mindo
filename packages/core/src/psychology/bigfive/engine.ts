@@ -9,7 +9,6 @@ import {
 } from './types';
 import { ipipNeo120Dictionary } from './dictionary';
 import { bigFiveReportSchema } from './schema';
-import { getQuestionItemsForLocale } from './alheimsins';
 
 const DOMAIN_FACETS: Record<BigFiveDomain, BigFiveFacet[]> = {
   N: ['Anxiety', 'Anger', 'Depression', 'SelfConsciousness', 'Immoderation', 'Vulnerability'],
@@ -55,13 +54,6 @@ export function calculateBigFive(
   };
 
   return bigFiveReportSchema.parse(reportData);
-}
-
-export function calculateBigFiveWithLocale(
-  answers: UserAnswer[],
-  locale: string
-): BigFiveReport {
-  return calculateBigFive(answers, getQuestionItemsForLocale(locale));
 }
 
 export function getQuestionCount(): number {

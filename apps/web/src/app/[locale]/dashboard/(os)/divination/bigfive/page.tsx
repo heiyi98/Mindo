@@ -232,7 +232,6 @@ export default function BigFivePage() {
           key={currentQuestion.id}
           questionId={currentQuestion.id}
           questionText={currentQuestion.text}
-          index={0}
           currentScore={answers[currentQuestion.id]}
           onAnswer={(score) => setAnswer(currentQuestion.id, score)}
         />

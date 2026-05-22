@@ -1,147 +1,350 @@
-@AGENTS.md
+\# Mindo — 项目记忆文件
 
-# Mindo — 项目记忆文件
 
-## 项目简介
+
+\## 项目简介
+
 全球化赛博玄学Web App，集命理测算、心理测量、社区论坛、社交匹配、周边商城于一体。
 
-- 生产环境URL：https://mindo-web.vercel.app
-- GitHub仓库：https://github.com/heiyi98/Mindo
 
-## 当前技术栈
-- Monorepo工具：pnpm workspace + Turborepo
-- 前端：Next.js 16 + TypeScript + Tailwind CSS v4 + Framer Motion
-- 国际化：next-intl 4.x
-- 数据库：Supabase（PostgreSQL + RLS）
-- 图标：lucide-react
-- 部署：Vercel（国际版）/ 阿里云（中国版，待定）
 
-## Monorepo结构
+\- 生产环境URL：https://mindo-web.vercel.app
+
+\- GitHub仓库：https://github.com/heiyi98/Mindo
+
+\- 本地路径：E:\\destinos
+
+
+
+\## 当前技术栈
+
+\- Monorepo工具：pnpm workspace + Turborepo
+
+\- 前端：Next.js 16 + TypeScript + Tailwind CSS v4 + Framer Motion
+
+\- 国际化：next-intl 4.x
+
+\- 数据库：Supabase（PostgreSQL + RLS）
+
+\- 图标：lucide-react
+
+\- 部署：Vercel（国际版）/ 阿里云（中国版，待定）
+
+\- 开发环境：Windows PowerShell 5.x，Cursor IDE
+
+
+
+\## Monorepo结构
+
+```
+
 apps/web/          ← Next.js前端主应用
+
 packages/core/     ← 命理+心理计算引擎（纯逻辑，无UI依赖）
+
 packages/db/       ← 数据库schema和Supabase客户端
+
 packages/ui/       ← 共享UI组件库
+
 packages/config/   ← 共享TypeScript/ESLint配置
 
-## 多语言规则（铁律，不得违反）
-1. 任何组件里禁止出现硬编码的中文或英文用户可见字符串
-2. 所有文字必须通过 useTranslations() 或 getTranslations() 读取
-3. 翻译文件位置：apps/web/messages/{locale}.json
-4. 当前支持语言：en（默认）、zh、fr、es、ja、ko、vi
-5. 新增功能时必须同步更新 en.json 和 zh.json，其他语言留空占位
+```
 
-## 路由结构
-/                  → 自动重定向到用户浏览器语言
-/{locale}/         → 首页
-/{locale}/divination/ → 测算模块
-/{locale}/forum/   → 论坛模块
-/{locale}/shop/    → 商城模块
-/{locale}/messages/ → 私信模块
-/{locale}/profile/ → 个人中心
 
-## 架构铁律
-1. 模块完全解耦：任何单一模块的修改不得影响其他模块
-2. AI调用必须走后端API路由，禁止在前端暴露任何Prompt
-3. 所有颜色和间距必须引用设计系统变量，禁止硬编码
-4. 计算结果必须存为快照，禁止重复触发计算
-5. packages/core 禁止引入任何前端框架依赖
 
-## 已完成模块
-- [x] Monorepo基础结构
-- [x] next-intl多语言框架（en/zh验证通过）
-- [x] 路由中间件（自动语言重定向）
-- [x] 设计系统（暗色模式，Apple配色，毛玻璃变量）
-- [x] 双轴导航框架（左侧48px Dock + 顶部48px状态栏 + 主内容区）
-- [x] 顶部状态栏Context系统（各页面可独立注入内容）
-- [x] 数据库Schema（5张表：users/profiles/snapshots/subscriptions/purchases，已部署到Supabase）
-- [x] Supabase项目连接（环境变量已配置）
-- [x] packages/core 架构重构（bazi/、psychology/、astrology/ 三模块分离）
-  - 删除旧文件（engine.ts、energy-engine.ts、relations.ts、destiny-timeline.ts、pro-engine.ts）
-  - bazi/engine.ts（八字排盘 + 真太阳时）
-  - bazi/analysis.ts（七步分析引擎：天干五合/相冲、地支关系、透根、能量计算、十神挂载、影响力汇总）
-  - bazi/timeline.ts（大运流年时间轴）
-  - bazi/pro.ts（专业模式入口）
-  - bazi/types.ts（19个类型定义：TianGan/DiZhi/BaziAnalysis等）
-- [x] 八字分析引擎 bazi/analysis.ts（analyzeBazi 函数，输出 BaziAnalysis 完整结构）
-- [x] 身份认证（Magic Link邮件登录 + Google OAuth，Supabase Auth）
-- [x] 认证回调路由（/api/auth/confirm 处理OTP，/api/auth/callback 处理OAuth）
-- [x] Onboarding流程（DatePicker/TimePicker/CityPicker/GenderPicker四步骤）
-- [x] Onboarding状态管理（sessionStorage，登录后写入数据库）
-- [x] 城市搜索API（OpenStreetMap Nominatim）
-- [x] onboarding/complete API路由（写入profiles表）
-- [x] 落地页（Logo + Slogan + Begin按钮 + 语言切换）
-- [x] 路由重构（OS主框架移至/dashboard，落地页分离）
-- [x] 登录后自动跳转逻辑（有档案→dashboard，无档案→onboarding）
-- [x] stem_content表（十天干软内容，支持多语言、多内容类型、jsonb灵活存储）
-- [x] celebrities表（名人数据，按stem_id分类，支持排序和启用控制）
-- [x] 引导页Teaser（日主卡片、五行五维图、名人轮播、登录按钮）
-- [x] 八字计算API路由（/api/bazi/calculate）
-- [x] 软内容查询API路由（/api/stem-content）
-- [x] 名人查询API路由（/api/celebrities）
-- [x] 仪表盘主页（八字命盘、五行五维图、今日运势占位）
-- [x] 仪表盘数据API（/api/dashboard，含快照缓存机制）
-- [x] 根layout修复（html/body标签，dark class，globals.css）
-- [x] 主题切换系统（浅色/深色/跟随系统，localStorage持久化，防闪烁）
-- [x] ThemeToggle组件（顶部状态栏默认显示，各模块可覆盖）
-- [x] 登录保护（未登录访问dashboard自动跳转落地页）
-- [x] requireAuth / requireProfile 工具函数（src/lib/auth/requireAuth.ts）
-- [x] 档案切换（顶部状态栏左侧，切换后仪表盘数据更新）
-- [x] 账户管理页面（邮箱显示、退出登录、注销账户）
-- [x] 档案管理页面（列表、新增、编辑、删除）
-- [x] 档案编辑弹窗（名称、生日、时间、城市、性别）
-- [x] 资产管理页面（付费快照存档）
-- [x] 大五人格测量模块（算法引擎、120题答题流程、结果雷达图和得分卡）
-- [x] 大五人格API（/api/psychology/bigfive，含快照缓存）
-- [x] 测算模块注册表（src/config/assessments.ts，单一数据源）
-- [x] 测算状态查询API（/api/assessments/status）
-- [x] 测算中心页面（/dashboard/divination，按命理/心理分组）
-- [x] CurrentProfile Context（OS层共享档案状态）
-- [x] 语言切换组件（含数据库偏好持久化）
-- [x] 大五人格缓存读取（进入页面检查历史结果，支持重新测量）
-- [x] 多语言系统改进（登录后自动应用语言偏好，落地页下拉菜单，账户页语言设置）
-- [x] 支持9种语言（en/zh/fr/es/ja/ko/vi/it/de）
-- [x] 西洋星盘模块（astronomy-engine MIT协议，日期/时分双模式，Placidus宫位+高纬度自动降级Whole Sign，月亮薛定谔机制）
-- [x] 西洋星盘前端（圆形星盘图SVG、行星列表、宫位列表）
-- [x] 量表类切换档案自动进入答题流程
-- [x] 部署到Vercel（https://mindo-web.vercel.app）
-- [x] Supabase Auth配置（Google OAuth + Magic Link）
-- [x] Lemon Squeezy付费系统（checkout API、webhook处理，/api/payments/checkout + /api/payments/webhook）
-- [x] AI解读生成API（Gemini 1.5 Pro，内部调用，/api/ai/reading）
-- [x] products表（测算产品注册表，含RLS）
-- [x] BuyReadingButton组件（购买入口，src/components/dashboard/BuyReadingButton.tsx）
-- [x] purchases表扩展（status、snapshot_id字段）
-- [x] BaziSnapshot 七段式存储结构（meta/pillars/relations/tougen/energy/shishen/influence）
-- [x] toBaziSnapshot 转换函数
-- [x] formatBaziDataSheet 格式化函数（供 Gemini API 使用）
-- [x] formatBaziDataSheet 全面汉化（天干、地支、五行、宫位、十神、关系类型）
-- [x] Onboarding时间+城市合并为一步，添加时区选择器（TimezoneSelector，38条，含夏令时标注）
-- [x] ProfileEditModal预填修复（城市/时区/性别/经纬度）
-- [x] ProfileSwitcher支持全部档案滚动显示
-- [x] profiles表补充gender列，PATCH handler修复gender保存
-- [x] DatePicker autoConfirm挂载时立即同步初始值
-- [x] 真太阳时修复（geo-tz行政时区查询，支持印度+5:30、尼泊尔+5:45等特殊时区）
-- [x] ProfileCard组件（顶部显示姓名、生日、年龄、真太阳时）
+\## 多语言规则（铁律，不得违反）
 
-## 架构决策记录（已锁定，不得随意更改）
+1\. 任何组件里禁止出现硬编码的中文或英文用户可见字符串
 
-1. 主键：UUID v7格式
-2. 导航状态栏：React Context实现，不用Parallel Routes
-3. 数据库客户端：统一在packages/db管理，便于多端共用
-4. 认证：Supabase Auth（邮箱+Google，未来加微信）
-5. 文件存储：Cloudflare R2（用户头像/论坛图片/商品图）
-6. 论坛/私信内容：存PostgreSQL，实时推送用Supabase Realtime
-7. 用户档案：免费限1个，VIP无限，业务层控制
-8. 快照：按测算类型独立存储，snapshot_type不枚举
-9. 支付渠道：provider字段不枚举，国际版/中国版各自管理
-10. 双区完全隔离：账号/VIP/内容三层全部独立，不跨区同步
-11. 软内容管理：十天干人格内容、名人数据存数据库，按locale区分语言，现阶段直接在Supabase Table Editor编辑，后台管理系统待开发
-12. packages/core 目录结构（已锁定）：
-    packages/core/src/
-    ├── bazi/          ← 八字命理（engine、analysis、timeline、pro、types）
-    ├── psychology/    ← 心理测量（bigfive/）
-    └── astrology/     ← 星象（western/）
+2\. 所有文字必须通过 useTranslations() 或 getTranslations() 读取
 
-## 待完成模块
-- [ ] 主题系统（浅色/深色/跟随系统，苹果配色规范，与用户设置模块一起实现）
-- [ ] 测算引擎
-- [ ] 各功能模块
+3\. 翻译文件结构：apps/web/messages/{locale}/ui.json（基础UI）+ 模块子目录
+
+&#x20;  - messages/{locale}/bigfive/index.json（大五主体）
+
+&#x20;  - messages/{locale}/bigfive/questions.json（120道题目）
+
+&#x20;  - messages/{locale}/western/index.json（西洋星盘）
+
+&#x20;  - messages/{locale}/assessments/index.json（测算注册表）
+
+4\. 当前支持语言：en（默认）、zh、fr、es、ja、ko、it、de
+
+5\. 新增功能时必须同步更新所有语言文件，至少en和zh必须完整
+
+
+
+\## 路由结构
+
+```
+
+/{locale}/                              → 落地页
+
+/{locale}/dashboard/                    → 仪表盘主页
+
+/{locale}/dashboard/divination/         → 测算中心
+
+/{locale}/dashboard/divination/bigfive/ → 大五人格
+
+/{locale}/dashboard/divination/western/ → 西洋星盘
+
+/{locale}/dashboard/profile/            → 账户管理
+
+/{locale}/dashboard/profile/profiles/  → 档案管理
+
+/{locale}/dashboard/profile/assets/    → 资产管理
+
+/{locale}/dashboard/forum/             → 论坛（待开发）
+
+/{locale}/dashboard/shop/              → 商城（待开发）
+
+/{locale}/dashboard/messages/          → 私信（待开发）
+
+/{locale}/onboarding/                  → 引导流程
+
+/{locale}/auth/login/                  → 登录页
+
+```
+
+
+
+\## 架构铁律
+
+1\. 模块完全解耦：任何单一模块的修改不得影响其他模块
+
+2\. AI调用必须走后端API路由，禁止在前端暴露任何Prompt
+
+3\. 所有颜色和间距必须引用设计系统变量，禁止硬编码
+
+4\. 计算结果必须存为快照，禁止重复触发计算
+
+5\. packages/core 禁止引入任何前端框架依赖
+
+6\. 新增数据库字段必须先执行SQL再写代码
+
+
+
+\## packages/core 目录结构（已锁定）
+
+```
+
+packages/core/src/
+
+├── bazi/
+
+│   ├── engine.ts      ← 八字排盘 + 真太阳时
+
+│   ├── analysis.ts    ← 七步分析引擎 + toBaziSnapshot
+
+│   ├── timeline.ts    ← 大运流年
+
+│   ├── pro.ts         ← 专业模式入口
+
+│   └── types.ts       ← 全部类型定义
+
+├── psychology/
+
+│   └── bigfive/       ← 大五人格引擎
+
+└── astrology/
+
+&#x20;   └── western/       ← 西洋星盘引擎
+
+```
+
+
+
+\## 数据库（Supabase项目：wsbskrgrkajnzzgpcfws）
+
+关键表：
+
+\- users（含vip\_tier: free/lifetime/pro）
+
+\- profiles（含birth\_date/time/lat/lng/place\_name/timezone/gender/is\_self）
+
+\- snapshots（snapshot\_type文本类型，calculation\_result为JSONB）
+
+\- products（测算产品注册）
+
+\- purchases（含status/snapshot\_id/provider）
+
+
+
+\## BaziSnapshot七段式存储结构
+
+```
+
+calculation\_result: {
+
+&#x20; meta:     { solarTime, lunarTime, jieQi }
+
+&#x20; pillars:  { year/month/day/hour, yuelingWuxing, tianGanNodes, cangGanNodes }
+
+&#x20; relations:{ tianGanHe, tianGanChong, diZhiRelations }
+
+&#x20; tougen:   { touGenResults, cangGanVisibility }
+
+&#x20; energy:   { energyNodes }
+
+&#x20; shishen:  { shishenMap }
+
+&#x20; influence:{ shishenInfluence, dayMasterEnergy }
+
+&#x20; dayStem, energyScores  ← 前端展示用
+
+}
+
+```
+
+
+
+\## 真太阳时算法
+
+```
+
+1\. 用城市经纬度查 administrative-timezones.ts 映射表 → 行政时区
+
+2\. 用户输入时间（行政时间）转UTC：localTime - utcOffset
+
+3\. 均时差（Spencer公式，根据出生日期计算）
+
+4\. 经度修正：(lng - utcOffset×15) × 4分钟
+
+5\. 真太阳时 = UTC + 经度修正 + 均时差
+
+注意：用户输入的永远是出生地行政时区时间
+
+```
+
+
+
+\## 八字能量算法（七步执行顺序）
+
+```
+
+步骤0：天干五合判定（真化/合绊/争合/妒合）→ 真化改写五行
+
+步骤1：透根判定（化神后扫描）
+
+步骤1.5：十神挂载
+
+步骤2：地支关系标注（三会/三合/半合/拱合/六合/六冲/刑/害/破，只标注）
+
+步骤3：月令系数（得令×2.0，近旺×1.33，泄气×0.83，受制×0.67，失令×0.33）
+
+步骤4：独立能量计算
+
+&#x20; 天干：30 × 月令系数 × (1 + 透根系数总和)
+
+&#x20; 藏干：基础分 × 月令系数
+
+&#x20; 透根系数 = 藏干基础分 ÷ 30（无上限）
+
+步骤5：合绊/墓库标记（保留能量，对外输出=0，日干例外）
+
+步骤6：宫位距离权重（勾股定理，日干为原点）
+
+&#x20; 年干0.50 | 年支0.45 | 月干1.00 | 月支0.71
+
+&#x20; 日支1.00 | 时干1.00 | 时支0.71
+
+步骤7：十神影响力总值 = Σ(节点能量 × 宫位权重)
+
+```
+
+
+
+\## 工作方式
+
+\- 架构讨论/产品决策：在此Project对话进行
+
+\- 代码施工：开新Cursor Chat，读CLAUDE.md后执行，完成后更新CLAUDE.md
+
+\- 每次施工后必须更新CLAUDE.md并推送到GitHub
+
+\- git commit必须用heiyi98账号（否则Vercel部署被blocked）
+
+\- 启动开发：cd E:\\destinos\\apps\\web \&\& pnpm dev
+
+
+
+\## 已完成模块
+
+\- \[x] Monorepo基础结构
+
+\- \[x] next-intl多语言框架
+
+\- \[x] 路由中间件（自动语言重定向）
+
+\- \[x] 设计系统（暗色模式，Apple配色，毛玻璃变量）
+
+\- \[x] 双轴导航框架（左侧48px Dock + 顶部48px状态栏）
+
+\- \[x] 顶部状态栏Context系统
+
+\- \[x] 数据库Schema（users/profiles/snapshots/products/purchases）
+
+\- \[x] Supabase Auth（Magic Link + Google OAuth）
+
+\- \[x] Onboarding流程（日期/时间+城市+时区/性别，合并为三步）
+
+\- \[x] 全球行政时区映射表（administrative-timezones.ts）
+
+\- \[x] 落地页、登录页、认证回调
+
+\- \[x] 仪表盘主页（八字命盘、五行五维图）
+
+\- \[x] ProfileCard（姓名/生日/年龄/真太阳时）
+
+\- \[x] ProfileSwitcher（支持全部档案滚动）
+
+\- \[x] 档案管理（增删改，预填修复，含city/timezone/gender）
+
+\- \[x] 账户管理、资产管理
+
+\- \[x] packages/core 架构重构（bazi/psychology/astrology三模块）
+
+\- \[x] 八字分析引擎（analyzeBazi，七步，BaziSnapshot七段式）
+
+\- \[x] 真太阳时（行政时区映射，支持全球所有地区）
+
+\- \[x] formatBaziDataSheet（全汉化，供Gemini使用）
+
+\- \[x] Lemon Squeezy付费系统
+
+\- \[x] AI解读API（Gemini 1.5 Pro）
+
+\- \[x] 测算中心页面
+
+\- \[x] 大五人格（120题单题模式，引擎，结果雷达图）
+
+\- \[x] 大五题目内化（messages/{locale}/bigfive/questions.json，8语言）
+
+\- \[x] 删除@alheimsins包
+
+\- \[x] 西洋星盘（astronomy-engine，双模式，SVG图）
+
+\- \[x] messages/按模块分文件结构
+
+
+
+\## 待完成
+
+\- \[ ] 解读prompt编写（用户负责，发给Gemini讨论后集成）
+
+\- \[ ] ai\_reading\_translated字段（多语言翻译缓存）
+
+\- \[ ] 大五人格结果解读文字
+
+\- \[ ] 十天干人格档案文字（stem\_content表填充）
+
+\- \[ ] 紫微斗数模块
+
+\- \[ ] MBTI模块
+
+\- \[ ] 论坛、商城、私信模块
+
+\- \[ ] 中国版部署（阿里云）
+
+```
+

@@ -122,27 +122,35 @@ export default function OnboardingPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    let baziData = null;
     try {
       const currentState = { ...state, gender };
+      const reqBody = {
+        birthYear: currentState.birthYear,
+        birthMonth: currentState.birthMonth,
+        birthDay: currentState.birthDay,
+        birthHour: currentState.birthHour ?? null,
+        birthMinute: currentState.birthMinute ?? null,
+        birthLat: currentState.birthLat ?? null,
+        birthLng: currentState.birthLng ?? null,
+      };
+      console.log('[bazi calculate] request:', reqBody);
       const res = await fetch('/api/bazi/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          birthYear: currentState.birthYear,
-          birthMonth: currentState.birthMonth,
-          birthDay: currentState.birthDay,
-          birthHour: currentState.birthHour,
-          birthMinute: currentState.birthMinute,
-          birthLat: currentState.birthLat,
-          birthLng: currentState.birthLng,
-        }),
+        body: JSON.stringify(reqBody),
       });
+      console.log('[bazi calculate] status:', res.status, res.ok);
       if (res.ok) {
-        const data = await res.json();
-        setTeaserData(data);
+        baziData = await res.json();
+        console.log('[bazi calculate] response:', baziData);
+        setTeaserData(baziData);
+      } else {
+        const errBody = await res.text();
+        console.error('[bazi calculate] error body:', errBody);
       }
     } catch (err) {
-      console.error('Bazi calculation error:', err);
+      console.error('[bazi calculate] exception:', err);
     }
 
     if (user) {
@@ -156,7 +164,7 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       const birth_date = `${finalState.birthYear}-${String(finalState.birthMonth).padStart(2, '0')}-${String(finalState.birthDay).padStart(2, '0')}`;
-      const birth_time = finalState.birthHour !== null
+      const birth_time = (finalState.birthHour !== null && finalState.birthHour !== undefined)
         ? `${String(finalState.birthHour).padStart(2, '0')}:${String(finalState.birthMinute ?? 0).padStart(2, '0')}`
         : null;
 
@@ -165,12 +173,12 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           birth_date,
-          birth_time,
-          birth_lat: finalState.birthLat,
-          birth_lng: finalState.birthLng,
-          birth_place_name: finalState.birthPlaceName,
-          birth_timezone: finalState.birthTimezone,
-          gender: finalState.gender,
+          birth_time: birth_time ?? null,
+          birth_lat: finalState.birthLat ?? null,
+          birth_lng: finalState.birthLng ?? null,
+          birth_place_name: finalState.birthPlaceName ?? null,
+          birth_timezone: finalState.birthTimezone ?? null,
+          gender: finalState.gender ?? null,
         }),
       });
 
@@ -411,20 +419,31 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 'teaser' && teaserData && (
-            <motion.div
-              key="teaser"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="fixed inset-0 overflow-y-auto"
-            >
-              <TeaserPage
-                baziData={teaserData}
-                onLogin={() => setStep('login')}
-              />
-            </motion.div>
+          {step === 'teaser' && (
+            teaserData ? (
+              <motion.div
+                key="teaser"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="fixed inset-0 overflow-y-auto"
+              >
+                <TeaserPage
+                  baziData={teaserData}
+                  onLogin={() => setStep('login')}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="teaser-loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center justify-center min-h-[60vh]"
+              >
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(var(--foreground))' }} />
+              </motion.div>
+            )
           )}
 
           {step === 'login' && (

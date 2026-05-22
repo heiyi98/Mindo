@@ -98,10 +98,12 @@ export async function GET(request: Request) {
       year:  { stem: baziResult.pillars.year.stem as TianGan,  branch: baziResult.pillars.year.branch as DiZhi  },
       month: { stem: baziResult.pillars.month.stem as TianGan, branch: baziResult.pillars.month.branch as DiZhi },
       day:   { stem: baziResult.pillars.day.stem as TianGan,   branch: baziResult.pillars.day.branch as DiZhi   },
-      hour:  {
-        stem:   (baziResult.pillars.hour.stem || 'Jia') as TianGan,
-        branch: (baziResult.pillars.hour.branch || 'Zi') as DiZhi,
-      },
+      ...(timeUnknown ? {} : {
+        hour: {
+          stem:   baziResult.pillars.hour.stem as TianGan,
+          branch: baziResult.pillars.hour.branch as DiZhi,
+        },
+      }),
     });
 
     const meta = {

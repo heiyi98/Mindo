@@ -140,7 +140,7 @@ export interface BaziAnalysis {
     year:  { stem: TianGan; branch: DiZhi };
     month: { stem: TianGan; branch: DiZhi };
     day:   { stem: TianGan; branch: DiZhi };
-    hour:  { stem: TianGan; branch: DiZhi };
+    hour?: { stem: TianGan; branch: DiZhi };
   };
   yuelingWuxing: Wuxing;
   tianGanNodes: TianGanNode[];
@@ -166,7 +166,7 @@ export interface BaziPillarsSegment {
   year:  { stem: TianGan; branch: DiZhi };
   month: { stem: TianGan; branch: DiZhi };
   day:   { stem: TianGan; branch: DiZhi };
-  hour:  { stem: TianGan; branch: DiZhi };
+  hour?: { stem: TianGan; branch: DiZhi };
   yuelingWuxing: Wuxing;
   tianGanNodes: TianGanNode[];
   cangGanNodes: CangGanNode[];

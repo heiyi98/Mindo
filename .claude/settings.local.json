@@ -64,7 +64,10 @@
       "PowerShell(node -e \"const { getItems } = require\\('E:/destinos/node_modules/@alheimsins/b5-johnson-120-ipip-neo-pi-r'\\); const langs = ['en', 'zh-cn', 'fr', 'es', 'ja', 'ko', 'it', 'de']; for \\(const lang of langs\\) { try { const items = getItems\\(lang\\); console.log\\(lang + ': ' + items.length + '题'\\); console.log\\('  1:', items[0].text\\); console.log\\('  2:', items[1].text\\); } catch\\(e\\) { console.log\\(lang + ': 不支持 -', e.message\\); } }\")",
       "PowerShell(Get-ChildItem \"E:\\\\destinos\\\\apps\\\\web\\\\src\" -Recurse | Where-Object { $_.Name -eq \"page.tsx\" } | Select-Object FullName)",
       "Bash(pnpm *)",
-      "Bash(Remove-Item *)"
+      "Bash(Remove-Item *)",
+      "Bash(Get-ChildItem -LiteralPath \"E:\\\\destinos\\\\apps\\\\web\" -Filter \"middleware.ts\")",
+      "Bash(Select-Object FullName)",
+      "PowerShell(taskkill *)"
     ]
   }
 }

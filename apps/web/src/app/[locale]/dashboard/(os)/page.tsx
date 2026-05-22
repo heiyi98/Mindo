@@ -66,12 +66,9 @@ export default function DashboardPage() {
     ? data.bazi.meta.solarTime.split(' ')[1]?.slice(0, 5)
     : null;
 
-  const STEM_TO_ELEMENT: Record<string, Wuxing> = {
-    Jia: 'Wood', Yi: 'Wood', Bing: 'Fire', Ding: 'Fire',
-    Wu: 'Earth', Ji: 'Earth', Geng: 'Metal', Xin: 'Metal',
-    Ren: 'Water', Gui: 'Water',
-  };
-  const element = STEM_TO_ELEMENT[dayStem] || 'Water';
+  const tianGanNodes = bazi.pillars?.tianGanNodes ?? [];
+  const dayNode = tianGanNodes.find((n: any) => n.pos === 'DayStem');
+  const element = (dayNode?.wuxing as Wuxing) || 'Water';
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-8">
@@ -94,7 +91,11 @@ export default function DashboardPage() {
             border: '1px solid hsl(var(--border))',
           }}
         >
-          <BaziChart pillars={bazi.pillars} dayStem={dayStem} />
+          <BaziChart
+            pillars={bazi.pillars}
+            tianGanNodes={bazi.pillars?.tianGanNodes ?? []}
+            dayStem={dayStem}
+          />
         </motion.div>
 
         <motion.div

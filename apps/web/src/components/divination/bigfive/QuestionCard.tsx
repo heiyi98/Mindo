@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 interface QuestionCardProps {
   questionId: string;
   questionText: string;
-  index: number;
   currentScore: number | undefined;
   onAnswer: (score: number) => void;
 }
@@ -13,7 +12,6 @@ const SCORES = [1, 2, 3, 4, 5];
 
 export default function QuestionCard({
   questionText,
-  index,
   currentScore,
   onAnswer,
 }: QuestionCardProps) {

@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         birth_lng: birth_lng || null,
         birth_place_name: birth_place_name || null,
         birth_timezone: birth_timezone || null,
+        gender: gender || null,
         is_self: true,
       }, {
         onConflict: 'user_id',
@@ -38,13 +39,6 @@ export async function POST(request: Request) {
     if (profileError) {
       console.error('Profile insert error:', profileError);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
-    }
-
-    // 如果用户提供了性别，更新users表（用于大运计算）
-    if (gender === 'M' || gender === 'F') {
-      await supabase
-        .from('users')
-        .upsert({ id: user.id, email: user.email! })
     }
 
     return NextResponse.json({ success: true });

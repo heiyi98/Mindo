@@ -3,39 +3,51 @@ import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
 const ELEMENT_COLORS: Record<string, string> = {
-  wood: '#10b981',
-  fire: '#f43f5e',
-  earth: '#f59e0b',
-  metal: '#94a3b8',
-  water: '#3b82f6',
+  Wood: '#10b981',
+  Fire: '#f43f5e',
+  Earth: '#f59e0b',
+  Metal: '#94a3b8',
+  Water: '#3b82f6',
   gray: '#6b7280',
 };
+
+interface TianGanNode {
+  pos: string;
+  stem: string;
+  wuxing: string;
+}
 
 interface Pillar {
   stem: string;
   branch: string;
   shishenStem?: string;
-  element?: { stem: string; branch: string };
 }
 
 interface BaziChartProps {
   pillars: {
-    year: Pillar;
-    month: Pillar;
-    day: Pillar;
-    hour: Pillar;
+    year?: Pillar;
+    month?: Pillar;
+    day?: Pillar;
+    hour?: Pillar;
   };
+  tianGanNodes: TianGanNode[];
   dayStem: string;
 }
 
-export default function BaziChart({ pillars, dayStem }: BaziChartProps) {
+const UNKNOWN_PILLAR: Pillar = { stem: '?', branch: '?' };
+
+export default function BaziChart({ pillars, tianGanNodes, dayStem }: BaziChartProps) {
   const t = useTranslations('dashboard.bazi');
 
+  const wuxingByPos = new Map(
+    tianGanNodes.map(n => [n.pos, n.wuxing])
+  );
+
   const columns = [
-    { key: 'year', label: t('year'), pillar: pillars.year },
-    { key: 'month', label: t('month'), pillar: pillars.month },
-    { key: 'day', label: t('day'), pillar: pillars.day },
-    { key: 'hour', label: t('hour'), pillar: pillars.hour },
+    { key: 'year',  label: t('year'),  pillar: pillars.year  ?? UNKNOWN_PILLAR, pos: 'YearStem',  branchPos: 'YearBranch'  },
+    { key: 'month', label: t('month'), pillar: pillars.month ?? UNKNOWN_PILLAR, pos: 'MonthStem', branchPos: 'MonthBranch' },
+    { key: 'day',   label: t('day'),   pillar: pillars.day   ?? UNKNOWN_PILLAR, pos: 'DayStem',   branchPos: 'DayBranch'   },
+    { key: 'hour',  label: t('hour'),  pillar: pillars.hour  ?? UNKNOWN_PILLAR, pos: 'HourStem',  branchPos: 'HourBranch'  },
   ];
 
   return (
@@ -48,11 +60,13 @@ export default function BaziChart({ pillars, dayStem }: BaziChartProps) {
       </h3>
 
       <div className="grid grid-cols-4 gap-3">
-        {columns.map(({ key, label, pillar }, idx) => {
-          const stemColor = ELEMENT_COLORS[pillar.element?.stem || 'gray'];
-          const branchColor = ELEMENT_COLORS[pillar.element?.branch || 'gray'];
+        {columns.map(({ key, label, pillar, pos, branchPos }, idx) => {
+          const stemWuxing = wuxingByPos.get(pos) || 'gray';
+          const branchWuxing = wuxingByPos.get(branchPos) || 'gray';
+          const stemColor = ELEMENT_COLORS[stemWuxing] ?? ELEMENT_COLORS['gray'];
+          const branchColor = ELEMENT_COLORS[branchWuxing] ?? ELEMENT_COLORS['gray'];
           const isDay = key === 'day';
-          const isUnknown = pillar.stem === 'Unknown';
+          const isUnknown = !pillar.stem || pillar.stem === '?' || pillar.stem === 'Unknown';
 
           return (
             <motion.div

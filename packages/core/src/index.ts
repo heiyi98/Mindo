@@ -10,8 +10,8 @@ export * from './bazi/engine';
 export * from './bazi/timeline';
 
 // 心理测量
-export { calculateBigFive, calculateBigFiveWithLocale, getQuestionCount } from './psychology/bigfive';
-export { buildQuestions, getQuestionItemsForLocale } from './psychology/bigfive/alheimsins';
+export { calculateBigFive, getQuestionCount } from './psychology/bigfive';
+export { buildQuestions } from './psychology/bigfive/alheimsins';
 export type { BigFiveQuestion } from './psychology/bigfive/alheimsins';
 export type {
   BigFiveDomain,
