@@ -18,16 +18,6 @@ const SHISHEN_MAP: Record<string, string> = {
   '日主': 'DayMaster', '': 'None'
 };
 
-function getElement(char: string): string {
-  const map: Record<string, string> = {
-    '甲': 'wood', '乙': 'wood', '寅': 'wood', '卯': 'wood',
-    '丙': 'fire', '丁': 'fire', '巳': 'fire', '午': 'fire',
-    '戊': 'earth', '己': 'earth', '辰': 'earth', '戌': 'earth', '丑': 'earth', '未': 'earth',
-    '庚': 'metal', '辛': 'metal', '申': 'metal', '酉': 'metal',
-    '壬': 'water', '癸': 'water', '亥': 'water', '子': 'water'
-  };
-  return map[char] || 'gray';
-}
 
 export const engine = {
   calculate: (input: { dateStr: string; lat: number; lng: number; timeUnknown?: boolean; timezone?: string }) => {
@@ -147,7 +137,6 @@ export const engine = {
       shishenStem: SHISHEN_MAP[rawShishenStem] || rawShishenStem,
       shishenBranch: rawShishenBranch.map(ss => SHISHEN_MAP[ss] || ss),
       hiddenStems: rawHiddenStems.map(hs => STEM_MAP[hs] || hs),
-      element: { stem: getElement(rawStem), branch: getElement(rawBranch) }
     });
 
     return {
@@ -161,7 +150,7 @@ export const engine = {
         month: buildPillar(baziDay.getMonthGan(), baziDay.getMonthZhi(), baziDay.getMonthNaYin(), baziDay.getMonthShiShenGan(), baziDay.getMonthShiShenZhi(), baziDay.getMonthHideGan()),
         day: buildPillar(baziDay.getDayGan(), baziDay.getDayZhi(), baziDay.getDayNaYin(), '日主', baziDay.getDayShiShenZhi(), baziDay.getDayHideGan()),
         hour: input.timeUnknown
-          ? { stem: 'Unknown', branch: 'Unknown', element: { stem: 'gray', branch: 'gray' } }
+          ? { stem: 'Unknown', branch: 'Unknown', nayin: '', shishenStem: '', shishenBranch: [], hiddenStems: [] }
           : buildPillar(baziHour.getTimeGan(), baziHour.getTimeZhi(), baziHour.getTimeNaYin(), baziHour.getTimeShiShenGan(), baziHour.getTimeShiShenZhi(), baziHour.getTimeShiShenZhi())
       },
       extras: {
