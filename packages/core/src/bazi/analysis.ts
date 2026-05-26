@@ -74,76 +74,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   }
 
   // ═══════════════════════════════════════════════════════
-  // 步骤一：天干五合判定
-  // ═══════════════════════════════════════════════════════
-  const tianGanHeResults: TianGanHe[] = [];
-  const hebanStemPos = new Set<GongWeiPos>();
-  const zhenhuaMap = new Map<GongWeiPos, Wuxing>();
-
-  for (const [s1, s2, huashen] of TIANGAN_WUHE) {
-    const node1 = tianGanNodes.find(n => n.stem === s1);
-    const node2 = tianGanNodes.find(n => n.stem === s2);
-    if (!node1 || !node2) continue;
-
-    const sameAs1 = tianGanNodes.filter(n => n.stem === s1);
-    const sameAs2 = tianGanNodes.filter(n => n.stem === s2);
-    if (sameAs1.length >= 2 || sameAs2.length >= 2) {
-      tianGanHeResults.push({
-        stem1: s1, stem1Pos: node1.pos,
-        stem2: s2, stem2Pos: node2.pos,
-        huashen, result: 'ZhengHe'
-      });
-      continue;
-    }
-
-    const adjacent = isAdjacent(node1.pos, node2.pos);
-    const moonHelps = yuelingWuxing === huashen ||
-                      GENERATES[yuelingWuxing] === huashen;
-    const hasClash = tianGanNodes
-      .filter(n => n.pos !== node1.pos && n.pos !== node2.pos)
-      .some(n => RESTRAINS[n.wuxing] === huashen);
-
-    if (adjacent && moonHelps && !hasClash) {
-      tianGanHeResults.push({
-        stem1: s1, stem1Pos: node1.pos,
-        stem2: s2, stem2Pos: node2.pos,
-        huashen, result: 'ZhenHua'
-      });
-      zhenhuaMap.set(node1.pos, huashen);
-      zhenhuaMap.set(node2.pos, huashen);
-    } else {
-      tianGanHeResults.push({
-        stem1: s1, stem1Pos: node1.pos,
-        stem2: s2, stem2Pos: node2.pos,
-        huashen, result: 'HeBan'
-      });
-      hebanStemPos.add(node1.pos);
-      hebanStemPos.add(node2.pos);
-    }
-  }
-
-  for (const node of tianGanNodes) {
-    if (zhenhuaMap.has(node.pos)) {
-      node.wuxing = zhenhuaMap.get(node.pos)!;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // 步骤二：天干相冲标注
-  // ═══════════════════════════════════════════════════════
-  const tianGanChongResults: TianGanChong[] = [];
-  for (const [s1, s2] of TIANGAN_CHONG) {
-    const node1 = tianGanNodes.find(n => n.stem === s1);
-    const node2 = tianGanNodes.find(n => n.stem === s2);
-    if (!node1 || !node2) continue;
-    tianGanChongResults.push({
-      stem1: s1, stem1Pos: node1.pos,
-      stem2: s2, stem2Pos: node2.pos,
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // 步骤三：地支关系标注
+  // 步骤一：地支关系标注（先于五合，供化气条件引用）
   // ═══════════════════════════════════════════════════════
   const diZhiRelations: DiZhiRelation[] = [];
   const branches = [
@@ -153,17 +84,18 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   ];
   const branchSet = new Set(branches);
 
-  for (const [b1, b2, b3] of DIZHI_SANHUI) {
+  for (const [b1, b2, b3, sanhuiWuxing] of DIZHI_SANHUI) {
     if (branchSet.has(b1) && branchSet.has(b2) && branchSet.has(b3)) {
       diZhiRelations.push({
         type: 'SanHui',
         branches: [b1, b2, b3],
         positions: [b1, b2, b3].map(b => getBranchPos(b, pillars)),
+        wuxing: sanhuiWuxing,
       });
     }
   }
 
-  for (const [changSheng, diWang, mu] of DIZHI_SANHE) {
+  for (const [changSheng, diWang, mu, sanheWuxing] of DIZHI_SANHE) {
     const hasChangSheng = branchSet.has(changSheng);
     const hasDiWang = branchSet.has(diWang);
     const hasMu = branchSet.has(mu);
@@ -173,6 +105,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
         type: 'SanHe',
         branches: [changSheng, diWang, mu],
         positions: [changSheng, diWang, mu].map(b => getBranchPos(b, pillars)),
+        wuxing: sanheWuxing,
       });
     } else if (hasDiWang && (hasChangSheng || hasMu)) {
       const present = [changSheng, diWang, mu].filter(b => branchSet.has(b));
@@ -244,6 +177,77 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   }
 
   // ═══════════════════════════════════════════════════════
+  // 步骤二：天干五合判定（moonHelps 引用地支三合/三会）
+  // ═══════════════════════════════════════════════════════
+  const tianGanHeResults: TianGanHe[] = [];
+  const hebanStemPos = new Set<GongWeiPos>();
+  const zhenhuaMap = new Map<GongWeiPos, Wuxing>();
+
+  for (const [s1, s2, huashen] of TIANGAN_WUHE) {
+    const node1 = tianGanNodes.find(n => n.stem === s1);
+    const node2 = tianGanNodes.find(n => n.stem === s2);
+    if (!node1 || !node2) continue;
+
+    const sameAs1 = tianGanNodes.filter(n => n.stem === s1);
+    const sameAs2 = tianGanNodes.filter(n => n.stem === s2);
+    if (sameAs1.length >= 2 || sameAs2.length >= 2) {
+      tianGanHeResults.push({
+        stem1: s1, stem1Pos: node1.pos,
+        stem2: s2, stem2Pos: node2.pos,
+        huashen, result: 'ZhengHe'
+      });
+      continue;
+    }
+
+    const adjacent = isAdjacent(node1.pos, node2.pos);
+    const moonHelps = yuelingWuxing === huashen ||
+      diZhiRelations.some(r =>
+        (r.type === 'SanHui' || r.type === 'SanHe') && r.wuxing === huashen
+      );
+    const hasClash = tianGanNodes
+      .filter(n => n.pos !== node1.pos && n.pos !== node2.pos)
+      .some(n => RESTRAINS[n.wuxing] === huashen);
+
+    if (adjacent && moonHelps && !hasClash) {
+      tianGanHeResults.push({
+        stem1: s1, stem1Pos: node1.pos,
+        stem2: s2, stem2Pos: node2.pos,
+        huashen, result: 'ZhenHua'
+      });
+      zhenhuaMap.set(node1.pos, huashen);
+      zhenhuaMap.set(node2.pos, huashen);
+    } else {
+      tianGanHeResults.push({
+        stem1: s1, stem1Pos: node1.pos,
+        stem2: s2, stem2Pos: node2.pos,
+        huashen, result: 'HeBan'
+      });
+      hebanStemPos.add(node1.pos);
+      hebanStemPos.add(node2.pos);
+    }
+  }
+
+  for (const node of tianGanNodes) {
+    if (zhenhuaMap.has(node.pos)) {
+      node.wuxing = zhenhuaMap.get(node.pos)!;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 步骤三：天干相冲标注
+  // ═══════════════════════════════════════════════════════
+  const tianGanChongResults: TianGanChong[] = [];
+  for (const [s1, s2] of TIANGAN_CHONG) {
+    const node1 = tianGanNodes.find(n => n.stem === s1);
+    const node2 = tianGanNodes.find(n => n.stem === s2);
+    if (!node1 || !node2) continue;
+    tianGanChongResults.push({
+      stem1: s1, stem1Pos: node1.pos,
+      stem2: s2, stem2Pos: node2.pos,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
   // 步骤四：透根判定
   // ═══════════════════════════════════════════════════════
   const touGenResults: TouGenResult[] = [];
@@ -301,14 +305,17 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
 
   // ═══════════════════════════════════════════════════════
   // 步骤五：独立能量计算
+  // 天干：有根×3，无根×1；藏干：透出×3，未透×1
+  // tougenCoeff 保留写入，仅作参考，不参与能量计算
   // ═══════════════════════════════════════════════════════
   const energyNodes: EnergyNode[] = [];
 
   for (const stemNode of tianGanNodes) {
-    const tougen = touGenResults.find(t => t.stemPos === stemNode.pos);
-    const totalTougenCoeff = tougen?.totalTougenCoeff ?? 0;
+    const tougenResult = touGenResults.find(t => t.stemPos === stemNode.pos);
+    const totalTougenCoeff = tougenResult?.totalTougenCoeff ?? 0;
     const yuelingCoeff = YUELING_COEFF[yuelingWuxing][stemNode.wuxing];
-    const energy = 30 * yuelingCoeff * (1 + totalTougenCoeff);
+    const hasRoot = (tougenResult?.roots.length ?? 0) > 0;
+    const energy = 30 * yuelingCoeff * (hasRoot ? 3 : 1);
 
     const isHeBan = hebanStemPos.has(stemNode.pos);
     const outputEnabled = !isHeBan || stemNode.pos === 'DayStem';
@@ -333,7 +340,8 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     const visibility = cangGanVisibility.find(v => v.cangganId === cgNode.id);
     const isMuKuLocked = visibility?.isMuKuLocked ?? false;
     const yuelingCoeff = YUELING_COEFF[yuelingWuxing][cgNode.wuxing];
-    const energy = cgNode.baseScore * yuelingCoeff;
+    const isTransparent = visibility?.tag === 'TouChu';
+    const energy = cgNode.baseScore * yuelingCoeff * (isTransparent ? 3 : 1);
 
     energyNodes.push({
       id: cgNode.id,
