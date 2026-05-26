@@ -132,31 +132,29 @@ packages/core/src/
 
 ├── bazi/
 
-│   ├── engine.ts      ← 八字排盘 + 真太阳时
+│   ├── constants.ts   ← 所有静态数据表
 
-│   ├── analysis.ts    ← 七步分析引擎 + toBaziSnapshot
+│   ├── utils.ts       ← calcShiShen / isAdjacent 等共享工具
 
-│   ├── pattern.ts     ← 格局判定（detectPattern）
+│   ├── engine.ts      ← 排盘 + 真太阳时
 
-│   ├── yongshen.ts    ← 用神判定（detectYongshen）
+│   ├── analysis.ts    ← 七步分析引擎
+
+│   ├── pattern.ts     ← 格局判定
+
+│   ├── yongshen.ts    ← 用神算法
 
 │   ├── timeline.ts    ← 大运流年
-
-│   ├── constants.ts   ← 全部静态查表（17张）
-
-│   ├── utils.ts       ← calcShiShen / isAdjacent
-
-│   ├── pro.ts         ← 专业模式入口
 
 │   └── types.ts       ← 全部类型定义
 
 ├── psychology/
 
-│   └── bigfive/       ← 大五人格引擎
+│   └── bigfive/
 
 └── astrology/
 
-&#x20;   └── western/       ← 西洋星盘引擎
+&#x20;   └── western/
 
 ```
 
@@ -244,11 +242,15 @@ calculation\_result: {
 
 步骤3：月令系数（得令×2.0，近旺×1.33，泄气×0.83，受制×0.67，失令×0.33）
 
-步骤4：独立能量计算
+步骤4：独立能量计算（透根系数已废弃，改为二元规则）
 
-&#x20; 天干：30 × 月令系数 × (有透根? 3 : 1)
+&#x20; 天干有根 → 30 × 月令系数 × 3
 
-&#x20; 藏干：基础分 × 月令系数 × (透出天干? 3 : 1)
+&#x20; 天干无根 → 30 × 月令系数 × 1
+
+&#x20; 藏干透出 → 基础分 × 月令系数 × 3
+
+&#x20; 藏干不透 → 基础分 × 月令系数 × 1
 
 步骤5：合绊/墓库标记（保留能量，对外输出=0，日干例外）
 
@@ -264,69 +266,79 @@ calculation\_result: {
 
 
 
-\## 格局判定算法（pattern.ts）
+\## 格局判定优先级
 
 ```
 
 优先级顺序（高→低，首个命中即返回）：
 
-1\. 化气格：天干五合出现 ZhenHua 且日主参与
+化气格：天干五合出现 ZhenHua 且日主参与
 
-2\. 专旺格A（非土）：地支三会/三合 = 日主五行 且无官杀
+专旺格（五格）：曲直/炎上/稼穑/从革/润下
 
-3\. 专旺格B（土/稼穑格）：四柱地支全在辰戌丑未 且无木
+&#x20; 非土：地支三会/三合 = 日主五行 且无官杀
 
-4\. 从儿/财/杀格：无印星比劫 且地支三会/三合→食伤/财/官（取第一个）
+&#x20; 土（稼穑格）：四柱地支全在辰戌丑未 且无木
 
-5\. 从强格：月令主气为印星 且三会/三合为该五行 且无财星
+从格（四子类）：
 
-6\. 正格：扫描月支藏干中透干者（本气→中气→余气），无透则兜底本气
+&#x20; 从儿格：无印比 且三会/三合→食伤
 
-PatternResult.category: 'huaqi' | 'zhuanwang' | 'cong' | 'normal'
+&#x20; 从财格：无印比 且三会/三合→财
+
+&#x20; 从杀格：无印比 且三会/三合→官杀
+
+&#x20; 从强格：月令主气为印 且三会/三合该五行 且无财
+
+正格（十种）：扫描月支藏干透干者（本气→中气→余气），无透兜底本气
+
+&#x20; 正官/七杀/正印/偏印/正财/偏财/食神/伤官/比肩/劫财
+
+PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
 
 ```
 
 
 
-\## 用神判定算法（yongshen.ts）
+\## 用神算法
 
 ```
 
 特殊格局→固定映射：
 
-  化气格  → 食伤五行
+  化气格/从儿格 → 食伤五行
 
-  专旺格  → 日主五行
+  专旺格       → 日主五行
 
-  从儿格  → 食伤五行
+  从财格       → 财星五行
 
-  从财格  → 财星五行
+  从杀格       → 官杀五行
 
-  从杀格  → 官杀五行
+  从强格       → 印星五行
 
-  从强格  → 印星五行
+正格→五步链式评分：
 
-正格→五步评分：
+  帮扶方 H = 印星 + 日主五行
 
-  步骤0：outputEnabled节点累加初始能量state0
+  克泄方 K = 官杀 + 食伤 + 财星
 
-  步骤1：链式反应state1（生克同时计算初始Δ，同步应用）
+  Score = |H/K - 1|（越接近0越平衡）
 
-  步骤2：对每个候选W（=30）施加临效应lin
+  流程：
 
-          W生X：dX += xv×30/T；W克X：dX -= xv×30/T
+    ① 链式反应一：state0（纯outputEnabled能量）→ state1
 
-          X生W（泄耗）：dX -= xv×30/T；X克W（互耗）：dX -= xv×30/T
+       生=能量转移（A泄失 B得益）；克=互耗（双方同时损失）
 
-          X=W（同气共鸣）：dX += xv×30/T
+    ② 临：对每个候选W施加×30虚拟力 → lin
 
-  步骤3：对lin再做链式反应得state2
+       被生(+) 比(+) 被克(-) 泄(-) 耗(-)
 
-  步骤4：H = state2[印] + state2[日主]；K = state2[官] + state2[食伤] + state2[财]
+    ③ 链式反应二：lin → state2
 
-          Score = |H/K - 1|（K=0→Infinity，H=K=0→0）
+    ④ 评分：对state2计算H/K Score
 
-  步骤5：取最小Score的W；阴阳选命盘中该五行能量更低者
+    ⑤ 阴阳选优：命盘中该五行能量更低的阴阳
 
 YongshenResult: { wuxing, yinyang, shishen }
 
@@ -406,11 +418,11 @@ YongshenResult: { wuxing, yinyang, shishen }
 
 \- \[x] messages/按模块分文件结构
 
-\- \[x] bazi引擎基础层重构（constants.ts 17张静态表，utils.ts calcShiShen/isAdjacent）
+\- \[x] 算法架构重构（constants/utils 分离，消除 timeline 重复代码）
 
-\- \[x] 格局判定（detectPattern，huaqi/zhuanwang/cong/normal，六级优先序）
+\- \[x] 格局判定引擎（pattern.ts：化气/专旺/从格四子类/正格十种）
 
-\- \[x] 用神判定（detectYongshen，特殊格局固定映射+正格五步链式反应评分）
+\- \[x] 用神算法（yongshen.ts：纯能量+链式反应+临+评分+阴阳选优）
 
 
 
