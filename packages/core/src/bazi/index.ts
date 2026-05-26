@@ -1,4 +1,5 @@
 export { analyzeBazi, toBaziSnapshot } from './analysis';
+export { detectPattern } from './pattern';
 export type {
   BaziAnalysis,
   BaziSnapshot,

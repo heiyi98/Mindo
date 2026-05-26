@@ -14,6 +14,7 @@ import {
   GONGWEI_WEIGHT, GENERATES, RESTRAINS
 } from './constants';
 import { calcShiShen, isAdjacent } from './utils';
+import { detectPattern } from './pattern';
 
 function getBranchPos(
   branch: DiZhi,
@@ -416,7 +417,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     });
   }
 
-  return {
+  const result: BaziAnalysis = {
     pillars,
     yuelingWuxing,
     tianGanNodes,
@@ -431,6 +432,8 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     shishenInfluence,
     dayMasterEnergy,
   };
+  result.pattern = detectPattern(result);
+  return result;
 }
 
 export function toBaziSnapshot(
@@ -470,5 +473,6 @@ export function toBaziSnapshot(
     },
     dayStem:      analysis.pillars.day.stem,
     energyScores,
+    pattern:      analysis.pattern,
   };
 }
