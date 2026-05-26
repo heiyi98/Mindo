@@ -73,6 +73,7 @@ export interface DiZhiRelation {
   type: DiZhiRelationType;
   branches: DiZhi[];
   positions: GongWeiPos[];
+  wuxing?: Wuxing;
   note?: string;
 }
 
@@ -92,7 +93,7 @@ export interface TouGenResult {
   wuxing: Wuxing;
   roots: TouGenRoot[];
   totalTougenCoeff: number;
-  tag: 'TouChu' | 'Lu';
+  tag: 'TongGen' | 'Lu';
 }
 
 export interface CangGanVisibility {
@@ -154,6 +155,8 @@ export interface BaziAnalysis {
   shishenMap: ShiShenNode[];
   shishenInfluence: ShiShenInfluenceGroup[];
   dayMasterEnergy: number;
+  pattern?: PatternResult;
+  yongshen?: YongshenResult;
 }
 
 export interface BaziMeta {
@@ -196,6 +199,17 @@ export interface BaziInfluenceSegment {
   dayMasterEnergy: number;
 }
 
+export interface PatternResult {
+  category: 'huaqi' | 'zhuanwang' | 'cong' | 'normal';
+  name: string;
+}
+
+export interface YongshenResult {
+  wuxing: Wuxing;
+  yinyang: YinYang;
+  shishen: ShiShen;
+}
+
 // 七段式完整存储结构
 export interface BaziSnapshot {
   meta: BaziMeta;
@@ -208,4 +222,6 @@ export interface BaziSnapshot {
   // 前端展示用（冗余但方便）
   dayStem: TianGan;
   energyScores: Record<Wuxing, number>;
+  pattern?: PatternResult;
+  yongshen?: YongshenResult;
 }

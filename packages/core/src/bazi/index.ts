@@ -11,6 +11,8 @@ export type {
   BaziInfluenceSegment,
   EnergyNode,
   ShiShenInfluenceGroup,
+  PatternResult,
+  YongshenResult,
 } from './types';
 export * from './engine';
 export * from './timeline';

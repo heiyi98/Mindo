@@ -1,162 +1,19 @@
 import type {
-  Wuxing, TianGan, DiZhi, ShiShen, QiWei, YinYang,
+  Wuxing, TianGan, DiZhi, ShiShen,
   GongWeiPos, CangGanNode, TianGanNode,
   TianGanHe, TianGanChong, DiZhiRelation, TouGenResult,
   TouGenRoot, CangGanVisibility, EnergyNode, ShiShenNode,
   ShiShenInfluenceGroup, BaziAnalysis,
   BaziMeta, BaziSnapshot
 } from './types';
-
-// ═══════════════════════════════════════════════════════
-// 静态数据表
-// ═══════════════════════════════════════════════════════
-
-const TIANGAN_WUXING: Record<TianGan, Wuxing> = {
-  Jia: 'Wood', Yi: 'Wood',
-  Bing: 'Fire', Ding: 'Fire',
-  Wu: 'Earth', Ji: 'Earth',
-  Geng: 'Metal', Xin: 'Metal',
-  Ren: 'Water', Gui: 'Water'
-};
-
-const TIANGAN_YINYANG: Record<TianGan, YinYang> = {
-  Jia: 'Yang', Yi: 'Yin',
-  Bing: 'Yang', Ding: 'Yin',
-  Wu: 'Yang', Ji: 'Yin',
-  Geng: 'Yang', Xin: 'Yin',
-  Ren: 'Yang', Gui: 'Yin'
-};
-
-const DIZHI_CANGGAN: Record<DiZhi, { stem: TianGan; qi: QiWei; score: number }[]> = {
-  Zi:   [{ stem: 'Gui',  qi: 'BenQi',   score: 30 }],
-  Chou: [{ stem: 'Ji',   qi: 'BenQi',   score: 18 },
-         { stem: 'Gui',  qi: 'ZhongQi', score: 9  },
-         { stem: 'Xin',  qi: 'YuQi',    score: 3  }],
-  Yin:  [{ stem: 'Jia',  qi: 'BenQi',   score: 16 },
-         { stem: 'Bing', qi: 'ZhongQi', score: 7  },
-         { stem: 'Wu',   qi: 'YuQi',    score: 7  }],
-  Mao:  [{ stem: 'Yi',   qi: 'BenQi',   score: 30 }],
-  Chen: [{ stem: 'Wu',   qi: 'BenQi',   score: 18 },
-         { stem: 'Yi',   qi: 'ZhongQi', score: 9  },
-         { stem: 'Gui',  qi: 'YuQi',    score: 3  }],
-  Si:   [{ stem: 'Bing', qi: 'BenQi',   score: 16 },
-         { stem: 'Geng', qi: 'ZhongQi', score: 7  },
-         { stem: 'Wu',   qi: 'YuQi',    score: 7  }],
-  Wu:   [{ stem: 'Ding', qi: 'BenQi',   score: 21 },
-         { stem: 'Ji',   qi: 'ZhongQi', score: 9  }],
-  Wei:  [{ stem: 'Ji',   qi: 'BenQi',   score: 18 },
-         { stem: 'Ding', qi: 'ZhongQi', score: 9  },
-         { stem: 'Yi',   qi: 'YuQi',    score: 3  }],
-  Shen: [{ stem: 'Geng', qi: 'BenQi',   score: 16 },
-         { stem: 'Ren',  qi: 'ZhongQi', score: 7  },
-         { stem: 'Wu',   qi: 'YuQi',    score: 7  }],
-  You:  [{ stem: 'Xin',  qi: 'BenQi',   score: 30 }],
-  Xu:   [{ stem: 'Wu',   qi: 'BenQi',   score: 18 },
-         { stem: 'Xin',  qi: 'ZhongQi', score: 9  },
-         { stem: 'Ding', qi: 'YuQi',    score: 3  }],
-  Hai:  [{ stem: 'Ren',  qi: 'BenQi',   score: 21 },
-         { stem: 'Jia',  qi: 'ZhongQi', score: 9  }]
-};
-
-const MU_KU: DiZhi[] = ['Chen', 'Xu', 'Chou', 'Wei'];
-
-const YUELING_COEFF: Record<Wuxing, Record<Wuxing, number>> = {
-  Wood:  { Wood: 2.0,  Fire: 1.33, Earth: 0.67, Metal: 0.33, Water: 0.83 },
-  Fire:  { Fire: 2.0,  Earth: 1.33, Metal: 0.67, Water: 0.33, Wood: 0.83 },
-  Earth: { Earth: 2.0, Metal: 1.33, Water: 0.67, Wood: 0.33,  Fire: 0.83 },
-  Metal: { Metal: 2.0, Water: 1.33, Wood: 0.67,  Fire: 0.33,  Earth: 0.83 },
-  Water: { Water: 2.0, Wood: 1.33,  Fire: 0.67,  Earth: 0.33, Metal: 0.83 }
-};
-
-const TIANGAN_WUHE: [TianGan, TianGan, Wuxing][] = [
-  ['Jia', 'Ji',   'Earth'],
-  ['Yi',  'Geng', 'Metal'],
-  ['Bing','Xin',  'Water'],
-  ['Ding','Ren',  'Wood'],
-  ['Wu',  'Gui',  'Fire']
-];
-
-const TIANGAN_CHONG: [TianGan, TianGan][] = [
-  ['Jia', 'Geng'],
-  ['Yi',  'Xin'],
-  ['Bing','Ren'],
-  ['Ding','Gui']
-];
-
-const DIZHI_SANHUI: [DiZhi, DiZhi, DiZhi, Wuxing][] = [
-  ['Yin', 'Mao', 'Chen', 'Wood'],
-  ['Si',  'Wu',  'Wei',  'Fire'],
-  ['Shen','You', 'Xu',   'Metal'],
-  ['Hai', 'Zi',  'Chou', 'Water']
-];
-
-const DIZHI_SANHE: [DiZhi, DiZhi, DiZhi, Wuxing][] = [
-  ['Hai', 'Mao', 'Wei',  'Wood'],
-  ['Yin', 'Wu',  'Xu',   'Fire'],
-  ['Si',  'You', 'Chou', 'Metal'],
-  ['Shen','Zi',  'Chen', 'Water']
-];
-
-const DIZHI_LIUHE: [DiZhi, DiZhi][] = [
-  ['Zi','Chou'], ['Yin','Hai'], ['Mao','Xu'],
-  ['Chen','You'], ['Si','Shen'], ['Wu','Wei']
-];
-
-const DIZHI_LIUCHONG: [DiZhi, DiZhi][] = [
-  ['Zi','Wu'], ['Chou','Wei'], ['Yin','Shen'],
-  ['Mao','You'], ['Chen','Xu'], ['Si','Hai']
-];
-
-const DIZHI_XING: DiZhi[][] = [
-  ['Yin', 'Si', 'Shen'],
-  ['Chou', 'Xu', 'Wei'],
-  ['Zi', 'Mao'],
-  ['Chen'],
-  ['Wu'],
-  ['You'],
-  ['Hai']
-];
-
-const DIZHI_HAI: [DiZhi, DiZhi][] = [
-  ['Zi','Wei'], ['Chou','Wu'], ['Yin','Si'],
-  ['Mao','Chen'], ['Shen','Hai'], ['You','Xu']
-];
-
-const DIZHI_PO: [DiZhi, DiZhi][] = [
-  ['Zi','You'], ['Chou','Chen'], ['Yin','Hai'],
-  ['Mao','Wu'], ['Si','Shen'], ['Wei','Xu']
-];
-
-// 宫位权重（勾股定理，日干坐标(1,3)为原点）
-const GONGWEI_WEIGHT: Record<GongWeiPos, number> = {
-  YearStem:    1 / Math.sqrt(4),
-  YearBranch:  1 / Math.sqrt(5),
-  MonthStem:   1 / Math.sqrt(1),
-  MonthBranch: 1 / Math.sqrt(2),
-  DayStem:     1,
-  DayBranch:   1 / Math.sqrt(1),
-  HourStem:    1 / Math.sqrt(1),
-  HourBranch:  1 / Math.sqrt(2),
-};
-
-const GENERATES: Record<Wuxing, Wuxing> = {
-  Wood: 'Fire', Fire: 'Earth', Earth: 'Metal', Metal: 'Water', Water: 'Wood'
-};
-const RESTRAINS: Record<Wuxing, Wuxing> = {
-  Wood: 'Earth', Earth: 'Water', Water: 'Fire', Fire: 'Metal', Metal: 'Wood'
-};
-
-// ═══════════════════════════════════════════════════════
-// 辅助函数
-// ═══════════════════════════════════════════════════════
-
-function isAdjacent(pos1: GongWeiPos, pos2: GongWeiPos): boolean {
-  const stemOrder = ['YearStem', 'MonthStem', 'DayStem', 'HourStem'];
-  const i1 = stemOrder.indexOf(pos1);
-  const i2 = stemOrder.indexOf(pos2);
-  if (i1 === -1 || i2 === -1) return false;
-  return Math.abs(i1 - i2) === 1;
-}
+import {
+  TIANGAN_WUXING, TIANGAN_YINYANG, DIZHI_CANGGAN, MU_KU,
+  YUELING_COEFF, TIANGAN_WUHE, TIANGAN_CHONG,
+  DIZHI_SANHUI, DIZHI_SANHE, DIZHI_LIUHE, DIZHI_LIUCHONG,
+  DIZHI_XING, DIZHI_HAI, DIZHI_PO,
+  GONGWEI_WEIGHT, GENERATES, RESTRAINS
+} from './constants';
+import { calcShiShen, isAdjacent } from './utils';
 
 function getBranchPos(
   branch: DiZhi,
@@ -167,36 +24,6 @@ function getBranchPos(
   if (pillars.day.branch === branch) return 'DayBranch';
   return 'HourBranch';
 }
-
-function calcShiShen(
-  dayMasterWuxing: Wuxing,
-  dayMasterYinYang: YinYang,
-  targetWuxing: Wuxing,
-  targetYinYang: YinYang
-): ShiShen {
-  const isSameYinYang = dayMasterYinYang === targetYinYang;
-
-  if (targetWuxing === dayMasterWuxing) {
-    return isSameYinYang ? 'BiJian' : 'JieCai';
-  }
-  if (GENERATES[dayMasterWuxing] === targetWuxing) {
-    return isSameYinYang ? 'ShiShen' : 'ShangGuan';
-  }
-  if (RESTRAINS[dayMasterWuxing] === targetWuxing) {
-    return isSameYinYang ? 'PianCai' : 'ZhengCai';
-  }
-  if (RESTRAINS[targetWuxing] === dayMasterWuxing) {
-    return isSameYinYang ? 'QiSha' : 'ZhengGuan';
-  }
-  if (GENERATES[targetWuxing] === dayMasterWuxing) {
-    return isSameYinYang ? 'PianYin' : 'ZhengYin';
-  }
-  return 'BiJian';
-}
-
-// ═══════════════════════════════════════════════════════
-// 主分析函数
-// ═══════════════════════════════════════════════════════
 
 export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
 
@@ -453,7 +280,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       wuxing: stemNode.wuxing,
       roots,
       totalTougenCoeff: totalCoeff,
-      tag: roots.length > 0 ? 'TouChu' : 'Lu',
+      tag: roots.length > 0 ? 'TongGen' : 'Lu',
     });
   }
 

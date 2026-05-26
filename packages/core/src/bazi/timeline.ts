@@ -1,4 +1,8 @@
 import { Solar } from 'lunar-typescript';
+import type { TianGan, DiZhi } from './types';
+import { calcShiShen } from './utils';
+import { STEM_MAP, BRANCH_MAP } from './engine';
+import { TIANGAN_WUXING, TIANGAN_YINYANG, DIZHI_CANGGAN } from './constants';
 
 export interface ChapterSection {
   year: number;
@@ -28,40 +32,6 @@ export interface DestinyTimeline {
 
 const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
 const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-const STEM_MAP: Record<string, string> = { '甲':'Jia', '乙':'Yi', '丙':'Bing', '丁':'Ding', '戊':'Wu', '己':'Ji', '庚':'Geng', '辛':'Xin', '壬':'Ren', '癸':'Gui' };
-const BRANCH_MAP: Record<string, string> = { '子':'Zi', '丑':'Chou', '寅':'Yin', '卯':'Mao', '辰':'Chen', '巳':'Si', '午':'Wu', '未':'Wei', '申':'Shen', '酉':'You', '戌':'Xu', '亥':'Hai' };
-
-const BRANCH_MAIN_QI: Record<string, string> = {
-  '子': '癸', '丑': '己', '寅': '甲', '卯': '乙', '辰': '戊', '巳': '丙',
-  '午': '丁', '未': '己', '申': '庚', '酉': '辛', '戌': '戊', '亥': '壬'
-};
-
-const WX_MAP: Record<string, number> = { '甲':1, '乙':1, '丙':2, '丁':2, '戊':3, '己':3, '庚':4, '辛':4, '壬':5, '癸':5 };
-const YY_MAP: Record<string, number> = { '甲':1, '乙':0, '丙':1, '丁':0, '戊':1, '己':0, '庚':1, '辛':0, '壬':1, '癸':0 };
-
-function getShiShenId(dayMaster: string, target: string): string {
-  if (!dayMaster || !target || target === '?') return 'Unknown';
-  if (dayMaster === target) return 'BiJian';
-
-  const meW = WX_MAP[dayMaster], meY = YY_MAP[dayMaster];
-  const taW = WX_MAP[target], taY = YY_MAP[target];
-  const sameY = meY === taY;
-
-  let rel = 0;
-  if (meW === taW) rel = 0;
-  else if ((meW % 5) + 1 === taW) rel = 1;
-  else if ((meW + 1) % 5 + 1 === taW) rel = 2;
-  else if ((taW % 5) + 1 === meW) rel = 4;
-  else rel = 3;
-
-  if (rel === 0) return sameY ? 'BiJian' : 'JieCai';
-  if (rel === 1) return sameY ? 'ShiShen' : 'ShangGuan';
-  if (rel === 2) return sameY ? 'PianCai' : 'ZhengCai';
-  if (rel === 3) return sameY ? 'QiSha' : 'ZhengGuan';
-  if (rel === 4) return sameY ? 'PianYin' : 'ZhengYin';
-  return 'Unknown';
-}
 
 function getNextPillar(gan: string, zhi: string, offset: number) {
   const gIdx = (STEMS.indexOf(gan) + offset + 12000) % 10;
@@ -94,6 +64,8 @@ export function generateDestinyTimeline(dateStr: string, gender: 'M' | 'F', curr
   const chapters: LifeChapter[] = [];
   let currentChapterIndex = -1;
 
+  const dayMasterEn = STEM_MAP[dayMaster] as TianGan;
+
   for (let i = 0; i < 12; i++) {
     let dyGan, dyZhi, startAge, endAge, startYear, endYear;
 
@@ -119,9 +91,17 @@ export function generateDestinyTimeline(dateStr: string, gender: 'M' | 'F', curr
       endYear = startYear + 9;
     }
 
-    const stemShishenId = getShiShenId(dayMaster, dyGan);
-    const branchMainQi = BRANCH_MAIN_QI[dyZhi];
-    const branchShishenId = getShiShenId(dayMaster, branchMainQi);
+    const dyGanEn = STEM_MAP[dyGan] as TianGan;
+    const stemShishenId = calcShiShen(
+      TIANGAN_WUXING[dayMasterEn], TIANGAN_YINYANG[dayMasterEn],
+      TIANGAN_WUXING[dyGanEn], TIANGAN_YINYANG[dyGanEn]
+    );
+    const dyZhiEn = BRANCH_MAP[dyZhi] as DiZhi;
+    const mainQiStemEn = DIZHI_CANGGAN[dyZhiEn][0].stem;
+    const branchShishenId = calcShiShen(
+      TIANGAN_WUXING[dayMasterEn], TIANGAN_YINYANG[dayMasterEn],
+      TIANGAN_WUXING[mainQiStemEn], TIANGAN_YINYANG[mainQiStemEn]
+    );
     const chapterId = `Chapters.${stemShishenId}_${branchShishenId}`;
 
     const sections: ChapterSection[] = [];
