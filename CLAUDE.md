@@ -136,7 +136,15 @@ packages/core/src/
 
 │   ├── analysis.ts    ← 七步分析引擎 + toBaziSnapshot
 
+│   ├── pattern.ts     ← 格局判定（detectPattern）
+
+│   ├── yongshen.ts    ← 用神判定（detectYongshen）
+
 │   ├── timeline.ts    ← 大运流年
+
+│   ├── constants.ts   ← 全部静态查表（17张）
+
+│   ├── utils.ts       ← calcShiShen / isAdjacent
 
 │   ├── pro.ts         ← 专业模式入口
 
@@ -192,6 +200,10 @@ calculation\_result: {
 
 &#x20; dayStem, energyScores  ← 前端展示用
 
+&#x20; pattern:  { category, name }         ← 格局判定结果
+
+&#x20; yongshen: { wuxing, yinyang, shishen } ← 用神判定结果
+
 }
 
 ```
@@ -234,11 +246,9 @@ calculation\_result: {
 
 步骤4：独立能量计算
 
-&#x20; 天干：30 × 月令系数 × (1 + 透根系数总和)
+&#x20; 天干：30 × 月令系数 × (有透根? 3 : 1)
 
-&#x20; 藏干：基础分 × 月令系数
-
-&#x20; 透根系数 = 藏干基础分 ÷ 30（无上限）
+&#x20; 藏干：基础分 × 月令系数 × (透出天干? 3 : 1)
 
 步骤5：合绊/墓库标记（保留能量，对外输出=0，日干例外）
 
@@ -249,6 +259,76 @@ calculation\_result: {
 &#x20; 日支1.00 | 时干1.00 | 时支0.71
 
 步骤7：十神影响力总值 = Σ(节点能量 × 宫位权重)
+
+```
+
+
+
+\## 格局判定算法（pattern.ts）
+
+```
+
+优先级顺序（高→低，首个命中即返回）：
+
+1\. 化气格：天干五合出现 ZhenHua 且日主参与
+
+2\. 专旺格A（非土）：地支三会/三合 = 日主五行 且无官杀
+
+3\. 专旺格B（土/稼穑格）：四柱地支全在辰戌丑未 且无木
+
+4\. 从儿/财/杀格：无印星比劫 且地支三会/三合→食伤/财/官（取第一个）
+
+5\. 从强格：月令主气为印星 且三会/三合为该五行 且无财星
+
+6\. 正格：扫描月支藏干中透干者（本气→中气→余气），无透则兜底本气
+
+PatternResult.category: 'huaqi' | 'zhuanwang' | 'cong' | 'normal'
+
+```
+
+
+
+\## 用神判定算法（yongshen.ts）
+
+```
+
+特殊格局→固定映射：
+
+  化气格  → 食伤五行
+
+  专旺格  → 日主五行
+
+  从儿格  → 食伤五行
+
+  从财格  → 财星五行
+
+  从杀格  → 官杀五行
+
+  从强格  → 印星五行
+
+正格→五步评分：
+
+  步骤0：outputEnabled节点累加初始能量state0
+
+  步骤1：链式反应state1（生克同时计算初始Δ，同步应用）
+
+  步骤2：对每个候选W（=30）施加临效应lin
+
+          W生X：dX += xv×30/T；W克X：dX -= xv×30/T
+
+          X生W（泄耗）：dX -= xv×30/T；X克W（互耗）：dX -= xv×30/T
+
+          X=W（同气共鸣）：dX += xv×30/T
+
+  步骤3：对lin再做链式反应得state2
+
+  步骤4：H = state2[印] + state2[日主]；K = state2[官] + state2[食伤] + state2[财]
+
+          Score = |H/K - 1|（K=0→Infinity，H=K=0→0）
+
+  步骤5：取最小Score的W；阴阳选命盘中该五行能量更低者
+
+YongshenResult: { wuxing, yinyang, shishen }
 
 ```
 
@@ -325,6 +405,12 @@ calculation\_result: {
 \- \[x] 西洋星盘（astronomy-engine，双模式，SVG图）
 
 \- \[x] messages/按模块分文件结构
+
+\- \[x] bazi引擎基础层重构（constants.ts 17张静态表，utils.ts calcShiShen/isAdjacent）
+
+\- \[x] 格局判定（detectPattern，huaqi/zhuanwang/cong/normal，六级优先序）
+
+\- \[x] 用神判定（detectYongshen，特殊格局固定映射+正格五步链式反应评分）
 
 
 
