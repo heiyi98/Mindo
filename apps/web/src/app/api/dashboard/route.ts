@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     // 检查快照是否已存在
     const { data: existingSnapshot } = await supabase
       .from('snapshots')
-      .select('calculation_result')
+      .select('id, calculation_result')
       .eq('profile_id', profile.id)
       .eq('snapshot_type', 'bazi')
       .single();
@@ -52,22 +52,61 @@ export async function GET(request: Request) {
         pillars_yuelingWuxing: existingSnapshot.calculation_result?.pillars?.yuelingWuxing,
         has_relations: existingSnapshot.calculation_result?.relations !== undefined,
         has_influence: existingSnapshot.calculation_result?.influence !== undefined,
-        pillars_keys: existingSnapshot.calculation_result?.pillars
-          ? Object.keys(existingSnapshot.calculation_result.pillars)
-          : null,
+        has_pattern: existingSnapshot.calculation_result?.pattern !== undefined,
       });
       const isNewFormat =
         existingSnapshot.calculation_result?.pillars?.yuelingWuxing !== undefined &&
         existingSnapshot.calculation_result?.relations !== undefined &&
         existingSnapshot.calculation_result?.influence !== undefined;
+
       if (isNewFormat) {
+        // 懒迁移：新格式但缺少 pattern/yongshen 字段
+        if (!existingSnapshot.calculation_result?.pattern) {
+          console.log('[dashboard API] lazy migration: rebuilding pattern/yongshen for snapshot:', existingSnapshot.id);
+          const pillars = existingSnapshot.calculation_result.pillars as BaziSnapshot['pillars'];
+          const migratedAnalysis = analyzeBazi({
+            year:  { stem: pillars.year.stem,  branch: pillars.year.branch  },
+            month: { stem: pillars.month.stem, branch: pillars.month.branch },
+            day:   { stem: pillars.day.stem,   branch: pillars.day.branch   },
+            hour:  pillars.hour
+              ? { stem: pillars.hour.stem, branch: pillars.hour.branch }
+              : undefined,
+          });
+          const migratedScores: Record<string, number> = {
+            Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0,
+          };
+          for (const node of migratedAnalysis.energyNodes) {
+            if (node.outputEnabled) {
+              migratedScores[node.wuxing] = (migratedScores[node.wuxing] || 0) + node.energy;
+            }
+          }
+          const migratedSnapshot = toBaziSnapshot(
+            migratedAnalysis,
+            existingSnapshot.calculation_result.meta,
+            migratedScores as any,
+          );
+          // 异步写回 DB，不阻塞本次响应
+          supabase
+            .from('snapshots')
+            .update({ calculation_result: migratedSnapshot })
+            .eq('id', existingSnapshot.id)
+            .then(() => {
+              console.log('[dashboard API] lazy migration written for snapshot:', existingSnapshot.id);
+            });
+          return NextResponse.json({
+            profile,
+            bazi: migratedSnapshot as BaziSnapshot,
+            fromCache: true,
+          });
+        }
+
         return NextResponse.json({
           profile,
           bazi: existingSnapshot.calculation_result as BaziSnapshot,
           fromCache: true,
         });
       }
-      // 旧格式：继续往下重新计算，会覆盖旧快照
+      // 旧格式（无 yuelingWuxing/relations/influence）：删除并重算
       await supabase
         .from('snapshots')
         .delete()
