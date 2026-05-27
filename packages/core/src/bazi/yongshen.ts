@@ -56,51 +56,38 @@ function detectNormalYongshen(
   dmWx: Wuxing, dmYy: YinYang,
   energyNodes: EnergyNode[]
 ): YongshenResult {
-  // 步骤 0：纯能量分组（outputEnabled，含日主）
-  const state0: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
+  // 准备：原局纯能量（outputEnabled，按五行累加，不含宫位权重）
+  const baseState: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
   for (const n of energyNodes) {
-    if (n.outputEnabled) state0[n.wuxing] += n.energy;
+    if (n.outputEnabled) baseState[n.wuxing] += n.energy;
   }
-  const T = WUXING_LIST.reduce((s, w) => s + state0[w], 0) || 1;
-
-  // 步骤 1：第一轮链式反应
-  const state1 = chainReact(state0, T);
-  const T1 = WUXING_LIST.reduce((s, w) => s + state1[w], 0) || 1;
+  const T = WUXING_LIST.reduce((s, w) => s + baseState[w], 0) || 1;
 
   // 十神阵营五行
-  const shishenWx = GENERATES[dmWx];           // 食伤
-  const caiWx     = RESTRAINS[dmWx];            // 财星
+  const shishenWx = GENERATES[dmWx];            // 食伤
+  const caiWx     = RESTRAINS[dmWx];             // 财星
   const yinWx     = wxByCat(dmWx, dmYy, 'yin'); // 印星
   const guanWx    = wxByCat(dmWx, dmYy, 'guan');// 官杀
 
-  // 步骤 2+3+4：对五个候选 W 评分
+  const ε = 0.01;
   let bestWx: Wuxing = WUXING_LIST[0];
   let bestScore = Infinity;
 
   for (const W of WUXING_LIST) {
-    // 步骤 2：临（W=30 对 state1 各五行的影响）
-    const lin: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
-    for (const X of WUXING_LIST) {
-      const xv = state1[X];
-      let dX = 0;
-      if (GENERATES[W] === X) dX += (xv * 30) / T1;  // W生X
-      if (RESTRAINS[W] === X) dX -= (xv * 30) / T1;  // W克X
-      if (GENERATES[X] === W) dX -= (xv * 30) / T1;  // X泄耗
-      if (RESTRAINS[X] === W) dX -= (xv * 30) / T1;  // X克W互耗
-      if (X === W)             dX += (xv * 30) / T1;  // 同气共鸣
-      lin[X] = Math.max(0, xv + dX);
-    }
+    // 1. 将候选五行加入命盘（+30）后整体重算
+    const state: WxState = { ...baseState };
+    state[W] += 30;
+    const T_aug = T + 30;
 
-    // 步骤 3：第二轮链式反应
-    const T_lin = WUXING_LIST.reduce((s, w) => s + lin[w], 0) || 1;
-    const state2 = chainReact(lin, T_lin);
+    // 2. 一轮链式反应
+    const finalState = chainReact(state, T_aug);
 
-    // 步骤 4：评分 Score = |H/K - 1|
-    const H = state2[yinWx] + state2[dmWx];
-    const K = state2[guanWx] + state2[shishenWx] + state2[caiWx];
-    const score = (H === 0 && K === 0) ? 0
-                : K === 0              ? Infinity
-                : Math.abs(H / K - 1);
+    // 3. 帮扶方 H / 克泄方 K
+    const H = finalState[yinWx] + finalState[dmWx];
+    const K = finalState[guanWx] + finalState[shishenWx] + finalState[caiWx];
+
+    // 4. Score = |H/K - 1|；K 极小时直接用 H（越大越差）
+    const score = K < ε ? H : Math.abs(H / K - 1);
 
     if (score < bestScore) {
       bestScore = score;
@@ -108,7 +95,7 @@ function detectNormalYongshen(
     }
   }
 
-  // 步骤 5：阴阳选优（命盘中能量更低者）
+  // 阴阳选优：取命盘中该五行能量更低的阴阳
   const selectedYy = selectLowerYinyang(bestWx, energyNodes);
   return {
     wuxing:  bestWx,

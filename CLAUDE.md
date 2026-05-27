@@ -316,29 +316,27 @@ PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
 
   从强格       → 印星五行
 
-正格→五步链式评分：
+正格→候选直接加入命盘后整体重算：
 
   帮扶方 H = 印星 + 日主五行
 
   克泄方 K = 官杀 + 食伤 + 财星
 
-  Score = |H/K - 1|（越接近0越平衡）
+  Score = |H/K - 1|（越接近0越平衡；K<ε时Score=H）
 
-  流程：
+  流程（对每个候选五行 W）：
 
-    ① 链式反应一：state0（纯outputEnabled能量）→ state1
+    ① baseState：outputEnabled节点按五行累加能量（去宫位权重）
 
-       生=能量转移（A泄失 B得益）；克=互耗（双方同时损失）
+    ② state = baseState + W加30 → T_aug = T + 30
 
-    ② 临：对每个候选W施加×30虚拟力 → lin
+    ③ 一轮链式反应（用T_aug作分母）→ finalState
 
-       被生(+) 比(+) 被克(-) 泄(-) 耗(-)
+    ④ 评分：对finalState计算H/K Score
 
-    ③ 链式反应二：lin → state2
+    ⑤ 选Score最小的W为用神五行
 
-    ④ 评分：对state2计算H/K Score
-
-    ⑤ 阴阳选优：命盘中该五行能量更低的阴阳
+    ⑥ 阴阳选优：命盘中该五行能量更低的阴阳
 
 YongshenResult: { wuxing, yinyang, shishen }
 
