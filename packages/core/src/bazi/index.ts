@@ -1,6 +1,6 @@
 export { analyzeBazi, toBaziSnapshot } from './analysis';
 export { detectPattern } from './pattern';
-export { detectYongshen } from './yongshen';
+export { computeWuxingAssessment } from './yongshen';
 export type {
   BaziAnalysis,
   BaziSnapshot,
@@ -15,6 +15,9 @@ export type {
   ShiShenInfluenceGroup,
   PatternResult,
   YongshenResult,
+  WuxingAssessment,
+  WuxingRole,
+  WuxingStrengthLabel,
 } from './types';
 export * from './engine';
 export * from './timeline';

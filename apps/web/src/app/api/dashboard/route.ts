@@ -60,9 +60,9 @@ export async function GET(request: Request) {
         existingSnapshot.calculation_result?.influence !== undefined;
 
       if (isNewFormat) {
-        // 懒迁移：新格式但缺少 pattern/yongshen 字段
-        if (!existingSnapshot.calculation_result?.pattern) {
-          console.log('[dashboard API] lazy migration: rebuilding pattern/yongshen for snapshot:', existingSnapshot.id);
+        // 懒迁移：新格式但缺少 pattern 或 wuxingAssessment 字段
+        if (!existingSnapshot.calculation_result?.pattern || !existingSnapshot.calculation_result?.wuxingAssessment) {
+          console.log('[dashboard API] lazy migration: rebuilding pattern/wuxingAssessment for snapshot:', existingSnapshot.id);
           const pillars = existingSnapshot.calculation_result.pillars as BaziSnapshot['pillars'];
           const migratedAnalysis = analyzeBazi({
             year:  { stem: pillars.year.stem,  branch: pillars.year.branch  },

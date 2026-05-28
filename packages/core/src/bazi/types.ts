@@ -223,5 +223,19 @@ export interface BaziSnapshot {
   dayStem: TianGan;
   energyScores: Record<Wuxing, number>;
   pattern?: PatternResult;
-  yongshen?: YongshenResult;
+  wuxingAssessment: WuxingAssessment[];
+}
+
+export type WuxingRole = 'yongshen' | 'jishen';
+export type WuxingStrengthLabel = '关键用神' | '辅助用神' | '强忌神' | '弱忌神';
+
+export interface WuxingAssessment {
+  wuxing: Wuxing;
+  role: WuxingRole;
+  strengthLabel: WuxingStrengthLabel;
+  effect: number;
+  impacts: {
+    strengthened: ShiShen[];
+    weakened: ShiShen[];
+  };
 }

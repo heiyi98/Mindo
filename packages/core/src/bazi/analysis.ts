@@ -15,7 +15,7 @@ import {
 } from './constants';
 import { calcShiShen, isAdjacent } from './utils';
 import { detectPattern } from './pattern';
-import { detectYongshen } from './yongshen';
+import { computeWuxingAssessment } from './yongshen';
 
 function getBranchPos(
   branch: DiZhi,
@@ -434,7 +434,6 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     dayMasterEnergy,
   };
   result.pattern = detectPattern(result);
-  result.yongshen = detectYongshen(result);
   return result;
 }
 
@@ -473,9 +472,12 @@ export function toBaziSnapshot(
       shishenInfluence: analysis.shishenInfluence,
       dayMasterEnergy:  analysis.dayMasterEnergy,
     },
-    dayStem:      analysis.pillars.day.stem,
+    dayStem:          analysis.pillars.day.stem,
     energyScores,
-    pattern:      analysis.pattern,
-    yongshen:     analysis.yongshen,
+    pattern:          analysis.pattern,
+    wuxingAssessment: computeWuxingAssessment({
+      dayStem:      analysis.pillars.day.stem,
+      energyScores,
+    }),
   };
 }

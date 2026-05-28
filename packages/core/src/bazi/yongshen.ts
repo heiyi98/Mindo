@@ -1,38 +1,8 @@
-import type {
-  BaziAnalysis, YongshenResult, Wuxing, YinYang, EnergyNode
-} from './types';
-import { GENERATES, RESTRAINS } from './constants';
-import { calcShiShen } from './utils';
+import type { BaziSnapshot, Wuxing, ShiShen, WuxingAssessment, WuxingStrengthLabel } from './types';
+import { GENERATES, RESTRAINS, TIANGAN_WUXING } from './constants';
 
 const WUXING_LIST: Wuxing[] = ['Wood', 'Fire', 'Earth', 'Metal', 'Water'];
 type WxState = Record<Wuxing, number>;
-
-// 返回能量更低的阴阳（相等时取 Yang）
-function selectLowerYinyang(wx: Wuxing, nodes: EnergyNode[]): YinYang {
-  let yang = 0, yin = 0;
-  for (const n of nodes) {
-    if (n.wuxing === wx && n.outputEnabled) {
-      if (n.yinyang === 'Yang') yang += n.energy;
-      else yin += n.energy;
-    }
-  }
-  return yin < yang ? 'Yin' : 'Yang';
-}
-
-// 按关系类别找对应五行（跳过日主同五行）
-function wxByCat(dmWx: Wuxing, dmYy: YinYang, cat: 'shishen' | 'cai' | 'guan' | 'yin'): Wuxing {
-  for (const w of WUXING_LIST) {
-    if (w === dmWx) continue;
-    const ss = calcShiShen(dmWx, dmYy, w, 'Yang');
-    if (
-      (cat === 'shishen' && (ss === 'ShiShen'   || ss === 'ShangGuan')) ||
-      (cat === 'cai'     && (ss === 'PianCai'    || ss === 'ZhengCai'))  ||
-      (cat === 'guan'    && (ss === 'QiSha'       || ss === 'ZhengGuan')) ||
-      (cat === 'yin'     && (ss === 'PianYin'     || ss === 'ZhengYin'))
-    ) return w;
-  }
-  return dmWx;
-}
 
 // 链式反应：生克同时作用，用初始值计算 Δ，同步应用
 function chainReact(s: WxState, t: number): WxState {
@@ -52,92 +22,98 @@ function chainReact(s: WxState, t: number): WxState {
   return r;
 }
 
-function detectNormalYongshen(
-  dmWx: Wuxing, dmYy: YinYang,
-  energyNodes: EnergyNode[]
-): YongshenResult {
-  // 准备：原局纯能量（outputEnabled，按五行累加，不含宫位权重）
-  const baseState: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
-  for (const n of energyNodes) {
-    if (n.outputEnabled) baseState[n.wuxing] += n.energy;
-  }
-  const T = WUXING_LIST.reduce((s, w) => s + baseState[w], 0) || 1;
-
-  // 十神阵营五行
-  const shishenWx = GENERATES[dmWx];            // 食伤
-  const caiWx     = RESTRAINS[dmWx];             // 财星
-  const yinWx     = wxByCat(dmWx, dmYy, 'yin'); // 印星
-  const guanWx    = wxByCat(dmWx, dmYy, 'guan');// 官杀
-
-  const ε = 0.01;
-  let bestWx: Wuxing = WUXING_LIST[0];
-  let bestScore = Infinity;
-
-  for (const W of WUXING_LIST) {
-    // 1. 将候选五行加入命盘（+30）后整体重算
-    const state: WxState = { ...baseState };
-    state[W] += 30;
-    const T_aug = T + 30;
-
-    // 2. 一轮链式反应
-    const finalState = chainReact(state, T_aug);
-
-    // 3. 帮扶方 H / 克泄方 K
-    const H = finalState[yinWx] + finalState[dmWx];
-    const K = finalState[guanWx] + finalState[shishenWx] + finalState[caiWx];
-
-    // 4. Score = |H/K - 1|；K 极小时直接用 H（越大越差）
-    const score = K < ε ? H : Math.abs(H / K - 1);
-
-    if (score < bestScore) {
-      bestScore = score;
-      bestWx = W;
-    }
-  }
-
-  // 阴阳选优：取命盘中该五行能量更低的阴阳
-  const selectedYy = selectLowerYinyang(bestWx, energyNodes);
-  return {
-    wuxing:  bestWx,
-    yinyang: selectedYy,
-    shishen: calcShiShen(dmWx, dmYy, bestWx, selectedYy),
-  };
+function calcHKScore(
+  energy: Record<Wuxing, number>,
+  hGroup: Wuxing[],
+  kGroup: Wuxing[]
+): number {
+  const H = hGroup.reduce((sum, w) => sum + (energy[w] ?? 0), 0);
+  const K = kGroup.reduce((sum, w) => sum + (energy[w] ?? 0), 0);
+  if (K === 0) return H;
+  return Math.abs(H / K - 1);
 }
 
-export function detectYongshen(analysis: BaziAnalysis): YongshenResult | undefined {
-  if (!analysis.pattern) return undefined;
+export function computeWuxingAssessment(
+  snapshot: Pick<BaziSnapshot, 'energyScores' | 'dayStem'>
+): WuxingAssessment[] {
+  const baseEnergy: WxState = { ...snapshot.energyScores } as WxState;
+  const dayStemWuxing: Wuxing = TIANGAN_WUXING[snapshot.dayStem];
 
-  const { energyNodes, tianGanNodes } = analysis;
-  const dmNode = tianGanNodes.find(n => n.pos === 'DayStem')!;
-  const dmWx = dmNode.wuxing;
-  const dmYy = dmNode.yinyang;
-
-  const makeResult = (wx: Wuxing): YongshenResult => {
-    const yy = selectLowerYinyang(wx, energyNodes);
-    return { wuxing: wx, yinyang: yy, shishen: calcShiShen(dmWx, dmYy, wx, yy) };
-  };
-
-  const { category, name } = analysis.pattern;
-
-  // 化气格：化神五行（ZhenHua 后已更新至 dmWx）的食伤五行
-  if (category === 'huaqi') {
-    return makeResult(wxByCat(dmWx, dmYy, 'shishen'));
+  // 反向查找：生我五行（印）和克我五行（官杀）
+  const generatedByMap = {} as Record<Wuxing, Wuxing>;
+  const restrainedByMap = {} as Record<Wuxing, Wuxing>;
+  for (const w of WUXING_LIST) {
+    generatedByMap[GENERATES[w]] = w;  // GENERATES[w] 被 w 所生
+    restrainedByMap[RESTRAINS[w]] = w; // RESTRAINS[w] 被 w 所克
   }
 
-  // 专旺格：日主同五行（比肩或劫财）
-  if (category === 'zhuanwang') {
-    return makeResult(dmWx);
+  const hGroup: Wuxing[] = [dayStemWuxing, generatedByMap[dayStemWuxing]];
+  const kGroup: Wuxing[] = [
+    GENERATES[dayStemWuxing],          // 我生（食伤）
+    RESTRAINS[dayStemWuxing],          // 我克（财）
+    restrainedByMap[dayStemWuxing],    // 克我（官杀）
+  ];
+
+  // 五行→十神对映射
+  const wuxingToShishen: Record<Wuxing, ShiShen[]> = {
+    [dayStemWuxing]:                  ['BiJian', 'JieCai'],
+    [GENERATES[dayStemWuxing]]:       ['ShiShen', 'ShangGuan'],
+    [RESTRAINS[dayStemWuxing]]:       ['PianCai', 'ZhengCai'],
+    [restrainedByMap[dayStemWuxing]]: ['QiSha', 'ZhengGuan'],
+    [generatedByMap[dayStemWuxing]]:  ['PianYin', 'ZhengYin'],
+  } as Record<Wuxing, ShiShen[]>;
+
+  const T = WUXING_LIST.reduce((s, w) => s + baseEnergy[w], 0) || 1;
+  const baseScore = calcHKScore(baseEnergy, hGroup, kGroup);
+
+  const candidates: Array<{
+    wuxing: Wuxing;
+    effect: number;
+    strengthened: ShiShen[];
+    weakened: ShiShen[];
+  }> = [];
+
+  for (const candidate of WUXING_LIST) {
+    const candidateEnergy: WxState = { ...baseEnergy };
+    candidateEnergy[candidate] = candidateEnergy[candidate] + 30;
+    const T_aug = T + 30;
+
+    const afterEnergy = chainReact(candidateEnergy, T_aug);
+    const candidateScore = calcHKScore(afterEnergy, hGroup, kGroup);
+
+    const effect = baseScore === 0 ? 0 : (baseScore - candidateScore) / baseScore;
+    if (Math.abs(effect) < 0.25) continue;
+
+    const strengthened: ShiShen[] = [];
+    const weakened: ShiShen[] = [];
+    for (const w of WUXING_LIST) {
+      const pair = wuxingToShishen[w];
+      if (!pair) continue;
+      if (afterEnergy[w] > baseEnergy[w]) strengthened.push(...pair);
+      else if (afterEnergy[w] < baseEnergy[w]) weakened.push(...pair);
+    }
+
+    candidates.push({ wuxing: candidate, effect, strengthened, weakened });
   }
 
-  // 从格：按子格固定映射
-  if (category === 'cong') {
-    if (name === '从儿格') return makeResult(wxByCat(dmWx, dmYy, 'shishen'));
-    if (name === '从财格') return makeResult(wxByCat(dmWx, dmYy, 'cai'));
-    if (name === '从杀格') return makeResult(wxByCat(dmWx, dmYy, 'guan'));
-    if (name === '从强格') return makeResult(wxByCat(dmWx, dmYy, 'yin'));
-    return undefined;
-  }
+  candidates.sort((a, b) => b.effect - a.effect);
+  if (candidates.length === 0) return [];
 
-  // 正格：纯能量+链式反应+临+评分+阴阳选优
-  return detectNormalYongshen(dmWx, dmYy, energyNodes);
+  const maxAbsEffect = Math.max(...candidates.map(c => Math.abs(c.effect)));
+
+  return candidates.map(c => {
+    let strengthLabel: WuxingStrengthLabel;
+    if (c.effect > 0 && c.effect > maxAbsEffect * 0.50)       strengthLabel = '关键用神';
+    else if (c.effect > 0)                                      strengthLabel = '辅助用神';
+    else if (Math.abs(c.effect) > maxAbsEffect * 0.50)         strengthLabel = '强忌神';
+    else                                                        strengthLabel = '弱忌神';
+
+    return {
+      wuxing: c.wuxing,
+      role: (c.effect > 0 ? 'yongshen' : 'jishen') as WuxingAssessment['role'],
+      strengthLabel,
+      effect: c.effect,
+      impacts: { strengthened: c.strengthened, weakened: c.weakened },
+    };
+  });
 }

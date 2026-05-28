@@ -140,7 +140,9 @@ packages/core/src/bazi/
 
 ├── pattern.ts     ← 格局判定
 
-├── yongshen.ts    ← 用神算法
+├── yongshen.ts           ← 五行全局评估（computeWuxingAssessment）
+
+├── preparePhase1Input.ts ← AI解读第一阶段输入准备
 
 ├── timeline.ts    ← 大运流年
 
@@ -190,7 +192,7 @@ calculation\_result: {
 
 &#x20; pattern:  { category, name }         ← 格局判定结果
 
-&#x20; yongshen: { wuxing, yinyang, shishen } ← 用神判定结果
+&#x20; wuxingAssessment: WuxingAssessment[] ← 五行全局评估（用神/忌神/强度/十神影响）
 
 }
 
@@ -290,45 +292,41 @@ PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
 
 
 
-\## 用神算法
+\## 五行全局评估算法（computeWuxingAssessment）
 
 ```
 
-特殊格局→固定映射：
+输入：snapshot.energyScores（五行能量）+ snapshot.dayStem（日主天干）
 
-  化气格/从儿格 → 食伤五行
+H组 = [日主五行, 生我五行（印）]
 
-  专旺格       → 日主五行
+K组 = [我生五行（食伤）, 我克五行（财）, 克我五行（官杀）]
 
-  从财格       → 财星五行
+对五个候选五行各执行：
 
-  从杀格       → 官杀五行
+  candidateEnergy = baseEnergy + 30（该五行）
 
-  从强格       → 印星五行
+  afterEnergy = chainReact(candidateEnergy, T+30)
 
-正格→候选直接加入命盘后整体重算：
+  effect = (baseScore - candidateScore) / baseScore
 
-  帮扶方 H（日主+印+比）vs 克泄方 K（官杀+食伤+财）
+  （正值=用神方向，负值=忌神方向）
 
-  Score = |H/K - 1|（越接近0越平衡；K<ε时Score=H）
+  impacts.strengthened/weakened：afterEnergy vs baseEnergy 变化 → 对应十神对
 
-  流程（对每个候选五行 W）：
+闲神过滤：|effect| < 0.25 丢弃
 
-    ① baseState：outputEnabled节点按五行累加能量（去宫位权重）
+强度标签（maxAbsEffect = 所有剩余 |effect| 最大值）：
 
-    ② state = baseState + W加30 → T_aug = T + 30
+  effect > 0 且 > maxAbsEffect×0.50 → 关键用神
 
-    ③ 一轮链式反应（用T_aug作分母）→ finalState
+  effect > 0 且 ≤ maxAbsEffect×0.50 → 辅助用神
 
-       链式：生=能量转移（A泄B得），克=互耗（双方损失）
+  effect < 0 且 |effect| > maxAbsEffect×0.50 → 强忌神
 
-    ④ 评分：对finalState计算H/K Score
+  effect < 0 且 |effect| ≤ maxAbsEffect×0.50 → 弱忌神
 
-    ⑤ 选Score最小的W为用神五行
-
-    ⑥ 阴阳选优：命盘中该五行能量更低的阴阳
-
-YongshenResult: { wuxing, yinyang, shishen }
+WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 ```
 
@@ -410,9 +408,11 @@ YongshenResult: { wuxing, yinyang, shishen }
 
 \- \[x] 格局判定引擎（化气/专旺/从格四子类/正格十种）
 
-\- \[x] 用神算法（纯能量+链式反应+临+评分+阴阳选优）
+\- \[x] 五行全局评估（WuxingAssessment：用神/忌神分类+强度标签+十神影响，替代旧单一用神）
 
-\- \[x] 旧快照懒迁移（自动补全 pattern/yongshen）
+\- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估）
+
+\- \[x] 旧快照懒迁移（自动补全 pattern/wuxingAssessment）
 
 \- \[x] Snapshots RLS 性能优化
 
