@@ -49,12 +49,21 @@ export const DIZHI_CANGGAN: Record<DiZhi, { stem: TianGan; qi: QiWei; score: num
 
 export const MU_KU: DiZhi[] = ['Chen', 'Xu', 'Chou', 'Wei'];
 
+/**
+ * 月令旺衰系数 — 斐波那契能量递减模型
+ * 基于斐波那契数列倒序前五项 (8, 5, 3, 2, 1) 除以基准常数 4：
+ *   得令 (旺，同我)   = 8/4 = 2.00  — 能量极盛，完全顺应月令
+ *   近旺 (相，生我)   = 5/4 = 1.25  — 母体滋养，被月令生助
+ *   泄气 (休，我生)   = 3/4 = 0.75  — 主动输出，能量流向月令
+ *   受制 (囚，月令所克) = 2/4 = 0.50 — 受月令压制
+ *   失令 (死，克我)   = 1/4 = 0.25  — 逆势克制月令，能量冰点
+ */
 export const YUELING_COEFF: Record<Wuxing, Record<Wuxing, number>> = {
-  Wood:  { Wood: 2.0,  Fire: 1.33, Earth: 0.67, Metal: 0.33, Water: 0.83 },
-  Fire:  { Fire: 2.0,  Earth: 1.33, Metal: 0.67, Water: 0.33, Wood: 0.83 },
-  Earth: { Earth: 2.0, Metal: 1.33, Water: 0.67, Wood: 0.33,  Fire: 0.83 },
-  Metal: { Metal: 2.0, Water: 1.33, Wood: 0.67,  Fire: 0.33,  Earth: 0.83 },
-  Water: { Water: 2.0, Wood: 1.33,  Fire: 0.67,  Earth: 0.33, Metal: 0.83 }
+  Wood:  { Wood: 2.00, Fire: 1.25, Earth: 0.50, Metal: 0.25, Water: 0.75 },
+  Fire:  { Fire: 2.00, Earth: 1.25, Metal: 0.50, Water: 0.25, Wood: 0.75 },
+  Earth: { Earth: 2.00, Metal: 1.25, Water: 0.50, Wood: 0.25, Fire: 0.75 },
+  Metal: { Metal: 2.00, Water: 1.25, Wood: 0.50, Fire: 0.25, Earth: 0.75 },
+  Water: { Water: 2.00, Wood: 1.25, Fire: 0.50, Earth: 0.25, Metal: 0.75 }
 };
 
 export const TIANGAN_WUHE: [TianGan, TianGan, Wuxing][] = [
