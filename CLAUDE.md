@@ -128,33 +128,23 @@ packages/config/   ← 共享TypeScript/ESLint配置
 
 ```
 
-packages/core/src/
+packages/core/src/bazi/
 
-├── bazi/
+├── constants.ts   ← 所有静态数据表
 
-│   ├── constants.ts   ← 所有静态数据表
+├── utils.ts       ← calcShiShen / isAdjacent 等共享工具
 
-│   ├── utils.ts       ← calcShiShen / isAdjacent 等共享工具
+├── engine.ts      ← 排盘 + 真太阳时
 
-│   ├── engine.ts      ← 排盘 + 真太阳时
+├── analysis.ts    ← 七步分析引擎
 
-│   ├── analysis.ts    ← 七步分析引擎
+├── pattern.ts     ← 格局判定
 
-│   ├── pattern.ts     ← 格局判定
+├── yongshen.ts    ← 用神算法
 
-│   ├── yongshen.ts    ← 用神算法
+├── timeline.ts    ← 大运流年
 
-│   ├── timeline.ts    ← 大运流年
-
-│   └── types.ts       ← 全部类型定义
-
-├── psychology/
-
-│   └── bigfive/
-
-└── astrology/
-
-&#x20;   └── western/
+└── types.ts       ← 全部类型定义
 
 ```
 
@@ -318,9 +308,7 @@ PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
 
 正格→候选直接加入命盘后整体重算：
 
-  帮扶方 H = 印星 + 日主五行
-
-  克泄方 K = 官杀 + 食伤 + 财星
+  帮扶方 H（日主+印+比）vs 克泄方 K（官杀+食伤+财）
 
   Score = |H/K - 1|（越接近0越平衡；K<ε时Score=H）
 
@@ -331,6 +319,8 @@ PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
     ② state = baseState + W加30 → T_aug = T + 30
 
     ③ 一轮链式反应（用T_aug作分母）→ finalState
+
+       链式：生=能量转移（A泄B得），克=互耗（双方损失）
 
     ④ 评分：对finalState计算H/K Score
 
@@ -416,11 +406,17 @@ YongshenResult: { wuxing, yinyang, shishen }
 
 \- \[x] messages/按模块分文件结构
 
-\- \[x] 算法架构重构（constants/utils 分离，消除 timeline 重复代码）
+\- \[x] 算法架构重构（constants/utils 分离，消除重复代码）
 
-\- \[x] 格局判定引擎（pattern.ts：化气/专旺/从格四子类/正格十种）
+\- \[x] 格局判定引擎（化气/专旺/从格四子类/正格十种）
 
-\- \[x] 用神算法（yongshen.ts：纯能量+链式反应+临+评分+阴阳选优）
+\- \[x] 用神算法（纯能量+链式反应+临+评分+阴阳选优）
+
+\- \[x] 旧快照懒迁移（自动补全 pattern/yongshen）
+
+\- \[x] Snapshots RLS 性能优化
+
+\- \[x] 大五人格 insert 静默失败修复
 
 
 
