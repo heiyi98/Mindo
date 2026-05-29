@@ -2,69 +2,89 @@ import type { BaziSnapshot, Wuxing, ShiShen, WuxingAssessment, WuxingStrengthLab
 import { GENERATES, RESTRAINS, TIANGAN_WUXING } from './constants';
 
 const WUXING_LIST: Wuxing[] = ['Wood', 'Fire', 'Earth', 'Metal', 'Water'];
-type WxState = Record<Wuxing, number>;
 
-// 链式反应：生克同时作用，用初始值计算 Δ，同步应用
-function chainReact(s: WxState, t: number): WxState {
-  const d: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
-  for (const a of WUXING_LIST) {
-    const b = GENERATES[a];
-    const delta = (s[a] * s[b]) / t;
+type SSGroups = { A: number; B: number; C: number; D: number; E: number };
+
+// A=印星, B=比劫, C=食伤, D=财星, E=官杀
+const GROUP_SHISHEN: Record<keyof SSGroups, ShiShen[]> = {
+  A: ['PianYin', 'ZhengYin'],
+  B: ['BiJian', 'JieCai'],
+  C: ['ShiShen', 'ShangGuan'],
+  D: ['PianCai', 'ZhengCai'],
+  E: ['QiSha', 'ZhengGuan'],
+};
+
+// 生：A→B→C→D→E→A；克：B克D、C克E、D克A、E克B、A克C
+function shishenChainReact(g: SSGroups): SSGroups {
+  const T = g.A + g.B + g.C + g.D + g.E;
+  if (T === 0) return { ...g };
+
+  const d = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+
+  const GEN: Array<[keyof SSGroups, keyof SSGroups]> = [
+    ['A', 'B'], ['B', 'C'], ['C', 'D'], ['D', 'E'], ['E', 'A'],
+  ];
+  for (const [a, b] of GEN) {
+    const delta = (g[a] * g[b]) / T;
     d[a] -= delta; d[b] += delta;
   }
-  for (const a of WUXING_LIST) {
-    const b = RESTRAINS[a];
-    const delta = (s[a] * s[b]) / t;
-    d[a] -= delta; d[b] -= delta; // 互耗
-  }
-  const r: WxState = { Wood: 0, Fire: 0, Earth: 0, Metal: 0, Water: 0 };
-  for (const w of WUXING_LIST) r[w] = Math.max(0, s[w] + d[w]);
-  return r;
-}
 
-function calcHKScore(
-  energy: Record<Wuxing, number>,
-  hGroup: Wuxing[],
-  kGroup: Wuxing[]
-): number {
-  const H = hGroup.reduce((sum, w) => sum + (energy[w] ?? 0), 0);
-  const K = kGroup.reduce((sum, w) => sum + (energy[w] ?? 0), 0);
-  if (K === 0) return H;
-  return Math.abs(H / K - 1);
+  const KE: Array<[keyof SSGroups, keyof SSGroups]> = [
+    ['B', 'D'], ['C', 'E'], ['D', 'A'], ['E', 'B'], ['A', 'C'],
+  ];
+  for (const [a, b] of KE) {
+    const delta = (g[a] * g[b]) / T;
+    d[a] -= delta; d[b] -= delta;
+  }
+
+  return {
+    A: Math.max(0, g.A + d.A),
+    B: Math.max(0, g.B + d.B),
+    C: Math.max(0, g.C + d.C),
+    D: Math.max(0, g.D + d.D),
+    E: Math.max(0, g.E + d.E),
+  };
 }
 
 export function computeWuxingAssessment(
-  snapshot: Pick<BaziSnapshot, 'energyScores' | 'dayStem'>
+  snapshot: Pick<BaziSnapshot, 'influence' | 'dayStem'>
 ): WuxingAssessment[] {
-  const baseEnergy: WxState = { ...snapshot.energyScores } as WxState;
-  const dayStemWuxing: Wuxing = TIANGAN_WUXING[snapshot.dayStem];
+  const { shishenInfluence, dayMasterEnergy } = snapshot.influence;
 
-  // 反向查找：生我五行（印）和克我五行（官杀）
+  const ssMap = new Map<ShiShen, number>();
+  for (const g of shishenInfluence) ssMap.set(g.shishen, g.totalInfluence);
+  const get = (ss: ShiShen) => ssMap.get(ss) ?? 0;
+
+  const groups_base: SSGroups = {
+    A: get('PianYin') + get('ZhengYin'),
+    B: get('BiJian') + get('JieCai'),
+    C: get('ShiShen') + get('ShangGuan'),
+    D: get('PianCai') + get('ZhengCai'),
+    E: get('QiSha') + get('ZhengGuan'),
+  };
+
+  const groups_after = shishenChainReact(groups_base);
+  const H_base = groups_after.A + groups_after.B + dayMasterEnergy;
+  const K_base = groups_after.C + groups_after.D + groups_after.E;
+  const baseScore = K_base === 0 ? H_base : Math.abs(H_base / K_base - 1);
+
+  if (baseScore === 0) return [];
+
+  // 候选五行 → 十神组映射
+  const dayStemWuxing = TIANGAN_WUXING[snapshot.dayStem];
   const generatedByMap = {} as Record<Wuxing, Wuxing>;
   const restrainedByMap = {} as Record<Wuxing, Wuxing>;
   for (const w of WUXING_LIST) {
-    generatedByMap[GENERATES[w]] = w;  // GENERATES[w] 被 w 所生
-    restrainedByMap[RESTRAINS[w]] = w; // RESTRAINS[w] 被 w 所克
+    generatedByMap[GENERATES[w]] = w;
+    restrainedByMap[RESTRAINS[w]] = w;
   }
-
-  const hGroup: Wuxing[] = [dayStemWuxing, generatedByMap[dayStemWuxing]];
-  const kGroup: Wuxing[] = [
-    GENERATES[dayStemWuxing],          // 我生（食伤）
-    RESTRAINS[dayStemWuxing],          // 我克（财）
-    restrainedByMap[dayStemWuxing],    // 克我（官杀）
-  ];
-
-  // 五行→十神对映射
-  const wuxingToShishen: Record<Wuxing, ShiShen[]> = {
-    [dayStemWuxing]:                  ['BiJian', 'JieCai'],
-    [GENERATES[dayStemWuxing]]:       ['ShiShen', 'ShangGuan'],
-    [RESTRAINS[dayStemWuxing]]:       ['PianCai', 'ZhengCai'],
-    [restrainedByMap[dayStemWuxing]]: ['QiSha', 'ZhengGuan'],
-    [generatedByMap[dayStemWuxing]]:  ['PianYin', 'ZhengYin'],
-  } as Record<Wuxing, ShiShen[]>;
-
-  const T = WUXING_LIST.reduce((s, w) => s + baseEnergy[w], 0) || 1;
-  const baseScore = calcHKScore(baseEnergy, hGroup, kGroup);
+  const wuxingToGroup: Record<Wuxing, keyof SSGroups> = {
+    [dayStemWuxing]:                  'B', // 同我→比劫
+    [generatedByMap[dayStemWuxing]]:  'A', // 生我→印星
+    [GENERATES[dayStemWuxing]]:       'C', // 我生→食伤
+    [RESTRAINS[dayStemWuxing]]:       'D', // 我克→财星
+    [restrainedByMap[dayStemWuxing]]: 'E', // 克我→官杀
+  } as Record<Wuxing, keyof SSGroups>;
 
   const candidates: Array<{
     wuxing: Wuxing;
@@ -74,23 +94,22 @@ export function computeWuxingAssessment(
   }> = [];
 
   for (const candidate of WUXING_LIST) {
-    const candidateEnergy: WxState = { ...baseEnergy };
-    candidateEnergy[candidate] = candidateEnergy[candidate] + 30;
-    const T_aug = T + 30;
+    const groupKey = wuxingToGroup[candidate];
+    const candidate_groups: SSGroups = { ...groups_base, [groupKey]: groups_base[groupKey] + 30 };
+    const after = shishenChainReact(candidate_groups);
 
-    const afterEnergy = chainReact(candidateEnergy, T_aug);
-    const candidateScore = calcHKScore(afterEnergy, hGroup, kGroup);
+    const H_new = after.A + after.B + dayMasterEnergy;
+    const K_new = after.C + after.D + after.E;
+    const candidateScore = K_new === 0 ? H_new : Math.abs(H_new / K_new - 1);
 
-    const effect = baseScore === 0 ? 0 : (baseScore - candidateScore) / baseScore;
-    if (Math.abs(effect) < 0.25) continue;
+    const effect = (baseScore - candidateScore) / baseScore;
+    if (Math.abs(effect) < baseScore * 0.25) continue;
 
     const strengthened: ShiShen[] = [];
     const weakened: ShiShen[] = [];
-    for (const w of WUXING_LIST) {
-      const pair = wuxingToShishen[w];
-      if (!pair) continue;
-      if (afterEnergy[w] > baseEnergy[w]) strengthened.push(...pair);
-      else if (afterEnergy[w] < baseEnergy[w]) weakened.push(...pair);
+    for (const key of ['A', 'B', 'C', 'D', 'E'] as Array<keyof SSGroups>) {
+      if (after[key] > groups_base[key])      strengthened.push(...GROUP_SHISHEN[key]);
+      else if (after[key] < groups_base[key]) weakened.push(...GROUP_SHISHEN[key]);
     }
 
     candidates.push({ wuxing: candidate, effect, strengthened, weakened });
@@ -103,10 +122,10 @@ export function computeWuxingAssessment(
 
   return candidates.map(c => {
     let strengthLabel: WuxingStrengthLabel;
-    if (c.effect > 0 && c.effect > maxAbsEffect * 0.50)       strengthLabel = '关键用神';
-    else if (c.effect > 0)                                      strengthLabel = '辅助用神';
-    else if (Math.abs(c.effect) > maxAbsEffect * 0.50)         strengthLabel = '强忌神';
-    else                                                        strengthLabel = '弱忌神';
+    if (c.effect > 0 && c.effect > maxAbsEffect * 0.50)   strengthLabel = '关键用神';
+    else if (c.effect > 0)                                  strengthLabel = '辅助用神';
+    else if (Math.abs(c.effect) > maxAbsEffect * 0.50)     strengthLabel = '强忌神';
+    else                                                    strengthLabel = '弱忌神';
 
     return {
       wuxing: c.wuxing,

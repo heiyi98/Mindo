@@ -476,8 +476,11 @@ export function toBaziSnapshot(
     energyScores,
     pattern:          analysis.pattern,
     wuxingAssessment: computeWuxingAssessment({
-      dayStem:      analysis.pillars.day.stem,
-      energyScores,
+      dayStem:   analysis.pillars.day.stem,
+      influence: {
+        shishenInfluence: analysis.shishenInfluence,
+        dayMasterEnergy:  analysis.dayMasterEnergy,
+      },
     }),
   };
 }
