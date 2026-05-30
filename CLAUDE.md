@@ -416,7 +416,7 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] 五行全局评估（WuxingAssessment：用神/忌神分类+强度标签+十神影响，替代旧单一用神）
 
-\- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估）
+\- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估+十神字段+wuxing/yinyang+透出宫位）
 
 \- \[x] 旧快照懒迁移（自动补全 pattern/wuxingAssessment）
 
