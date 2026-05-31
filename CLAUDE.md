@@ -30,7 +30,7 @@
 
 \- 部署：Vercel（国际版）/ 阿里云（中国版，待定）
 
-\- 开发环境：Windows PowerShell 5.x，Cursor IDE
+\- 开发环境：Windows PowerShell 5.x，Claude Code
 
 
 
@@ -342,7 +342,7 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- 架构讨论/产品决策：在此Project对话进行
 
-\- 代码施工：开新Cursor Chat，读CLAUDE.md后执行，完成后更新CLAUDE.md
+\- 代码施工：开新Claude Code会话，读CLAUDE.md后执行，完成后更新CLAUDE.md
 
 \- 每次施工后必须更新CLAUDE.md并推送到GitHub
 
@@ -416,7 +416,7 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] 五行全局评估（WuxingAssessment：用神/忌神分类+强度标签+十神影响，替代旧单一用神）
 
-\- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估+十神字段+wuxing/yinyang+透出宫位）
+\- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估+十神字段+wuxing/yinyang+透出宫位；所有枚举值已汉化：dayStem/shishen/wuxing/yinyang/transparentThrough 均输出中文）
 
 \- \[x] 旧快照懒迁移（自动补全 pattern/wuxingAssessment）
 
