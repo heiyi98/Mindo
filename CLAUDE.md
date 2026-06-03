@@ -232,17 +232,19 @@ calculation\_result: {
 
 步骤2：地支关系标注（三会/三合/半合/拱合/六合/六冲/刑/害/破，只标注）
 
-步骤3：月令系数（得令×2.0，近旺×1.33，泄气×0.83，受制×0.67，失令×0.33）
+步骤3：月令系数（斐波那契推导，8:5:3:2:1 ÷ 4，锚定得令=2.00）
 
-步骤4：独立能量计算（透根系数已废弃，改为二元规则）
+&#x20; 得令×2.00 | 近旺×1.25 | 泄气×0.75 | 受制×0.50 | 失令×0.25
 
-&#x20; 天干有根 → 30 × 月令系数 × 3
+步骤4：独立能量计算（通根系数分配规则）
 
-&#x20; 天干无根 → 30 × 月令系数 × 1
+&#x20; 通根系数 = 藏干基础分 ÷ 10（上限截断为3，每条通根单独计算）
 
-&#x20; 藏干透出 → 基础分 × 月令系数 × 3
+&#x20; 天干：energy = 30 × 月令系数 × (1 + 分配通根系数)
 
-&#x20; 藏干不透 → 基础分 × 月令系数 × 1
+&#x20;   分配通根系数 = totalTougenCoeff / 同五行天干数
+
+&#x20; 藏干：energy = 藏干基础分 × 月令系数（去掉透出乘数）
 
 步骤5：合绊/墓库标记（保留能量，对外输出=0，日干例外）
 
@@ -304,33 +306,53 @@ PatternResult: { category: 'huaqi'|'zhuanwang'|'cong'|'normal', name: string }
 
 克：B克D, C克E, D克A, E克B, A克C（互耗，双方各-δ）
 
-基准评分：groups_after = shishenChainReact(groups_base)
+基准失衡：直接使用 groups_base（无链式反应）
 
-  H = groups_after.A + groups_after.B + dayMasterEnergy
+  H = groups_base.A + groups_base.B + dayMasterEnergy
 
-  K = groups_after.C + groups_after.D + groups_after.E
+  K = groups_base.C + groups_base.D + groups_base.E
 
-  baseScore = K===0 ? H : |H/K - 1|
+  baseScore = |H - K|
 
 候选映射：同我→B，生我→A，我生→C，我克→D，克我→E
 
-对五个候选各加30至对应组，跑链式反应，计算：
+对五个候选各加30至对应组，只跑直接涉及该组的生/克关系（每组最多4条，不跑完整链式反应）：
 
-  effect = (baseScore - candidateScore) / baseScore
+  newImbalance = |新H - 新K|
 
-闲神过滤：|effect| < baseScore×0.25 丢弃（相对阈值）
+方向判定：
 
-强度标签（maxAbsEffect = 所有剩余 |effect| 最大值）：
+  newImbalance < baseScore → 用神
 
-  effect > 0 且 > maxAbsEffect×0.50 → 关键用神
+  newImbalance ≥ baseScore → 忌神
 
-  effect > 0 且 ≤ maxAbsEffect×0.50 → 辅助用神
+用神强度：
 
-  effect < 0 且 |effect| > maxAbsEffect×0.50 → 强忌神
+  关键优化值 = baseScore - min(所有用神的newImbalance)
 
-  effect < 0 且 |effect| ≤ maxAbsEffect×0.50 → 弱忌神
+  新失衡最小者 → 关键用神（唯一）
 
-impacts：对比groups_base与候选链式反应后各组变化 → 对应十神对
+  其余用神：optimization = baseScore - newImbalance
+
+    optimization ≥ 关键优化值×0.5 → 强用神
+
+    optimization < 关键优化值×0.5 → 弱用神
+
+忌神强度：
+
+  最大劣化值 = max(所有忌神的newImbalance) - baseScore
+
+  deterioration = newImbalance - baseScore
+
+    deterioration ≥ 最大劣化值×0.5 → 强忌神
+
+    deterioration < 最大劣化值×0.5 → 弱忌神
+
+effect 字段：用神存 optimization（正值），忌神存 -deterioration（负值）
+
+impacts：对比 groups_base 与候选直接关系后各组变化 → 对应十神对
+
+WuxingStrengthLabel: '关键用神' | '强用神' | '弱用神' | '强忌神' | '弱忌神'
 
 WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
@@ -418,11 +440,17 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] preparePhase1Input（AI解读第一阶段数据组装，含强度标签+宫位标签+五行评估+十神字段+wuxing/yinyang+透出宫位；所有枚举值已汉化：dayStem/shishen/wuxing/yinyang/transparentThrough 均输出中文）
 
-\- \[x] 旧快照懒迁移（自动补全 pattern/wuxingAssessment）
+\- \[x] 旧快照懒迁移（自动补全 pattern；wuxingAssessment 不再存储，改为实时计算）
 
 \- \[x] Snapshots RLS 性能优化
 
 \- \[x] 大五人格 insert 静默失败修复
+
+\- \[x] debug API路由（apps/web/src/app/api/debug/phase1-input/route.ts，仅开发环境，GET ?snapshotId=xxx 返回纯中文文本，Content-Type: text/plain）
+
+\- \[x] preparePhase1Input 重写为纯文本输出（string）：日主→五行强弱（偏强/中/偏弱）→十神（强度标签极强/强/中/弱/极弱/缺失；TianGan只输出通根宫位或无通根；CangGan透出/墓库锁闭/未透出）→干支关系（天干合/天干冲格式不变；地支关系格式{宫位}{十神}{阴阳}{五行}，不附加note）→用神忌神
+
+\- \[x] wuxingAssessment 实时计算（dashboard API 不再读取快照中存储的 wuxingAssessment，每次返回前调用 computeWuxingAssessment(baziSnapshot) 实时计算并覆盖；computeWuxingAssessment 已从 @mindo/core 正确导出）
 
 
 
