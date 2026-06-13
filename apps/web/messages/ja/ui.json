@@ -18,5 +18,37 @@
       "timezone": "タイムゾーン",
       "unknown": "不明"
     }
+  },
+  "divination": {
+    "oracle": "Oracle",
+    "bazi": { "desc": "Decode your elemental birth chart" },
+    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
+    "western": { "desc": "Planetary chart at your birth" },
+    "bigfive": { "desc": "Five-factor personality science" }
+  },
+  "dashboard": {
+    "bazi": {
+      "unlockReading": "Unlock Full Reading",
+      "viewReading": "View Full Reading",
+      "klineTitle": "Life K-Line",
+      "wuxing": {
+        "Wood": "Wood",
+        "Fire": "Fire",
+        "Earth": "Earth",
+        "Metal": "Metal",
+        "Water": "Water"
+      },
+      "kline": {
+        "bijie": "交友",
+        "shishang": "表現",
+        "caixin": "財運",
+        "guansha": "権威",
+        "yinxing": "影響",
+        "close": "閉じる",
+        "modeDayun": "大運",
+        "modeYear": "大運・流年",
+        "modeMonth": "大運・流年・流月"
+      }
+    }
   }
 }

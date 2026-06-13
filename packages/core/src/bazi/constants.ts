@@ -16,6 +16,7 @@ export const TIANGAN_YINYANG: Record<TianGan, YinYang> = {
   Ren: 'Yang', Gui: 'Yin'
 };
 
+// 传统纳甲，各气在月中的司令天数比例，本气:中气:余气（各支合计不超过30）
 export const DIZHI_CANGGAN: Record<DiZhi, { stem: TianGan; qi: QiWei; score: number }[]> = {
   Zi:   [{ stem: 'Gui',  qi: 'BenQi',   score: 30 }],
   Chou: [{ stem: 'Ji',   qi: 'BenQi',   score: 18 },
@@ -125,15 +126,16 @@ export const DIZHI_PO: [DiZhi, DiZhi][] = [
   ['Mao','Wu'], ['Si','Shen'], ['Wei','Xu']
 ];
 
+// 宫位权重：日干为原点，各宫位到日干的勾股距离取倒数（列距=天干列差，行距=干支行差各1）
 export const GONGWEI_WEIGHT: Record<GongWeiPos, number> = {
-  YearStem:    1 / Math.sqrt(4),
-  YearBranch:  1 / Math.sqrt(5),
-  MonthStem:   1 / Math.sqrt(1),
-  MonthBranch: 1 / Math.sqrt(2),
-  DayStem:     1,
-  DayBranch:   1 / Math.sqrt(1),
-  HourStem:    1 / Math.sqrt(1),
-  HourBranch:  1 / Math.sqrt(2),
+  YearStem:    1 / Math.sqrt(4), // 距日干2列，sqrt(2²)=2
+  YearBranch:  1 / Math.sqrt(5), // 距日干2列+1行，sqrt(2²+1²)
+  MonthStem:   1 / Math.sqrt(1), // 距日干1列，sqrt(1²)=1
+  MonthBranch: 1 / Math.sqrt(2), // 距日干1列+1行，sqrt(1²+1²)
+  DayStem:     1,                // 原点，权重锚定为1
+  DayBranch:   1 / Math.sqrt(1), // 距日干1行，sqrt(1²)=1
+  HourStem:    1 / Math.sqrt(1), // 距日干1列，sqrt(1²)=1
+  HourBranch:  1 / Math.sqrt(2), // 距日干1列+1行，sqrt(1²+1²)
 };
 
 export const GENERATES: Record<Wuxing, Wuxing> = {

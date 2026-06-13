@@ -17,24 +17,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'birth_date is required' }, { status: 400 });
     }
 
-    // 写入profiles表
-    const { error: profileError } = await supabase
+    const { data: existing } = await supabase
       .from('profiles')
-      .upsert({
-        user_id: user.id,
-        display_name: user.email?.split('@')[0] || 'User',
-        birth_date,
-        birth_time: birth_time || null,
-        birth_lat: birth_lat || null,
-        birth_lng: birth_lng || null,
-        birth_place_name: birth_place_name || null,
-        birth_timezone: birth_timezone || null,
-        gender: gender || null,
-        is_self: true,
-      }, {
-        onConflict: 'user_id',
-        ignoreDuplicates: false,
-      });
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_self', true)
+      .maybeSingle();
+
+    const profileData = {
+      user_id: user.id,
+      display_name: user.email?.split('@')[0] || 'User',
+      birth_date,
+      birth_time: birth_time || null,
+      birth_lat: birth_lat || null,
+      birth_lng: birth_lng || null,
+      birth_place_name: birth_place_name || null,
+      birth_timezone: birth_timezone || null,
+      gender: gender || null,
+      is_self: true,
+    };
+
+    let profileError;
+    if (existing) {
+      ({ error: profileError } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', existing.id));
+    } else {
+      ({ error: profileError } = await supabase
+        .from('profiles')
+        .insert(profileData));
+    }
 
     if (profileError) {
       console.error('Profile insert error:', profileError);

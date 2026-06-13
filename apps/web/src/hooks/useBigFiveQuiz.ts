@@ -65,6 +65,16 @@ export function useBigFiveQuiz() {
     setCurrentIndex(0);
   }, []);
 
+  // dev only — fills every question with score 3 and jumps to last question
+  const devFillAll = useCallback(() => {
+    const filled: Record<string, number> = {};
+    for (let i = 1; i <= TOTAL_QUESTIONS; i++) {
+      filled[`q${String(i).padStart(3, '0')}`] = 3;
+    }
+    setAnswersState(filled);
+    setCurrentIndex(TOTAL_QUESTIONS - 1);
+  }, []);
+
   return {
     questions,
     currentQuestion,
@@ -80,6 +90,7 @@ export function useBigFiveQuiz() {
     nextAnswered,
     getAnswersArray,
     reset,
+    devFillAll,
     loadingQuestions: false,
   };
 }

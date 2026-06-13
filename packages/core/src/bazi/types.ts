@@ -130,7 +130,6 @@ export interface ShiShenInfluenceGroup {
   nodes: {
     id: string;
     energy: number;
-    weight: number;
     influence: number;
   }[];
   totalInfluence: number;
@@ -227,7 +226,7 @@ export interface BaziSnapshot {
 }
 
 export type WuxingRole = 'yongshen' | 'jishen';
-export type WuxingStrengthLabel = '关键用神' | '辅助用神' | '强忌神' | '弱忌神';
+export type WuxingStrengthLabel = '关键用神' | '强用神' | '弱用神' | '强忌神' | '弱忌神';
 
 export interface WuxingAssessment {
   wuxing: Wuxing;

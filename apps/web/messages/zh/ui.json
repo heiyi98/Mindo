@@ -170,6 +170,27 @@
         "ZhengYin": "正印",
         "DayMaster": "日主",
         "Unknown": ""
+      },
+      "unlockReading": "解锁完整解读",
+      "viewReading": "查看完整解读",
+      "klineTitle": "人生K线图",
+      "wuxing": {
+        "Wood": "木",
+        "Fire": "火",
+        "Earth": "土",
+        "Metal": "金",
+        "Water": "水"
+      },
+      "kline": {
+        "bijie": "交友",
+        "shishang": "工作",
+        "caixin": "事业",
+        "guansha": "团队",
+        "yinxing": "声誉",
+        "close": "关闭",
+        "modeDayun": "大运",
+        "modeYear": "大运流年",
+        "modeMonth": "大运流年流月"
       }
     },
     "fortune": {
@@ -188,8 +209,13 @@
     "title": "测算中心",
     "destiny": "命理测算",
     "psychology": "心理测量",
+    "oracle": "占卜",
     "comingSoon": "即将推出",
-    "minutes": " 分钟"
+    "minutes": " 分钟",
+    "bazi": { "desc": "解析你的五行命盘" },
+    "ziwei": { "desc": "古典紫微星命学" },
+    "western": { "desc": "出生时刻的星象分析" },
+    "bigfive": { "desc": "五大维度科学人格" }
   },
   "payment": {
     "buyReading": "解锁AI解读 · $19.99",

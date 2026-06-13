@@ -22,5 +22,23 @@
   "enneagram": {
     "name": "九型人格",
     "description": "九种人格类型系统"
+  },
+  "liuyao": {
+    "name": "六爻",
+    "description": "六爻纳甲占卜系统"
+  },
+  "tarot": {
+    "name": "塔罗",
+    "description": "塔罗牌洞察与反思"
+  },
+  "geomancy": {
+    "name": "地占",
+    "description": "基于地气能量的占卜系统"
+  },
+  "divination": {
+    "bazi": { "desc": "解析你的五行命盘" },
+    "ziwei": { "desc": "古典紫微星命学" },
+    "western": { "desc": "出生时刻的星象分析" },
+    "bigfive": { "desc": "五大维度科学人格" }
   }
 }

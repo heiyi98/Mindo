@@ -5,7 +5,7 @@
 - 终端：PowerShell 5.x
   - 路径含括号时必须用 -LiteralPath 参数
   - 文件写入用 [System.IO.File]::WriteAllText()
-- IDE：Cursor（内置Claude Code）
+- IDE：Claude Code
 - 本地项目路径：E:\destinos
 
 ## 代码托管与部署
@@ -59,7 +59,7 @@ LEMONSQUEEZY_API_KEY
 
 ## 施工工作流
 1. 在Project对话讨论需求，获取施工指令
-2. 在Cursor开新Chat，第一句：请读取 E:\destinos\CLAUDE.md
+2. 开新Claude Code会话，第一句：请读取 E:\destinos\CLAUDE.md
 3. 执行施工，type-check零错误
 4. 更新CLAUDE.md
 5. git add . && git commit -m "..." && git push

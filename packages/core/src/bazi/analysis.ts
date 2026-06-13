@@ -11,20 +11,19 @@ import {
   YUELING_COEFF, TIANGAN_WUHE, TIANGAN_CHONG,
   DIZHI_SANHUI, DIZHI_SANHE, DIZHI_LIUHE, DIZHI_LIUCHONG,
   DIZHI_XING, DIZHI_HAI, DIZHI_PO,
-  GONGWEI_WEIGHT, GENERATES, RESTRAINS
+  GENERATES, RESTRAINS
 } from './constants';
 import { calcShiShen, isAdjacent } from './utils';
 import { detectPattern } from './pattern';
 import { computeWuxingAssessment } from './yongshen';
 
-function getBranchPos(
+function getAllBranchPos(
   branch: DiZhi,
-  pillars: BaziAnalysis['pillars']
-): GongWeiPos {
-  if (pillars.year.branch === branch) return 'YearBranch';
-  if (pillars.month.branch === branch) return 'MonthBranch';
-  if (pillars.day.branch === branch) return 'DayBranch';
-  return 'HourBranch';
+  branchPosMap: { pos: GongWeiPos; branch: DiZhi }[]
+): GongWeiPos[] {
+  // 地支可能在多个宫位出现（如午在年支和月支同时出现）
+  // 返回所有匹配宫位，避免重复地支只映射到第一个宫位的 bug
+  return branchPosMap.filter(e => e.branch === branch).map(e => e.pos);
 }
 
 export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
@@ -78,7 +77,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   // ═══════════════════════════════════════════════════════
   // 步骤一：地支关系标注（先于五合，供化气条件引用）
   // ═══════════════════════════════════════════════════════
-  const diZhiRelations: DiZhiRelation[] = [];
+  let diZhiRelations: DiZhiRelation[] = [];
   const branches = [
     pillars.year.branch, pillars.month.branch,
     pillars.day.branch,
@@ -91,7 +90,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'SanHui',
         branches: [b1, b2, b3],
-        positions: [b1, b2, b3].map(b => getBranchPos(b, pillars)),
+        positions: [b1, b2, b3].flatMap(b => getAllBranchPos(b, branchPosMap)),
         wuxing: sanhuiWuxing,
       });
     }
@@ -106,7 +105,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'SanHe',
         branches: [changSheng, diWang, mu],
-        positions: [changSheng, diWang, mu].map(b => getBranchPos(b, pillars)),
+        positions: [changSheng, diWang, mu].flatMap(b => getAllBranchPos(b, branchPosMap)),
         wuxing: sanheWuxing,
       });
     } else if (hasDiWang && (hasChangSheng || hasMu)) {
@@ -114,14 +113,14 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'BanHe',
         branches: present,
-        positions: present.map(b => getBranchPos(b, pillars)),
+        positions: present.flatMap(b => getAllBranchPos(b, branchPosMap)),
         note: `帝旺${diWang}在场，${!hasChangSheng ? `缺长生${changSheng}` : `缺墓${mu}`}`,
       });
     } else if (hasChangSheng && hasMu && !hasDiWang) {
       diZhiRelations.push({
         type: 'GongHe',
         branches: [changSheng, mu],
-        positions: [changSheng, mu].map(b => getBranchPos(b, pillars)),
+        positions: [changSheng, mu].flatMap(b => getAllBranchPos(b, branchPosMap)),
         note: `缺帝旺${diWang}，待激活`,
       });
     }
@@ -132,7 +131,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'LiuHe',
         branches: [b1, b2],
-        positions: [b1, b2].map(b => getBranchPos(b, pillars)),
+        positions: [b1, b2].flatMap(b => getAllBranchPos(b, branchPosMap)),
       });
     }
   }
@@ -142,18 +141,29 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'LiuChong',
         branches: [b1, b2],
-        positions: [b1, b2].map(b => getBranchPos(b, pillars)),
+        positions: [b1, b2].flatMap(b => getAllBranchPos(b, branchPosMap)),
       });
     }
   }
 
   for (const xingGroup of DIZHI_XING) {
-    if (xingGroup.every(b => branchSet.has(b as DiZhi))) {
+    if (xingGroup.length === 1) {
+      // 自刑（辰午酉亥）：同一地支在四柱中出现 ≥2 次才标记
+      const b = xingGroup[0] as DiZhi;
+      const matched = branchPosMap.filter(e => e.branch === b).map(e => e.pos);
+      if (matched.length >= 2) {
+        diZhiRelations.push({
+          type: 'Xing',
+          branches: matched.map(() => b),
+          positions: matched,
+          note: '自刑',
+        });
+      }
+    } else if (xingGroup.every(b => branchSet.has(b as DiZhi))) {
       diZhiRelations.push({
         type: 'Xing',
         branches: xingGroup as DiZhi[],
-        positions: (xingGroup as DiZhi[]).map(b => getBranchPos(b, pillars)),
-        note: xingGroup.length === 1 ? '自刑' : undefined,
+        positions: (xingGroup as DiZhi[]).flatMap(b => getAllBranchPos(b, branchPosMap)),
       });
     }
   }
@@ -163,7 +173,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'Hai',
         branches: [b1, b2],
-        positions: [b1, b2].map(b => getBranchPos(b, pillars)),
+        positions: [b1, b2].flatMap(b => getAllBranchPos(b, branchPosMap)),
       });
     }
   }
@@ -173,8 +183,39 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
       diZhiRelations.push({
         type: 'Po',
         branches: [b1, b2],
-        positions: [b1, b2].map(b => getBranchPos(b, pillars)),
+        positions: [b1, b2].flatMap(b => getAllBranchPos(b, branchPosMap)),
       });
+    }
+  }
+
+  // 合解冲：三合/六合参与支免疫六冲标签
+  // 依据：优先级 会合冲刑破害，有合则冲被化解
+  const protectedByHe = new Set<DiZhi>();
+  for (const r of diZhiRelations) {
+    if (r.type === 'SanHe' || r.type === 'LiuHe') {
+      r.branches.forEach(b => protectedByHe.add(b));
+    }
+  }
+  diZhiRelations = diZhiRelations.filter(r =>
+    r.type !== 'LiuChong' ||
+    !r.branches.some(b => protectedByHe.has(b))
+  );
+
+  // 三会/三合：化神藏干 baseScore→30，其余→0
+  // 依据：地支属性不变，但会局气势使化神完全压制其他气
+  // 三会优先于三合（遍历时 SanHui 在前，用 Map 保证先到先得）
+  const branchHuashen = new Map<DiZhi, Wuxing>();
+  for (const r of diZhiRelations) {
+    if ((r.type === 'SanHui' || r.type === 'SanHe') && r.wuxing) {
+      for (const branch of r.branches) {
+        if (!branchHuashen.has(branch)) branchHuashen.set(branch, r.wuxing);
+      }
+    }
+  }
+  for (const cgNode of cangGanNodes) {
+    const huashen = branchHuashen.get(cgNode.branch);
+    if (huashen !== undefined) {
+      cgNode.baseScore = TIANGAN_WUXING[cgNode.stem] === huashen ? 30 : 0;
     }
   }
 
@@ -266,8 +307,15 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
   for (const stemNode of tianGanNodes) {
     const roots: TouGenRoot[] = [];
     for (const cgNode of cangGanNodes) {
+      // 墓库被六冲则开库，已开库的藏干可作为通根来源
+      if (MU_KU.includes(cgNode.branch)) {
+        const isChonged = diZhiRelations.some(r =>
+          r.type === 'LiuChong' && r.branches.includes(cgNode.branch)
+        );
+        if (!isChonged) continue;
+      }
       if (cgNode.wuxing === stemNode.wuxing) {
-        const coeff = cgNode.baseScore / 30;
+        const coeff = cgNode.baseScore / 10; // 通根系数 = 藏干基础分÷10，来自"一专气根胜三比肩"口诀推导
         roots.push({
           branchPos: cgNode.branchPos,
           branch: cgNode.branch,
@@ -292,8 +340,13 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
 
   for (const cgNode of cangGanNodes) {
     const isMuKu = MU_KU.includes(cgNode.branch);
-    const hasTransparent = transparentWuxingMap.has(cgNode.wuxing);
-    const isMuKuLocked = isMuKu && !hasTransparent;
+    // 墓库被六冲则开库（辰戌互冲、丑未互冲）
+    // 依据：冲开墓库，藏干能量得以释放
+    const isChonged = isMuKu && diZhiRelations.some(r =>
+      r.type === 'LiuChong' && r.branches.includes(cgNode.branch)
+    );
+    const isMuKuLocked = isMuKu && !isChonged;
+    const hasTransparent = !isMuKuLocked && transparentWuxingMap.has(cgNode.wuxing);
 
     cangGanVisibility.push({
       cangganId: cgNode.id,
@@ -307,8 +360,8 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
 
   // ═══════════════════════════════════════════════════════
   // 步骤五：独立能量计算
-  // 天干：有根×3，无根×1；藏干：透出×3，未透×1
-  // tougenCoeff 保留写入，仅作参考，不参与能量计算
+  // 天干：energy = 30 × 月令系数 × (1 + 分配通根系数)，分配通根系数 = totalTougenCoeff / 同五行天干数，上限3
+  // 藏干：energy = baseScore × 月令系数（移除透出乘数）
   // ═══════════════════════════════════════════════════════
   const energyNodes: EnergyNode[] = [];
 
@@ -316,8 +369,10 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     const tougenResult = touGenResults.find(t => t.stemPos === stemNode.pos);
     const totalTougenCoeff = tougenResult?.totalTougenCoeff ?? 0;
     const yuelingCoeff = YUELING_COEFF[yuelingWuxing][stemNode.wuxing];
-    const hasRoot = (tougenResult?.roots.length ?? 0) > 0;
-    const energy = 30 * yuelingCoeff * (hasRoot ? 3 : 1);
+    const sameWuxingCount = tianGanNodes.filter(n => n.wuxing === stemNode.wuxing).length;
+    const allocatedCoeff = totalTougenCoeff / sameWuxingCount;
+    const cappedCoeff = Math.min(allocatedCoeff, 3);
+    const energy = 30 * yuelingCoeff * (1 + cappedCoeff); // 基础分(30) × 月令系数 × (1 + 分配通根系数)
 
     const isHeBan = hebanStemPos.has(stemNode.pos);
     const outputEnabled = !isHeBan || stemNode.pos === 'DayStem';
@@ -342,8 +397,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     const visibility = cangGanVisibility.find(v => v.cangganId === cgNode.id);
     const isMuKuLocked = visibility?.isMuKuLocked ?? false;
     const yuelingCoeff = YUELING_COEFF[yuelingWuxing][cgNode.wuxing];
-    const isTransparent = visibility?.tag === 'TouChu';
-    const energy = cgNode.baseScore * yuelingCoeff * (isTransparent ? 3 : 1);
+    const energy = cgNode.baseScore * yuelingCoeff; // 藏干基础分 × 月令系数，不含透出加成
 
     energyNodes.push({
       id: cgNode.id,
@@ -394,8 +448,7 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     }
     if (!node.outputEnabled) continue;
 
-    const weight = GONGWEI_WEIGHT[node.pos];
-    const influence = node.energy * weight;
+    const influence = node.energy;
     const ssNode = shishenMap.find(s => s.id === node.id);
     if (!ssNode) continue;
 
@@ -404,7 +457,6 @@ export function analyzeBazi(pillars: BaziAnalysis['pillars']): BaziAnalysis {
     shishenGroups.get(ss)!.push({
       id: node.id,
       energy: node.energy,
-      weight,
       influence,
     });
   }
@@ -442,6 +494,12 @@ export function toBaziSnapshot(
   meta: BaziMeta,
   energyScores: Record<Wuxing, number>
 ): BaziSnapshot {
+  const relations = {
+    tianGanHe:      analysis.tianGanHeResults,
+    tianGanChong:   analysis.tianGanChongResults,
+    diZhiRelations: analysis.diZhiRelations,
+  };
+
   return {
     meta,
     pillars: {
@@ -453,11 +511,7 @@ export function toBaziSnapshot(
       tianGanNodes: analysis.tianGanNodes,
       cangGanNodes: analysis.cangGanNodes,
     },
-    relations: {
-      tianGanHe:      analysis.tianGanHeResults,
-      tianGanChong:   analysis.tianGanChongResults,
-      diZhiRelations: analysis.diZhiRelations,
-    },
+    relations,
     tougen: {
       touGenResults:     analysis.touGenResults,
       cangGanVisibility: analysis.cangGanVisibility,
@@ -476,11 +530,11 @@ export function toBaziSnapshot(
     energyScores,
     pattern:          analysis.pattern,
     wuxingAssessment: computeWuxingAssessment({
-      dayStem:   analysis.pillars.day.stem,
-      influence: {
-        shishenInfluence: analysis.shishenInfluence,
-        dayMasterEnergy:  analysis.dayMasterEnergy,
-      },
+      dayStem: analysis.pillars.day.stem,
+      energy:  { energyNodes: analysis.energyNodes },
+      shishen: { shishenMap: analysis.shishenMap },
+      pattern: analysis.pattern,
+      relations,
     }),
   };
 }

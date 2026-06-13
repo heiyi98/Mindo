@@ -170,6 +170,27 @@
         "ZhengYin": "Support",
         "DayMaster": "Self",
         "Unknown": ""
+      },
+      "unlockReading": "Unlock Full Reading",
+      "viewReading": "View Full Reading",
+      "klineTitle": "Life K-Line",
+      "wuxing": {
+        "Wood": "Wood",
+        "Fire": "Fire",
+        "Earth": "Earth",
+        "Metal": "Metal",
+        "Water": "Water"
+      },
+      "kline": {
+        "bijie": "Companions",
+        "shishang": "Expression",
+        "caixin": "Wealth",
+        "guansha": "Authority",
+        "yinxing": "Influence",
+        "close": "Close",
+        "modeDayun": "Cycle",
+        "modeYear": "Cycle · Year",
+        "modeMonth": "Cycle · Year · Month"
       }
     },
     "fortune": {
@@ -188,8 +209,13 @@
     "title": "Assessments",
     "destiny": "Destiny",
     "psychology": "Psychology",
+    "oracle": "Oracle",
     "comingSoon": "Coming soon",
-    "minutes": " min"
+    "minutes": " min",
+    "bazi": { "desc": "Decode your elemental birth chart" },
+    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
+    "western": { "desc": "Planetary chart at your birth" },
+    "bigfive": { "desc": "Five-factor personality science" }
   },
   "payment": {
     "buyReading": "Unlock AI Reading · $19.99",

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
@@ -24,11 +24,17 @@ export default function BigFivePage() {
   const [result, setResult] = useState<BigFiveReport | null>(null);
   const [error, setError] = useState('');
   const [checkingCache, setCheckingCache] = useState(true);
+  const profileIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setContent({ left: <ProfileSwitcher /> });
     return () => setContent({});
   }, [setContent]);
+
+  // 缓存当前档案 id，避免提交时 currentProfile 时序未就绪导致取不到值
+  useEffect(() => {
+    profileIdRef.current = currentProfile?.id ?? null;
+  }, [currentProfile?.id]);
 
   const {
     currentQuestion,
@@ -45,6 +51,7 @@ export default function BigFivePage() {
     isLastQuestion,
     currentAnswered,
     nextAnswered,
+    devFillAll,
   } = useBigFiveQuiz();
 
   useEffect(() => {
@@ -81,14 +88,15 @@ export default function BigFivePage() {
     setPageState('submitting');
     setError('');
     try {
-      if (!currentProfile) throw new Error('No profile found');
+      const profileId = profileIdRef.current;
+      if (!profileId) throw new Error('No profile found');
 
       const res = await fetch('/api/psychology/bigfive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers: getAnswersArray(),
-          profile_id: currentProfile.id,
+          profile_id: profileId,
           locale,
         }),
       });
@@ -236,6 +244,16 @@ export default function BigFivePage() {
           onAnswer={(score) => setAnswer(currentQuestion.id, score)}
         />
       </div>
+
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={devFillAll}
+          className="text-xs px-2 py-1 mb-2 rounded opacity-40 hover:opacity-80"
+          style={{ border: '1px dashed hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
+        >
+          [DEV] Fill all
+        </button>
+      )}
 
       {error && (
         <p className="text-sm mb-4" style={{ color: 'hsl(var(--destructive))' }}>

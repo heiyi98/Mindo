@@ -1,13 +1,18 @@
 // 八字命理
 export { analyzeBazi, toBaziSnapshot } from './bazi/analysis';
+export { preparePhase1Input } from './bazi/preparePhase1Input';
+export { computeWuxingAssessment } from './bazi/yongshen';
 export type {
   BaziAnalysis,
   BaziSnapshot,
   BaziMeta,
   Wuxing, TianGan, DiZhi, ShiShen, EnergyNode, ShiShenInfluenceGroup,
+  WuxingAssessment, WuxingRole, WuxingStrengthLabel,
 } from './bazi/types';
 export * from './bazi/engine';
 export * from './bazi/timeline';
+export { computeFortuneImbalance, generateLifeChart, getMonthPillar, getDayPillar } from './bazi/fortune';
+export type { LinPillar, FortuneGroupEnergies, FortuneResult, MonthScore, YearScore, LifeChartData } from './bazi/fortune';
 
 // 心理测量
 export { calculateBigFive, getQuestionCount } from './psychology/bigfive';
