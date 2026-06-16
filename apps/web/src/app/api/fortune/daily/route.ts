@@ -27,10 +27,9 @@ export async function GET(request: Request) {
 
     // 加载八字快照
     const { data: snapshotRow } = await supabase
-      .from('snapshots')
+      .from('bazi_snapshots')
       .select('calculation_result')
       .eq('profile_id', profileId)
-      .eq('snapshot_type', 'bazi')
       .single();
     if (!snapshotRow) {
       return NextResponse.json({ error: 'No bazi snapshot found' }, { status: 404 });

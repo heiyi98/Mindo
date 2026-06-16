@@ -10,7 +10,59 @@
     },
     "timezonePicker": {
       "label": "Zona horaria",
-      "dstNote": "Horario de verano"
+      "dstNote": "Horario de verano",
+      "regions": {
+        "Pacific_Midway": "Isla Midway, Pago Pago",
+        "Pacific_Honolulu": "Honolulú",
+        "America_Adak": "Adak",
+        "Pacific_Marquesas": "Islas Marquesas (Taha'a)",
+        "America_Anchorage": "Anchorage",
+        "America_Los_Angeles": "Los Ángeles, Vancouver",
+        "America_Phoenix": "Phoenix",
+        "America_Denver": "Denver, Calgary",
+        "America_Chicago": "Chicago, Winnipeg",
+        "America_Mexico_City": "Ciudad de México, Ciudad de Guatemala, Tegucigalpa, San Salvador, Managua, San José, Belmopán",
+        "America_New_York": "Nueva York, Toronto",
+        "America_Bogota": "Bogotá, Lima, Quito, Ciudad de Panamá, Kingston",
+        "America_Caracas": "Caracas, Puerto España, Bridgetown, Santo Domingo",
+        "America_Halifax": "Halifax",
+        "America_St_Johns": "San Juan de Terranova",
+        "America_Sao_Paulo": "São Paulo, Brasilia",
+        "America_Noronha": "Isla Fernando de Noronha",
+        "Atlantic_Azores": "Ponta Delgada",
+        "Atlantic_Cape_Verde": "Praia",
+        "Europe_London": "Londres, Dublín",
+        "Africa_Abidjan": "Reikiavik, Abiyán, Acra, Dakar, Lomé, Conakri",
+        "Europe_Paris": "París, Berlín, Roma, Madrid, Varsovia, Ámsterdam, Bruselas, Estocolmo, Viena, Oslo, Copenhague, Praga, Budapest, Belgrado, Zagreb",
+        "Africa_Lagos": "Lagos, Kinsasa, Yaundé",
+        "Africa_Casablanca": "Casablanca, Rabat",
+        "Europe_Athens": "Atenas, Helsinki, Tallin, Riga, Vilna, Kiev, Bucarest, Sofía, Nicosia",
+        "Africa_Cairo": "El Cairo, Johannesburgo, Harare, Maputo, Lusaka, Windhoek",
+        "Asia_Beirut": "Beirut",
+        "Asia_Jerusalem": "Jerusalén, Tel Aviv",
+        "Europe_Moscow": "Moscú, Estambul, Riad, Bagdad, Amán, Minsk, Nairobi, Adís Abeba, Kampala",
+        "Asia_Tehran": "Teherán",
+        "Asia_Dubai": "Dubái, Mascate, Tiflis, Ciudad de Kuwait, Doha",
+        "Asia_Kabul": "Kabul",
+        "Asia_Karachi": "Karachi, Taskent",
+        "Asia_Kolkata": "Nueva Delhi, Colombo",
+        "Asia_Kathmandu": "Katmandú",
+        "Asia_Dhaka": "Daca, Almatý",
+        "Asia_Yangon": "Rangún",
+        "Asia_Bangkok": "Bangkok, Hanói, Phnom Penh",
+        "Asia_Shanghai": "Pekín, Taipéi, Hong Kong, Macao, Manila, Singapur, Kuala Lumpur, Bandar Seri Begawan, Ulán Bator",
+        "Australia_Eucla": "Eucla",
+        "Asia_Tokyo": "Tokio, Seúl, Pyongyang, Dili",
+        "Australia_Darwin": "Darwin",
+        "Australia_Adelaide": "Adelaida",
+        "Australia_Sydney": "Sídney, Melbourne",
+        "Pacific_Guam": "Guam, Port Moresby",
+        "Pacific_Norfolk": "Isla Norfolk",
+        "Pacific_Auckland": "Auckland, Wellington",
+        "Pacific_Fiji": "Suva",
+        "Pacific_Tongatapu": "Nukuʻalofa, Apia",
+        "Pacific_Kiritimati": "Isla Christmas"
+      }
     }
   },
   "account": {
@@ -21,34 +73,9 @@
   },
   "divination": {
     "oracle": "Oracle",
-    "bazi": { "desc": "Decode your elemental birth chart" },
-    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
-    "western": { "desc": "Planetary chart at your birth" },
-    "bigfive": { "desc": "Five-factor personality science" }
-  },
-  "dashboard": {
-    "bazi": {
-      "unlockReading": "Unlock Full Reading",
-      "viewReading": "View Full Reading",
-      "klineTitle": "Life K-Line",
-      "wuxing": {
-        "Wood": "Wood",
-        "Fire": "Fire",
-        "Earth": "Earth",
-        "Metal": "Metal",
-        "Water": "Water"
-      },
-      "kline": {
-        "bijie": "Compañeros",
-        "shishang": "Expresión",
-        "caixin": "Riqueza",
-        "guansha": "Autoridad",
-        "yinxing": "Influencia",
-        "close": "Cerrar",
-        "modeDayun": "Ciclo",
-        "modeYear": "Ciclo · Año",
-        "modeMonth": "Ciclo · Año · Mes"
-      }
-    }
+    "bazi": { "desc": "Descifra tu carta natal elemental" },
+    "ziwei": { "desc": "Sistema estelar chino antiguo" },
+    "western": { "desc": "Carta planetaria en tu nacimiento" },
+    "bigfive": { "desc": "Ciencia de los cinco factores de personalidad" }
   }
 }

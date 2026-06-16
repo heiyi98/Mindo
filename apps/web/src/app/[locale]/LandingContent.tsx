@@ -6,7 +6,8 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 const LANGS = [
   { code: 'en', label: 'English' },
-  { code: 'zh', label: '中文' },
+  { code: 'zh', label: '简体中文' },
+  { code: 'zh-Hant', label: '繁體中文' },
   { code: 'fr', label: 'Français' },
   { code: 'es', label: 'Español' },
   { code: 'ja', label: '日本語' },

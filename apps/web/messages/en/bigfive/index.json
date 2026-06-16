@@ -1,5 +1,12 @@
 {
   "title": "Big Five Personality",
+  "intro": {
+    "cityLabel": "Your Location",
+    "cityHint": "Optional — helps compare with local norms",
+    "cityPlaceholder": "Search city...",
+    "startTest": "Start Test",
+    "skip": "Skip"
+  },
   "resultTitle": "Your Personality Profile",
   "prev": "Previous",
   "next": "Next",

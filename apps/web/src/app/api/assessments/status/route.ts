@@ -14,7 +14,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'profile_id required' }, { status: 400 });
   }
 
-  // 验证档案属于该用户
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
@@ -26,25 +25,39 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  // 查询该档案的所有快照
-  const { data: snapshots } = await supabase
-    .from('snapshots')
-    .select('snapshot_type, ai_reading')
-    .eq('profile_id', profileId);
+  // Query each dedicated table in parallel
+  const [baziRes, westernRes, bigfiveRes] = await Promise.all([
+    supabase
+      .from('bazi_snapshots')
+      .select('id, ai_reading')
+      .eq('profile_id', profileId)
+      .maybeSingle(),
+    supabase
+      .from('astrology_snapshots')
+      .select('id, ai_reading')
+      .eq('profile_id', profileId)
+      .maybeSingle(),
+    supabase
+      .from('bigfive_assessments')
+      .select('id')
+      .eq('profile_id', profileId)
+      .maybeSingle(),
+  ]);
 
-  // 构建状态映射
-  const snapshotMap = new Map(
-    (snapshots || []).map(s => [s.snapshot_type, s])
-  );
+  const completionMap: Record<string, { isCompleted: boolean; hasAiReading: boolean }> = {
+    bazi:    { isCompleted: !!baziRes.data,    hasAiReading: !!baziRes.data?.ai_reading },
+    western: { isCompleted: !!westernRes.data, hasAiReading: !!westernRes.data?.ai_reading },
+    bigfive: { isCompleted: !!bigfiveRes.data, hasAiReading: false },
+  };
 
   const status = ASSESSMENTS.map(assessment => {
-    const snapshot = snapshotMap.get(assessment.id);
+    const completion = completionMap[assessment.id] ?? { isCompleted: false, hasAiReading: false };
     return {
       id: assessment.id,
       category: assessment.category,
       isAvailable: assessment.isAvailable,
-      isCompleted: !!snapshot,
-      hasAiReading: !!snapshot?.ai_reading,
+      isCompleted: completion.isCompleted,
+      hasAiReading: completion.hasAiReading,
     };
   });
 

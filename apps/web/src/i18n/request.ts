@@ -27,6 +27,7 @@ async function loadMessages(locale: string): Promise<Record<string, any>> {
   // 模块文件按需加载，不存在时静默跳过
   const moduleFiles = [
     `../../messages/${locale}/assessments/index.json`,
+    `../../messages/${locale}/bazi/index.json`,
     `../../messages/${locale}/bigfive/index.json`,
     `../../messages/${locale}/bigfive/questions.json`,
     `../../messages/${locale}/western/index.json`,
@@ -34,6 +35,7 @@ async function loadMessages(locale: string): Promise<Record<string, any>> {
 
   const moduleKeys = [
     'assessments',
+    'bazi',
     'bigfive',
     'bigfive.questions',
     'western',

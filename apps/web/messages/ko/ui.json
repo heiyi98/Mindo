@@ -10,7 +10,59 @@
     },
     "timezonePicker": {
       "label": "시간대",
-      "dstNote": "서머타임"
+      "dstNote": "서머타임",
+      "regions": {
+        "Pacific_Midway": "미드웨이 섬, 파고파고",
+        "Pacific_Honolulu": "호놀룰루",
+        "America_Adak": "에이댁",
+        "Pacific_Marquesas": "마르키즈 제도 (타하아)",
+        "America_Anchorage": "앵커리지",
+        "America_Los_Angeles": "로스앤젤레스, 밴쿠버",
+        "America_Phoenix": "피닉스",
+        "America_Denver": "덴버, 캘거리",
+        "America_Chicago": "시카고, 위니펙",
+        "America_Mexico_City": "멕시코시티, 과테말라시티, 테구시갈파, 산살바도르, 마나과, 산호세, 벨모판",
+        "America_New_York": "뉴욕, 토론토",
+        "America_Bogota": "보고타, 리마, 키토, 파나마시티, 킹스턴",
+        "America_Caracas": "카라카스, 포트오브스페인, 브리지타운, 산토도밍고",
+        "America_Halifax": "핼리팩스",
+        "America_St_Johns": "세인트존스",
+        "America_Sao_Paulo": "상파울루, 브라질리아",
+        "America_Noronha": "페르난도 데 노로냐",
+        "Atlantic_Azores": "폰타델가다",
+        "Atlantic_Cape_Verde": "프라이아",
+        "Europe_London": "런던, 더블린",
+        "Africa_Abidjan": "레이캬비크, 아비장, 아크라, 다카르, 로메, 코나크리",
+        "Europe_Paris": "파리, 베를린, 로마, 마드리드, 바르샤바, 암스테르담, 브뤼셀, 스톡홀름, 빈, 오슬로, 코펜하겐, 프라하, 부다페스트, 베오그라드, 자그레브",
+        "Africa_Lagos": "라고스, 킨샤사, 야운데",
+        "Africa_Casablanca": "카사블랑카, 라바트",
+        "Europe_Athens": "아테네, 헬싱키, 탈린, 리가, 빌뉴스, 키이우, 부쿠레슈티, 소피아, 니코시아",
+        "Africa_Cairo": "카이로, 요하네스버그, 하라레, 마푸토, 루사카, 빈트후크",
+        "Asia_Beirut": "베이루트",
+        "Asia_Jerusalem": "예루살렘, 텔아비브",
+        "Europe_Moscow": "모스크바, 이스탄불, 리야드, 바그다드, 암만, 민스크, 나이로비, 아디스아바바, 캄팔라",
+        "Asia_Tehran": "테헤란",
+        "Asia_Dubai": "두바이, 무스카트, 트빌리시, 쿠웨이트시티, 도하",
+        "Asia_Kabul": "카불",
+        "Asia_Karachi": "카라치, 타슈켄트",
+        "Asia_Kolkata": "뉴델리, 콜롬보",
+        "Asia_Kathmandu": "카트만두",
+        "Asia_Dhaka": "다카, 알마티",
+        "Asia_Yangon": "양곤",
+        "Asia_Bangkok": "방콕, 하노이, 프놈펜",
+        "Asia_Shanghai": "베이징, 타이베이, 홍콩, 마카오, 마닐라, 싱가포르, 쿠알라룸푸르, 반다르스리브가완, 울란바토르",
+        "Australia_Eucla": "유클라",
+        "Asia_Tokyo": "도쿄, 서울, 평양, 딜리",
+        "Australia_Darwin": "다윈",
+        "Australia_Adelaide": "애들레이드",
+        "Australia_Sydney": "시드니, 멜버른",
+        "Pacific_Guam": "괌, 포트모르즈비",
+        "Pacific_Norfolk": "노퍽 섬",
+        "Pacific_Auckland": "오클랜드, 웰링턴",
+        "Pacific_Fiji": "수바",
+        "Pacific_Tongatapu": "누쿠알로파, 아피아",
+        "Pacific_Kiritimati": "크리스마스 섬"
+      }
     }
   },
   "account": {
@@ -21,34 +73,9 @@
   },
   "divination": {
     "oracle": "Oracle",
-    "bazi": { "desc": "Decode your elemental birth chart" },
-    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
-    "western": { "desc": "Planetary chart at your birth" },
-    "bigfive": { "desc": "Five-factor personality science" }
-  },
-  "dashboard": {
-    "bazi": {
-      "unlockReading": "Unlock Full Reading",
-      "viewReading": "View Full Reading",
-      "klineTitle": "Life K-Line",
-      "wuxing": {
-        "Wood": "Wood",
-        "Fire": "Fire",
-        "Earth": "Earth",
-        "Metal": "Metal",
-        "Water": "Water"
-      },
-      "kline": {
-        "bijie": "동료",
-        "shishang": "표현",
-        "caixin": "재물",
-        "guansha": "권위",
-        "yinxing": "영향",
-        "close": "닫기",
-        "modeDayun": "대운",
-        "modeYear": "대운 · 유년",
-        "modeMonth": "대운 · 유년 · 유월"
-      }
-    }
+    "bazi": { "desc": "당신의 오행 명식을 해독합니다" },
+    "ziwei": { "desc": "고대 중국 별자리 운명 시스템" },
+    "western": { "desc": "출생 시 행성 차트" },
+    "bigfive": { "desc": "5요인 성격 과학" }
   }
 }

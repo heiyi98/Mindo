@@ -10,7 +10,59 @@
     },
     "timezonePicker": {
       "label": "Zeitzone",
-      "dstNote": "Sommerzeit"
+      "dstNote": "Sommerzeit",
+      "regions": {
+        "Pacific_Midway": "Midway-Insel, Pago Pago",
+        "Pacific_Honolulu": "Honolulu",
+        "America_Adak": "Adak",
+        "Pacific_Marquesas": "Marquesas-Inseln (Taha'a)",
+        "America_Anchorage": "Anchorage",
+        "America_Los_Angeles": "Los Angeles, Vancouver",
+        "America_Phoenix": "Phoenix",
+        "America_Denver": "Denver, Calgary",
+        "America_Chicago": "Chicago, Winnipeg",
+        "America_Mexico_City": "Mexiko-Stadt, Guatemala-Stadt, Tegucigalpa, San Salvador, Managua, San José, Belmopan",
+        "America_New_York": "New York, Toronto",
+        "America_Bogota": "Bogotá, Lima, Quito, Panamá-Stadt, Kingston",
+        "America_Caracas": "Caracas, Port of Spain, Bridgetown, Santo Domingo",
+        "America_Halifax": "Halifax",
+        "America_St_Johns": "St. John's",
+        "America_Sao_Paulo": "São Paulo, Brasília",
+        "America_Noronha": "Fernando de Noronha",
+        "Atlantic_Azores": "Ponta Delgada",
+        "Atlantic_Cape_Verde": "Praia",
+        "Europe_London": "London, Dublin",
+        "Africa_Abidjan": "Reykjavik, Abidjan, Accra, Dakar, Lomé, Conakry",
+        "Europe_Paris": "Paris, Berlin, Rom, Madrid, Warschau, Amsterdam, Brüssel, Stockholm, Wien, Oslo, Kopenhagen, Prag, Budapest, Belgrad, Zagreb",
+        "Africa_Lagos": "Lagos, Kinshasa, Jaunde",
+        "Africa_Casablanca": "Casablanca, Rabat",
+        "Europe_Athens": "Athen, Helsinki, Tallinn, Riga, Vilnius, Kiew, Bukarest, Sofia, Nikosia",
+        "Africa_Cairo": "Kairo, Johannesburg, Harare, Maputo, Lusaka, Windhuk",
+        "Asia_Beirut": "Beirut",
+        "Asia_Jerusalem": "Jerusalem, Tel Aviv",
+        "Europe_Moscow": "Moskau, Istanbul, Riad, Bagdad, Amman, Minsk, Nairobi, Addis Abeba, Kampala",
+        "Asia_Tehran": "Teheran",
+        "Asia_Dubai": "Dubai, Maskat, Tiflis, Kuwait-Stadt, Doha",
+        "Asia_Kabul": "Kabul",
+        "Asia_Karachi": "Karatschi, Taschkent",
+        "Asia_Kolkata": "Neu-Delhi, Colombo",
+        "Asia_Kathmandu": "Kathmandu",
+        "Asia_Dhaka": "Dhaka, Almaty",
+        "Asia_Yangon": "Yangon",
+        "Asia_Bangkok": "Bangkok, Hanoi, Phnom Penh",
+        "Asia_Shanghai": "Peking, Taipeh, Hongkong, Macau, Manila, Singapur, Kuala Lumpur, Bandar Seri Begawan, Ulaanbaatar",
+        "Australia_Eucla": "Eucla",
+        "Asia_Tokyo": "Tokio, Seoul, Pjöngjang, Dili",
+        "Australia_Darwin": "Darwin",
+        "Australia_Adelaide": "Adelaide",
+        "Australia_Sydney": "Sydney, Melbourne",
+        "Pacific_Guam": "Guam, Port Moresby",
+        "Pacific_Norfolk": "Norfolkinsel",
+        "Pacific_Auckland": "Auckland, Wellington",
+        "Pacific_Fiji": "Suva",
+        "Pacific_Tongatapu": "Nukuʻalofa, Apia",
+        "Pacific_Kiritimati": "Weihnachtsinsel"
+      }
     }
   },
   "account": {
@@ -21,34 +73,9 @@
   },
   "divination": {
     "oracle": "Oracle",
-    "bazi": { "desc": "Decode your elemental birth chart" },
-    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
-    "western": { "desc": "Planetary chart at your birth" },
-    "bigfive": { "desc": "Five-factor personality science" }
-  },
-  "dashboard": {
-    "bazi": {
-      "unlockReading": "Unlock Full Reading",
-      "viewReading": "View Full Reading",
-      "klineTitle": "Life K-Line",
-      "wuxing": {
-        "Wood": "Wood",
-        "Fire": "Fire",
-        "Earth": "Earth",
-        "Metal": "Metal",
-        "Water": "Water"
-      },
-      "kline": {
-        "bijie": "Begleitung",
-        "shishang": "Ausdruck",
-        "caixin": "Wohlstand",
-        "guansha": "Autorität",
-        "yinxing": "Einfluss",
-        "close": "Schließen",
-        "modeDayun": "Zyklus",
-        "modeYear": "Zyklus · Jahr",
-        "modeMonth": "Zyklus · Jahr · Monat"
-      }
-    }
+    "bazi": { "desc": "Dein elementares Geburtshoroskop entschlüsseln" },
+    "ziwei": { "desc": "Altes chinesisches Sternsystem" },
+    "western": { "desc": "Planetenhoroskop zur Geburtszeit" },
+    "bigfive": { "desc": "Fünf-Faktoren-Persönlichkeitswissenschaft" }
   }
 }

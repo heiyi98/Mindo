@@ -24,13 +24,6 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // 删除免费快照，保留付费快照
-  await supabase
-    .from('snapshots')
-    .delete()
-    .eq('profile_id', id)
-    .is('ai_reading', null);
-
   const { error } = await supabase
     .from('profiles')
     .update({
@@ -46,6 +39,14 @@ export async function PATCH(
     .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 出生信息变更后清空命盘快照（大五与生日无关，保留）
+  await Promise.all([
+    supabase.from('bazi_snapshots').delete().eq('profile_id', id),
+    supabase.from('astrology_snapshots').delete().eq('profile_id', id),
+    supabase.from('life_timeline').delete().eq('profile_id', id),
+  ]);
+
   return NextResponse.json({ success: true });
 }
 

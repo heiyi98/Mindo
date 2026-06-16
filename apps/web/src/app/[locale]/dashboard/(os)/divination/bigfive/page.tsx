@@ -8,20 +8,48 @@ import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
 import QuestionCard from '@/components/divination/bigfive/QuestionCard';
 import BigFiveRadar from '@/components/divination/bigfive/BigFiveRadar';
 import BigFiveFacets from '@/components/divination/bigfive/BigFiveFacets';
-import type { BigFiveReport } from '@mindo/core';
+import BigFiveIntro from '@/components/divination/bigfive/BigFiveIntro';
+import type { RegionData } from '@/components/divination/bigfive/BigFiveIntro';
+import type { BigFiveReport, BigFiveDomain, BigFiveFacet } from '@mindo/core';
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
 import ProfileSwitcher from '@/components/dashboard/ProfileSwitcher';
 
-type PageState = 'quiz' | 'submitting' | 'result';
+type PageState = 'intro' | 'quiz' | 'submitting' | 'result';
+
+const DOMAIN_FACETS: Record<BigFiveDomain, BigFiveFacet[]> = {
+  N: ['Anxiety', 'Anger', 'Depression', 'SelfConsciousness', 'Immoderation', 'Vulnerability'],
+  E: ['Friendliness', 'Gregariousness', 'Assertiveness', 'ActivityLevel', 'ExcitementSeeking', 'Cheerfulness'],
+  O: ['Imagination', 'ArtisticInterests', 'Emotionality', 'Adventurousness', 'Intellect', 'Liberalism'],
+  A: ['Trust', 'Morality', 'Altruism', 'Cooperation', 'Modesty', 'Sympathy'],
+  C: ['SelfEfficacy', 'Orderliness', 'Dutifulness', 'AchievementStriving', 'SelfDiscipline', 'Cautiousness'],
+};
+
+function reconstructReport(
+  domainScores: Record<string, number>,
+  facetScores: Record<string, number>
+): BigFiveReport {
+  const domains: BigFiveDomain[] = ['N', 'E', 'O', 'A', 'C'];
+  return {
+    domains: domains.map(d => ({
+      domain: d,
+      score: domainScores[d] || 0,
+      facets: DOMAIN_FACETS[d].map(f => ({
+        facet: f,
+        score: facetScores[f] || 0,
+      })),
+    })),
+  };
+}
 
 export default function BigFivePage() {
   const t = useTranslations('bigfive');
   const locale = useLocale();
   const { currentProfile } = useCurrentProfile();
   const { setContent } = useTopBar();
-  const [pageState, setPageState] = useState<PageState>('quiz');
+  const [pageState, setPageState] = useState<PageState>('intro');
   const [result, setResult] = useState<BigFiveReport | null>(null);
+  const [regionData, setRegionData] = useState<RegionData | null>(null);
   const [error, setError] = useState('');
   const [checkingCache, setCheckingCache] = useState(true);
   const profileIdRef = useRef<string | null>(null);
@@ -31,7 +59,7 @@ export default function BigFivePage() {
     return () => setContent({});
   }, [setContent]);
 
-  // 缓存当前档案 id，避免提交时 currentProfile 时序未就绪导致取不到值
+  // Cache current profile id to avoid timing issues on submit
   useEffect(() => {
     profileIdRef.current = currentProfile?.id ?? null;
   }, [currentProfile?.id]);
@@ -47,7 +75,6 @@ export default function BigFivePage() {
     goPrev,
     getAnswersArray,
     reset,
-    isComplete,
     isLastQuestion,
     currentAnswered,
     nextAnswered,
@@ -57,32 +84,32 @@ export default function BigFivePage() {
   useEffect(() => {
     if (!currentProfile) return;
 
-    // 切换档案时重置所有状态
     reset();
     setResult(null);
-    setPageState('quiz');
+    setRegionData(null);
+    setPageState('intro');
     setCheckingCache(true);
 
-    fetch(`/api/assessments/status?profile_id=${currentProfile.id}`)
-      .then(res => res.json())
+    fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`)
+      .then(res => {
+        if (res.status === 404) return null;
+        return res.json();
+      })
       .then(data => {
-        const bigfiveStatus = data.status?.find((s: any) => s.id === 'bigfive');
-        if (bigfiveStatus?.isCompleted) {
-          return fetch(`/api/psychology/bigfive/result?profile_id=${currentProfile.id}`)
-            .then(res => res.json())
-            .then(data => {
-              if (data.result) {
-                setResult(data.result);
-                setPageState('result');
-              }
-              // 没有结果时保持 quiz 状态（已在上面设置）
-            });
+        if (data && data.domain_scores && data.facet_scores) {
+          setResult(reconstructReport(data.domain_scores, data.facet_scores));
+          setPageState('result');
         }
-        // 没有完成记录，保持 quiz 状态
+        // 404 or missing scores → stay on 'intro'
       })
       .catch(err => console.error(err))
       .finally(() => setCheckingCache(false));
   }, [currentProfile?.id, reset]);
+
+  const handleStart = (region: RegionData | null) => {
+    setRegionData(region);
+    setPageState('quiz');
+  };
 
   const handleSubmit = async () => {
     setPageState('submitting');
@@ -98,6 +125,11 @@ export default function BigFivePage() {
           answers: getAnswersArray(),
           profile_id: profileId,
           locale,
+          region_country: regionData?.country ?? null,
+          region_level1: regionData?.level1 ?? null,
+          region_level2: regionData?.level2 ?? null,
+          region_level3: regionData?.level3 ?? null,
+          region_display_name: regionData?.display_name ?? null,
         }),
       });
 
@@ -141,11 +173,13 @@ export default function BigFivePage() {
             transition={{ delay: 0.3 }}
             onClick={async () => {
               if (!currentProfile) return;
-              await fetch(`/api/psychology/bigfive/result?profile_id=${currentProfile.id}`, {
+              await fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`, {
                 method: 'DELETE',
               });
               setResult(null);
-              setPageState('quiz');
+              setRegionData(null);
+              reset();
+              setPageState('intro');
             }}
             className="text-xs px-3 py-1.5 rounded-lg transition-colors"
             style={{
@@ -192,6 +226,10 @@ export default function BigFivePage() {
         />
       </div>
     );
+  }
+
+  if (pageState === 'intro') {
+    return <BigFiveIntro onStart={handleStart} />;
   }
 
   if (loadingQuestions) {

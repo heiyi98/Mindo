@@ -1,0 +1,43 @@
+{
+  "title": "命盘",
+  "year": "年",
+  "month": "月",
+  "day": "日",
+  "hour": "时",
+  "daymaster": "日主",
+  "shishen": {
+    "BiJian": "比肩",
+    "JieCai": "劫财",
+    "ShiShen": "食神",
+    "ShangGuan": "伤官",
+    "PianCai": "偏财",
+    "ZhengCai": "正财",
+    "QiSha": "七杀",
+    "ZhengGuan": "正官",
+    "PianYin": "偏印",
+    "ZhengYin": "正印",
+    "DayMaster": "日主",
+    "Unknown": ""
+  },
+  "unlockReading": "解锁完整解读",
+  "viewReading": "查看完整解读",
+  "klineTitle": "人生K线图",
+  "wuxing": {
+    "Wood": "木",
+    "Fire": "火",
+    "Earth": "土",
+    "Metal": "金",
+    "Water": "水"
+  },
+  "kline": {
+    "bijie": "交友",
+    "shishang": "工作",
+    "caixin": "事业",
+    "guansha": "团队",
+    "yinxing": "声誉",
+    "close": "关闭",
+    "modeDayun": "大运",
+    "modeYear": "大运流年",
+    "modeMonth": "大运流年流月"
+  }
+}

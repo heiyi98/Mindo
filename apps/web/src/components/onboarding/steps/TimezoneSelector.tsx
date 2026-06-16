@@ -72,7 +72,7 @@ export default function TimezoneSelector({ selectedIana, onChange }: TimezoneSel
               className="ml-2 text-sm font-normal"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
-              {selectedOption.regions}
+              {t(`regions.${selectedOption.regions}`)}
             </span>
           </button>
           <ChevronDown
@@ -134,7 +134,7 @@ export default function TimezoneSelector({ selectedIana, onChange }: TimezoneSel
                         className="text-xs mt-0.5"
                         style={{ color: 'hsl(var(--muted-foreground) / 0.7)' }}
                       >
-                        {tz.regions}
+                        {t(`regions.${tz.regions}`)}
                       </span>
                     </div>
                     {isSelected && (

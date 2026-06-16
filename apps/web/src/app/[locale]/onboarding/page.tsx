@@ -40,6 +40,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>('date');
   const [state, setState] = useState<OnboardingState>(EMPTY_ONBOARDING_STATE);
   const [saving, setSaving] = useState(false);
+  const [isSavingGender, setIsSavingGender] = useState(false);
   const [teaserData, setTeaserData] = useState<{ dayStem: string; energyScores: Record<string, number> } | null>(null);
 
   const [hour, setHour] = useState<number | null>(null);
@@ -118,45 +119,51 @@ export default function OnboardingPage() {
   };
 
   const handleGenderSelect = async (gender: 'M' | 'F' | null) => {
-    updateState({ gender });
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    let baziData = null;
+    if (isSavingGender) return;
+    setIsSavingGender(true);
     try {
-      const currentState = { ...state, gender };
-      const reqBody = {
-        birthYear: currentState.birthYear,
-        birthMonth: currentState.birthMonth,
-        birthDay: currentState.birthDay,
-        birthHour: currentState.birthHour ?? null,
-        birthMinute: currentState.birthMinute ?? null,
-        birthLat: currentState.birthLat ?? null,
-        birthLng: currentState.birthLng ?? null,
-      };
-      console.log('[bazi calculate] request:', reqBody);
-      const res = await fetch('/api/bazi/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reqBody),
-      });
-      console.log('[bazi calculate] status:', res.status, res.ok);
-      if (res.ok) {
-        baziData = await res.json();
-        console.log('[bazi calculate] response:', baziData);
-        setTeaserData(baziData);
-      } else {
-        const errBody = await res.text();
-        console.error('[bazi calculate] error body:', errBody);
-      }
-    } catch (err) {
-      console.error('[bazi calculate] exception:', err);
-    }
+      updateState({ gender });
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      await saveToDatabase({ ...state, gender });
-    } else {
-      setStep('teaser');
+      let baziData = null;
+      try {
+        const currentState = { ...state, gender };
+        const reqBody = {
+          birthYear: currentState.birthYear,
+          birthMonth: currentState.birthMonth,
+          birthDay: currentState.birthDay,
+          birthHour: currentState.birthHour ?? null,
+          birthMinute: currentState.birthMinute ?? null,
+          birthLat: currentState.birthLat ?? null,
+          birthLng: currentState.birthLng ?? null,
+        };
+        console.log('[bazi calculate] request:', reqBody);
+        const res = await fetch('/api/bazi/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reqBody),
+        });
+        console.log('[bazi calculate] status:', res.status, res.ok);
+        if (res.ok) {
+          baziData = await res.json();
+          console.log('[bazi calculate] response:', baziData);
+          setTeaserData(baziData);
+        } else {
+          const errBody = await res.text();
+          console.error('[bazi calculate] error body:', errBody);
+        }
+      } catch (err) {
+        console.error('[bazi calculate] exception:', err);
+      }
+
+      if (user) {
+        await saveToDatabase({ ...state, gender });
+      } else {
+        setStep('teaser');
+      }
+    } finally {
+      setIsSavingGender(false);
     }
   };
 
@@ -415,7 +422,7 @@ export default function OnboardingPage() {
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.3 }}
             >
-              <GenderPicker onSelect={handleGenderSelect} />
+              <GenderPicker onSelect={handleGenderSelect} disabled={isSavingGender} />
             </motion.div>
           )}
 

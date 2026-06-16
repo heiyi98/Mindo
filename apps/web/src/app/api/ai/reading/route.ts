@@ -13,11 +13,19 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
+    const tableMap: Record<string, string> = {
+      bazi: 'bazi_snapshots',
+      western: 'astrology_snapshots',
+    };
+    const tableName = tableMap[assessmentType];
+    if (!tableName) {
+      return NextResponse.json({ error: 'Unsupported assessmentType' }, { status: 400 });
+    }
+
     const { data: snapshot } = await supabase
-      .from('snapshots')
+      .from(tableName)
       .select('*')
       .eq('profile_id', profileId)
-      .eq('snapshot_type', assessmentType)
       .single();
 
     if (!snapshot) {
@@ -42,10 +50,10 @@ export async function POST(request: Request) {
     const aiReading = result.response.text();
 
     await supabase
-      .from('snapshots')
+      .from(tableName)
       .update({
         ai_reading: aiReading,
-        ai_reading_generated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', snapshot.id);
 

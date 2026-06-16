@@ -60,6 +60,8 @@ packages/config/   ← 共享TypeScript/ESLint配置
 
 3\. 翻译文件结构：apps/web/messages/{locale}/ui.json（基础UI）+ 模块子目录
 
+&#x20;  - messages/{locale}/bazi/index.json（八字命盘，namespace: 'bazi'）
+
 &#x20;  - messages/{locale}/bigfive/index.json（大五主体）
 
 &#x20;  - messages/{locale}/bigfive/questions.json（120道题目）
@@ -68,7 +70,9 @@ packages/config/   ← 共享TypeScript/ESLint配置
 
 &#x20;  - messages/{locale}/assessments/index.json（测算注册表）
 
-4\. 当前支持语言：en（默认）、zh、fr、es、ja、ko、it、de
+&#x20;  - ui.json onboarding.timezonePicker.regions：时区城市名（key = ianaName 斜杠换下划线）
+
+4\. 当前支持语言：en（默认）、zh（简体）、zh-Hant（繁体，占位copy自zh待人工替换）、fr、es、ja、ko、it、de
 
 5\. 新增功能时必须同步更新所有语言文件，至少en和zh必须完整
 
@@ -162,16 +166,23 @@ packages/core/src/bazi/
 
 \- profiles（含birth\_date/time/lat/lng/place\_name/timezone/gender/is\_self）
 
-\- snapshots（snapshot\_type文本类型，calculation\_result为JSONB）
+\- bazi\_snapshots（id/profile\_id/user\_id/calculation\_result/ai\_reading/ai\_reading\_translated/profile\_display\_name/user\_display\_name/user\_handle/created\_at/updated\_at）
+
+\- astrology\_snapshots（id/profile\_id/user\_id/calculation\_result/ai\_reading/ai\_reading\_translated/profile\_display\_name/user\_display\_name/user\_handle/created\_at/updated\_at）
+
+\- bigfive\_assessments（id/profile\_id/user\_id/domain\_scores/facet\_scores/region\_country/level1/2/3/region\_display\_name/age\_group/gender/profile\_display\_name/user\_display\_name/user\_handle/submitted\_at）
+
+\- bigfive\_norms（region/gender/age\_group 常模，statistics JSONB，sample\_size）
+
+\- life\_timeline（profile\_id/user\_id/baseline\_imbalance/baseline\_energies/years JSONB）
 
 \- products（测算产品注册）
 
 \- purchases（含status/snapshot\_id/provider）
 
-旧快照清理（groups_base 算法已变更，旧 bazi 快照需清空后重算）：
-```sql
-DELETE FROM snapshots WHERE snapshot_type = 'bazi';
-```
+注意：snapshots 表已废弃并删除。bazi/western 分别存入独立表，bigfive 存 bigfive\_assessments。
+
+档案编辑（PATCH /api/profiles/[id]）会自动清空 bazi\_snapshots + astrology\_snapshots + life\_timeline（bigfive 保留）。
 
 
 
@@ -516,6 +527,20 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 - \[x] 人生K线图组件（LifeKlineCard.tsx）：缩略SVG折线图卡片（点击展开）+ LifeKlineModal全屏（recharts ComposedChart：大运色块背景ReferenceArea/基准线ReferenceLine/Customized蜡烛图层/五条能量折线/自定义Tooltip/图例toggle）；使用useXAxisScale/useYAxisScale recharts v3 hooks在CandlestickLayer内读取轴比例函数，阳线=绿#10b981/阴线=红#f43f5e
 - \[x] ui.json kline键（8语言）：bijie/shishang/caixin/guansha/yinxing/close（dashboard.bazi.kline）
 - \[x] recharts 安装至 apps/web
+- \[x] bigfive_assessments 表 + bigfive_norms 表（Supabase SQL 待手动执行，见下方 SQL）
+- \[x] /api/city-search 扩展 region 字段（region_country/level1/level2/level3，从 Nominatim addressdetails 提取）
+- \[x] 大五提交 API 重写（bigfive/route.ts）：存储目标从 snapshots 改为 bigfive_assessments；新增 region 四字段 + region_display_name；从 profiles 读 birth_date/gender 计算 age_group（≤11→'11-'/12-17/18-29/30-39/40-60/≥61→'60+'）；先 deprecate 旧记录（is_active=false/deprecated_at）再 INSERT
+- \[x] 大五结果 API 重写（bigfive/result/route.ts）：GET 从 bigfive_assessments 读取 is_active=true 记录，matchNorm 15级瀑布匹配 bigfive_norms；DELETE 改为软删除（is_active=false）；返回 { domain_scores, facet_scores, standard_scores: null, norm_group, norm_sample_size, region, age_group, gender, submitted_at }
+- \[x] BigFiveIntro 组件（components/divination/bigfive/BigFiveIntro.tsx）：城市搜索（可选，提取 region 四字段）+ 开始测试按钮 + 跳过按钮；Props: onStart(RegionData | null)
+- \[x] 大五页面流程重构（bigfive/page.tsx）：新增 'intro' state；加载时直接调 GET /api/psychology/bigfive/result?profileId=xxx（404→intro，200→重建 BigFiveReport 并显示结果）；去除 assessments/status 中间层；handleSubmit 携带 regionData；retake 后跳回 intro
+- \[x] bigfive/index.json 新增 intro 键（en+zh；intro.cityLabel/cityHint/cityPlaceholder/startTest/skip）
+- 注意：bigfive_assessments 使用 domain_scores（平铺 {O/C/E/A/N: number}）+ facet_scores（平铺 {facetName: number}）；页面通过 reconstructReport 重建 BigFiveReport；assessments/status 路由仍查 snapshots，bigfive 会显示未完成（低优先级遗留问题）
+- \[x] 新增 zh-Hant（繁體中文）语言支持：routing.ts locales 加入 'zh-Hant'；messages/zh-Hant/ 目录完整复制自 zh（占位，待人工替换为正体字）；LandingContent.tsx + LanguageSwitcher.tsx 中 zh label 改为'简体中文'并在其后插入 { code:'zh-Hant', label:'繁體中文' }；city-search route 新增 zh→zh-Hans/zh-Hant→zh-Hant Nominatim accept-language 映射
+- \[x] 数据库拆表迁移：snapshots 拆为 bazi\_snapshots + astrology\_snapshots（Supabase SQL 手动执行）；bigfive\_assessments 改为硬删除（INSERT+SELECT id → DELETE WHERE id!=new\_id，去除 is\_active/deprecated\_at 列）；bigfive/result DELETE 改为真删除
+- \[x] 全量 API 迁移：dashboard/route.ts、astrology/western/route.ts、ai/reading/route.ts（按 assessmentType 路由到对应表）、assessments/status/route.ts（并发查三张表）、fortune/daily/route.ts、debug/phase1-input/route.ts、account/assets/route.ts（join profiles 获取 birth\_date/birth\_place\_name）、account/delete/route.ts 全部从 snapshots 切换到专属表
+- \[x] 档案编辑清空快照：profiles/[id] PATCH 成功后并发 DELETE bazi\_snapshots + astrology\_snapshots + life\_timeline（bigfive\_assessments 不删）
+- \[x] city-search 英文 region：新增 ?needRegion=true 参数，触发对每条结果的 Nominatim reverse geocode（accept-language=en），用英文 region\_level1/2/3 覆盖本地化结果；BigFiveIntro 使用 needRegion=true 确保 bigfive\_norms 匹配用英文地名
+- \[x] 三张快照表写入时同步填入 profile\_display\_name/user\_display\_name/user\_handle：bazi\_snapshots（dashboard/route.ts computeAndSave）、astrology\_snapshots（astrology/western/route.ts）、bigfive\_assessments（bigfive/route.ts，profile 查询补 display\_name 字段）；三处均先查 is\_self=true 的自己档案获取 user\_display\_name，再写入；SQL 补全已有记录已给出
 
 
 
@@ -530,6 +555,18 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 \- \[x] assessments/index.json 扩展（8语言：liuyao/tarot/geomancy名称 + divination.bazi/ziwei/western/bigfive描述）
 
 \- \[x] ui.json 扩展（8语言：divination.oracle分类 + dashboard.bazi.unlockReading/viewReading/klineTitle/wuxing）
+
+\- \[x] onboarding complete route 改为 select→update/insert（替代 upsert onConflict，避免 profiles 主键冲突）
+
+\- \[x] onboarding gender 防重复点击（isSavingGender state + try/finally；GenderPicker 新增 disabled prop，确认按钮置灰）
+
+\- \[x] .claude/settings.local.json 加入 .gitignore 并从 git 索引移除（防止 Supabase 密钥泄露至 GitHub）
+
+\- \[x] dashboard.bazi 拆分为独立模块（messages/{locale}/bazi/index.json，8语言；i18n/request.ts 纳入 bazi 模块；BaziChart/LifeKlineCard/bazi/page.tsx 改用 useTranslations('bazi')；ui.json 删除 dashboard.bazi 段落）
+
+\- \[x] 时区城市名多语言（timezones.ts regions 字段改为 ianaName\_key；TimezoneSelector 改用 t('regions.{key}')；8语言 ui.json onboarding.timezonePicker.regions 对象，含 Pacific\_Marquesas 兜底）
+
+\- \[x] timezones.ts 新增 Africa/Casablanca、Asia/Beirut、Asia/Jerusalem 三条时区；8语言 regions 全量更新（城市名扩充至主要首都/大城市，各语言本地化拼写）
 
 \- \[ ] 解读prompt编写（用户负责，发给Gemini讨论后集成）
 

@@ -37,7 +37,7 @@ interface BaziChartProps {
 const UNKNOWN_PILLAR: Pillar = { stem: '?', branch: '?' };
 
 export default function BaziChart({ pillars, tianGanNodes, dayStem }: BaziChartProps) {
-  const t = useTranslations('dashboard.bazi');
+  const t = useTranslations('bazi');
 
   const wuxingByPos = new Map(
     tianGanNodes.map(n => [n.pos, n.wuxing])

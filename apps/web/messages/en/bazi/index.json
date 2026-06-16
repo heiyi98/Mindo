@@ -1,0 +1,43 @@
+{
+  "title": "Birth Chart",
+  "year": "Year",
+  "month": "Month",
+  "day": "Day",
+  "hour": "Hour",
+  "daymaster": "Day Master",
+  "shishen": {
+    "BiJian": "Friend",
+    "JieCai": "Rival",
+    "ShiShen": "Output",
+    "ShangGuan": "Talent",
+    "PianCai": "Wealth",
+    "ZhengCai": "Wealth+",
+    "QiSha": "Power",
+    "ZhengGuan": "Status",
+    "PianYin": "Resource",
+    "ZhengYin": "Support",
+    "DayMaster": "Self",
+    "Unknown": ""
+  },
+  "unlockReading": "Unlock Full Reading",
+  "viewReading": "View Full Reading",
+  "klineTitle": "Life K-Line",
+  "wuxing": {
+    "Wood": "Wood",
+    "Fire": "Fire",
+    "Earth": "Earth",
+    "Metal": "Metal",
+    "Water": "Water"
+  },
+  "kline": {
+    "bijie": "Companions",
+    "shishang": "Expression",
+    "caixin": "Wealth",
+    "guansha": "Authority",
+    "yinxing": "Influence",
+    "close": "Close",
+    "modeDayun": "Cycle",
+    "modeYear": "Cycle · Year",
+    "modeMonth": "Cycle · Year · Month"
+  }
+}

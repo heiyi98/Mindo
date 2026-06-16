@@ -1,0 +1,23 @@
+{
+  "unlockReading": "Vollständige Deutung freischalten",
+  "viewReading": "Vollständige Deutung anzeigen",
+  "klineTitle": "Lebens-K-Linie",
+  "wuxing": {
+    "Wood": "Holz",
+    "Fire": "Feuer",
+    "Earth": "Erde",
+    "Metal": "Metall",
+    "Water": "Wasser"
+  },
+  "kline": {
+    "bijie": "Begleitung",
+    "shishang": "Ausdruck",
+    "caixin": "Wohlstand",
+    "guansha": "Autorität",
+    "yinxing": "Einfluss",
+    "close": "Schließen",
+    "modeDayun": "Zyklus",
+    "modeYear": "Zyklus · Jahr",
+    "modeMonth": "Zyklus · Jahr · Monat"
+  }
+}

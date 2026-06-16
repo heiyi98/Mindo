@@ -1,0 +1,35 @@
+{
+  "title": "西洋星盘",
+  "fullMode": "完整星盘",
+  "dateMode": "仅日期模式",
+  "dateModeNote": "添加出生时间和城市以获得完整星盘（含宫位）。",
+  "moonWarning": "你的月亮可能在{sign1}或{sign2}——需要出生时间才能确定。",
+  "planets": "行星",
+  "houses": "宫位",
+  "planetNames": {
+    "Sun": "太阳",
+    "Moon": "月亮",
+    "Mercury": "水星",
+    "Venus": "金星",
+    "Mars": "火星",
+    "Jupiter": "木星",
+    "Saturn": "土星",
+    "Uranus": "天王星",
+    "Neptune": "海王星",
+    "Pluto": "冥王星"
+  },
+  "signs": {
+    "Aries": "白羊座",
+    "Taurus": "金牛座",
+    "Gemini": "双子座",
+    "Cancer": "巨蟹座",
+    "Leo": "狮子座",
+    "Virgo": "处女座",
+    "Libra": "天秤座",
+    "Scorpio": "天蝎座",
+    "Sagittarius": "射手座",
+    "Capricorn": "摩羯座",
+    "Aquarius": "水瓶座",
+    "Pisces": "双鱼座"
+  }
+}

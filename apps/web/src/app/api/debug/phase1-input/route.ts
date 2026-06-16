@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('snapshots')
+    .from('bazi_snapshots')
     .select('calculation_result')
     .eq('id', snapshotId)
     .single();

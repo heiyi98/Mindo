@@ -1,0 +1,23 @@
+{
+  "unlockReading": "전체 해석 잠금 해제",
+  "viewReading": "전체 해석 보기",
+  "klineTitle": "인생 K선도",
+  "wuxing": {
+    "Wood": "목",
+    "Fire": "화",
+    "Earth": "토",
+    "Metal": "금",
+    "Water": "수"
+  },
+  "kline": {
+    "bijie": "동료",
+    "shishang": "표현",
+    "caixin": "재물",
+    "guansha": "권위",
+    "yinxing": "영향",
+    "close": "닫기",
+    "modeDayun": "대운",
+    "modeYear": "대운 · 유년",
+    "modeMonth": "대운 · 유년 · 유월"
+  }
+}

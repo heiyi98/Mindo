@@ -10,7 +10,59 @@
     },
     "timezonePicker": {
       "label": "タイムゾーン",
-      "dstNote": "夏時間"
+      "dstNote": "夏時間",
+      "regions": {
+        "Pacific_Midway": "ミッドウェー島、パゴパゴ",
+        "Pacific_Honolulu": "ホノルル",
+        "America_Adak": "アダック",
+        "Pacific_Marquesas": "マルケサス諸島（タハア）",
+        "America_Anchorage": "アンカレジ",
+        "America_Los_Angeles": "ロサンゼルス、バンクーバー",
+        "America_Phoenix": "フェニックス",
+        "America_Denver": "デンバー、カルガリー",
+        "America_Chicago": "シカゴ、ウィニペグ",
+        "America_Mexico_City": "メキシコシティ、グアテマラシティ、テグシガルパ、サンサルバドル、マナグア、サンホセ、ベルモパン",
+        "America_New_York": "ニューヨーク、トロント",
+        "America_Bogota": "ボゴタ、リマ、キト、パナマシティ、キングストン",
+        "America_Caracas": "カラカス、ポートオブスペイン、ブリッジタウン、サントドミンゴ",
+        "America_Halifax": "ハリファックス",
+        "America_St_Johns": "セントジョンズ",
+        "America_Sao_Paulo": "サンパウロ、ブラジリア",
+        "America_Noronha": "フェルナンド・デ・ノローニャ島",
+        "Atlantic_Azores": "ポンタデルガダ",
+        "Atlantic_Cape_Verde": "プライア",
+        "Europe_London": "ロンドン、ダブリン",
+        "Africa_Abidjan": "レイキャビク、アビジャン、アクラ、ダカール、ロメ、コナクリ",
+        "Europe_Paris": "パリ、ベルリン、ローマ、マドリード、ワルシャワ、アムステルダム、ブリュッセル、ストックホルム、ウィーン、オスロ、コペンハーゲン、プラハ、ブダペスト、ベオグラード、ザグレブ",
+        "Africa_Lagos": "ラゴス、キンシャサ、ヤウンデ",
+        "Africa_Casablanca": "カサブランカ、ラバト",
+        "Europe_Athens": "アテネ、ヘルシンキ、タリン、リガ、ビリニュス、キーウ、ブカレスト、ソフィア、ニコシア",
+        "Africa_Cairo": "カイロ、ヨハネスブルク、ハラレ、マプト、ルサカ、ウィントフック",
+        "Asia_Beirut": "ベイルート",
+        "Asia_Jerusalem": "エルサレム、テルアビブ",
+        "Europe_Moscow": "モスクワ、イスタンブール、リヤド、バグダッド、アンマン、ミンスク、ナイロビ、アディスアベバ、カンパラ",
+        "Asia_Tehran": "テヘラン",
+        "Asia_Dubai": "ドバイ、マスカット、トビリシ、クウェート市、ドーハ",
+        "Asia_Kabul": "カブール",
+        "Asia_Karachi": "カラチ、タシュケント",
+        "Asia_Kolkata": "ニューデリー、コロンボ",
+        "Asia_Kathmandu": "カトマンズ",
+        "Asia_Dhaka": "ダッカ、アルマティ",
+        "Asia_Yangon": "ヤンゴン",
+        "Asia_Bangkok": "バンコク、ハノイ、プノンペン",
+        "Asia_Shanghai": "北京、台北、香港、マカオ、マニラ、シンガポール、クアラルンプール、バンダルスリブガワン、ウランバートル",
+        "Australia_Eucla": "ユークラ",
+        "Asia_Tokyo": "東京、ソウル、平壌、ディリ",
+        "Australia_Darwin": "ダーウィン",
+        "Australia_Adelaide": "アデレード",
+        "Australia_Sydney": "シドニー、メルボルン",
+        "Pacific_Guam": "グアム、ポートモレスビー",
+        "Pacific_Norfolk": "ノーフォーク島",
+        "Pacific_Auckland": "オークランド、ウェリントン",
+        "Pacific_Fiji": "スバ",
+        "Pacific_Tongatapu": "ヌクアロファ、アピア",
+        "Pacific_Kiritimati": "クリスマス島"
+      }
     }
   },
   "account": {
@@ -21,34 +73,9 @@
   },
   "divination": {
     "oracle": "Oracle",
-    "bazi": { "desc": "Decode your elemental birth chart" },
-    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
-    "western": { "desc": "Planetary chart at your birth" },
-    "bigfive": { "desc": "Five-factor personality science" }
-  },
-  "dashboard": {
-    "bazi": {
-      "unlockReading": "Unlock Full Reading",
-      "viewReading": "View Full Reading",
-      "klineTitle": "Life K-Line",
-      "wuxing": {
-        "Wood": "Wood",
-        "Fire": "Fire",
-        "Earth": "Earth",
-        "Metal": "Metal",
-        "Water": "Water"
-      },
-      "kline": {
-        "bijie": "交友",
-        "shishang": "表現",
-        "caixin": "財運",
-        "guansha": "権威",
-        "yinxing": "影響",
-        "close": "閉じる",
-        "modeDayun": "大運",
-        "modeYear": "大運・流年",
-        "modeMonth": "大運・流年・流月"
-      }
-    }
+    "bazi": { "desc": "あなたの五行命式を解読する" },
+    "ziwei": { "desc": "古代中国の星命術" },
+    "western": { "desc": "誕生時の惑星チャート" },
+    "bigfive": { "desc": "五因子性格科学" }
   }
 }

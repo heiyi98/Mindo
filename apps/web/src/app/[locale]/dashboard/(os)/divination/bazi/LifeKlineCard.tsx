@@ -242,7 +242,7 @@ function LifeKlineModal({
   dayMasterElement: Wuxing;
   onClose: () => void;
 }) {
-  const t = useTranslations('dashboard.bazi');
+  const t = useTranslations('bazi');
   const [mode, setMode] = useState<PrecisionMode>('liuyear');
   const [visible, setVisible] = useState<Record<EnergyKey, boolean>>({
     bijie: true, shishang: true, caixin: true, guansha: true, yinxing: true,

@@ -1,0 +1,23 @@
+{
+  "unlockReading": "Sblocca lettura completa",
+  "viewReading": "Vedi lettura completa",
+  "klineTitle": "Grafico K vita",
+  "wuxing": {
+    "Wood": "Legno",
+    "Fire": "Fuoco",
+    "Earth": "Terra",
+    "Metal": "Metallo",
+    "Water": "Acqua"
+  },
+  "kline": {
+    "bijie": "Compagni",
+    "shishang": "Espressione",
+    "caixin": "Ricchezza",
+    "guansha": "Autorità",
+    "yinxing": "Influenza",
+    "close": "Chiudi",
+    "modeDayun": "Ciclo",
+    "modeYear": "Ciclo · Anno",
+    "modeMonth": "Ciclo · Anno · Mese"
+  }
+}

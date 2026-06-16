@@ -30,11 +30,10 @@ export async function POST(request: Request) {
 
     // 检查已有快照
     const { data: existing } = await supabase
-      .from('snapshots')
+      .from('astrology_snapshots')
       .select('id, calculation_result')
       .eq('profile_id', profile_id)
-      .eq('snapshot_type', 'western')
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({ result: existing.calculation_result, fromCache: true });
@@ -71,15 +70,20 @@ export async function POST(request: Request) {
     const result = calculateStarChart(input);
 
     // 存入快照
-    await supabase.from('snapshots').insert({
+    const { data: selfProfile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('user_id', user.id)
+      .eq('is_self', true)
+      .single();
+
+    await supabase.from('astrology_snapshots').insert({
       profile_id,
       user_id: user.id,
-      snapshot_type: 'western',
-      input_hash: `western_${profile_id}`,
       calculation_result: result,
-      birth_date: profile.birth_date,
-      birth_time: profile.birth_time || null,
-      birth_place_name: profile.birth_place_name || null,
+      profile_display_name: profile.display_name ?? null,
+      user_display_name: selfProfile?.display_name ?? null,
+      user_handle: null,
     });
 
     return NextResponse.json({ result, fromCache: false });

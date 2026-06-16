@@ -49,7 +49,7 @@ interface BaziChartProps {
 const UNKNOWN_PILLAR: Pillar = { stem: '?', branch: '?' };
 
 function BaziChartCard({ pillars, tianGanNodes, cangGanNodes }: BaziChartProps) {
-  const t = useTranslations('dashboard.bazi');
+  const t = useTranslations('bazi');
 
   const stemWuxingByPos = new Map(tianGanNodes.map(n => [n.pos, n.wuxing]));
   const branchWuxingByPos = new Map(

@@ -1,0 +1,23 @@
+{
+  "unlockReading": "Débloquer la lecture complète",
+  "viewReading": "Voir la lecture complète",
+  "klineTitle": "Courbe de vie K",
+  "wuxing": {
+    "Wood": "Bois",
+    "Fire": "Feu",
+    "Earth": "Terre",
+    "Metal": "Métal",
+    "Water": "Eau"
+  },
+  "kline": {
+    "bijie": "Compagnons",
+    "shishang": "Expression",
+    "caixin": "Richesse",
+    "guansha": "Autorité",
+    "yinxing": "Influence",
+    "close": "Fermer",
+    "modeDayun": "Cycle",
+    "modeYear": "Cycle · Année",
+    "modeMonth": "Cycle · Année · Mois"
+  }
+}

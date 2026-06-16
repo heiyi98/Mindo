@@ -46,11 +46,10 @@ export async function GET(request: Request) {
     let fromCache = true;
 
     const { data: existingSnapshot } = await supabase
-      .from('snapshots')
+      .from('bazi_snapshots')
       .select('id, calculation_result')
       .eq('profile_id', profile.id)
-      .eq('snapshot_type', 'bazi')
-      .single();
+      .maybeSingle();
     console.log('[dashboard API] existingSnapshot:', !!existingSnapshot);
 
     if (existingSnapshot) {
@@ -93,7 +92,7 @@ export async function GET(request: Request) {
           );
           // 异步写回 DB，不阻塞本次响应
           supabase
-            .from('snapshots')
+            .from('bazi_snapshots')
             .update({ calculation_result: baziSnapshot })
             .eq('id', existingSnapshot.id)
             .then(() => {
@@ -103,12 +102,11 @@ export async function GET(request: Request) {
           baziSnapshot = existingSnapshot.calculation_result as BaziSnapshot;
         }
       } else {
-        // 旧格式（无 yuelingWuxing/relations/influence）：删除并重算
+        // 旧格式：删除并重算
         await supabase
-          .from('snapshots')
+          .from('bazi_snapshots')
           .delete()
-          .eq('profile_id', profile.id)
-          .eq('snapshot_type', 'bazi');
+          .eq('profile_id', profile.id);
 
         baziSnapshot = await computeAndSave(supabase, profile, user.id);
         fromCache = false;
@@ -222,15 +220,20 @@ async function computeAndSave(
 
   const snapshot = toBaziSnapshot(analysis, meta, energyScores as any);
 
-  await supabase.from('snapshots').insert({
+  const { data: selfProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('user_id', userId)
+    .eq('is_self', true)
+    .single();
+
+  await supabase.from('bazi_snapshots').insert({
     profile_id: profile.id,
     user_id: userId,
-    snapshot_type: 'bazi',
-    input_hash: `${birthDate}_${birthTime}_${lat}_${lng}`,
     calculation_result: snapshot,
-    birth_date: birthDate,
-    birth_time: profile.birth_time || null,
-    birth_place_name: profile.birth_place_name || null,
+    profile_display_name: profile.display_name ?? null,
+    user_display_name: selfProfile?.display_name ?? null,
+    user_handle: null,
   });
 
   return snapshot;

@@ -8,9 +8,10 @@ export type Gender = 'M' | 'F' | null;
 
 interface GenderPickerProps {
   onSelect: (gender: Gender) => void;
+  disabled?: boolean;
 }
 
-export default function GenderPicker({ onSelect }: GenderPickerProps) {
+export default function GenderPicker({ onSelect, disabled = false }: GenderPickerProps) {
   const t = useTranslations('onboarding.genderPicker');
   const [selected, setSelected] = useState<Gender>(null);
 
@@ -83,7 +84,8 @@ export default function GenderPicker({ onSelect }: GenderPickerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         onClick={handleConfirm}
-        className="w-full px-12 py-4 text-base font-medium rounded-full transition-all duration-300"
+        disabled={disabled}
+        className="w-full px-12 py-4 text-base font-medium rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           background: 'hsl(var(--foreground))',
           color: 'hsl(var(--background))',

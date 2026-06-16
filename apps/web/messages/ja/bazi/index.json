@@ -1,0 +1,23 @@
+{
+  "unlockReading": "完全な解読をアンロック",
+  "viewReading": "完全な解読を見る",
+  "klineTitle": "人生Kライン",
+  "wuxing": {
+    "Wood": "木",
+    "Fire": "火",
+    "Earth": "土",
+    "Metal": "金",
+    "Water": "水"
+  },
+  "kline": {
+    "bijie": "交友",
+    "shishang": "表現",
+    "caixin": "財運",
+    "guansha": "権威",
+    "yinxing": "影響",
+    "close": "閉じる",
+    "modeDayun": "大運",
+    "modeYear": "大運・流年",
+    "modeMonth": "大運・流年・流月"
+  }
+}
