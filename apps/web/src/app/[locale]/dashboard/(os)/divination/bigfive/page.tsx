@@ -6,10 +6,11 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
 import QuestionCard from '@/components/divination/bigfive/QuestionCard';
-import BigFiveRadar from '@/components/divination/bigfive/BigFiveRadar';
+import BigFiveChart from '@/components/divination/bigfive/BigFiveChart';
 import BigFiveFacets from '@/components/divination/bigfive/BigFiveFacets';
 import BigFiveIntro from '@/components/divination/bigfive/BigFiveIntro';
 import type { RegionData } from '@/components/divination/bigfive/BigFiveIntro';
+import type { StandardScores } from '@/components/divination/bigfive/BigFiveFacets';
 import type { BigFiveReport, BigFiveDomain, BigFiveFacet } from '@mindo/core';
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
@@ -49,6 +50,7 @@ export default function BigFivePage() {
   const { setContent } = useTopBar();
   const [pageState, setPageState] = useState<PageState>('intro');
   const [result, setResult] = useState<BigFiveReport | null>(null);
+  const [standardScores, setStandardScores] = useState<StandardScores | null>(null);
   const [regionData, setRegionData] = useState<RegionData | null>(null);
   const [error, setError] = useState('');
   const [checkingCache, setCheckingCache] = useState(true);
@@ -59,7 +61,6 @@ export default function BigFivePage() {
     return () => setContent({});
   }, [setContent]);
 
-  // Cache current profile id to avoid timing issues on submit
   useEffect(() => {
     profileIdRef.current = currentProfile?.id ?? null;
   }, [currentProfile?.id]);
@@ -81,29 +82,33 @@ export default function BigFivePage() {
     devFillAll,
   } = useBigFiveQuiz();
 
+  async function fetchAndSetResult(profileId: string): Promise<boolean> {
+    const res = await fetch(`/api/psychology/bigfive/result?profileId=${profileId}`);
+    if (res.status === 404) return false;
+    const data = await res.json();
+    if (data && data.domain_scores && data.facet_scores) {
+      setResult(reconstructReport(data.domain_scores, data.facet_scores));
+      setStandardScores(data.standard_scores ?? null);
+      return true;
+    }
+    return false;
+  }
+
   useEffect(() => {
     if (!currentProfile) return;
 
     reset();
     setResult(null);
+    setStandardScores(null);
     setRegionData(null);
     setPageState('intro');
     setCheckingCache(true);
 
-    fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`)
-      .then(res => {
-        if (res.status === 404) return null;
-        return res.json();
-      })
-      .then(data => {
-        if (data && data.domain_scores && data.facet_scores) {
-          setResult(reconstructReport(data.domain_scores, data.facet_scores));
-          setPageState('result');
-        }
-        // 404 or missing scores → stay on 'intro'
-      })
+    fetchAndSetResult(currentProfile.id)
+      .then(found => { if (found) setPageState('result'); })
       .catch(err => console.error(err))
       .finally(() => setCheckingCache(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProfile?.id, reset]);
 
   const handleStart = (region: RegionData | null) => {
@@ -135,8 +140,11 @@ export default function BigFivePage() {
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+
       setResult(data.result);
       setPageState('result');
+
+      fetchAndSetResult(profileId).catch(() => {});
     } catch (err: any) {
       setError(err.message);
       setPageState('quiz');
@@ -156,7 +164,7 @@ export default function BigFivePage() {
 
   if (pageState === 'result' && result) {
     return (
-      <div className="w-full max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <motion.h1
             initial={{ opacity: 0, y: -10 }}
@@ -177,6 +185,7 @@ export default function BigFivePage() {
                 method: 'DELETE',
               });
               setResult(null);
+              setStandardScores(null);
               setRegionData(null);
               reset();
               setPageState('intro');
@@ -195,23 +204,34 @@ export default function BigFivePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-6 rounded-3xl"
-          style={{
-            background: 'hsl(var(--card))',
-            border: '1px solid hsl(var(--border))',
-          }}
         >
-          <div style={{ height: 300 }}>
-            <BigFiveRadar report={result} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            {/* Left column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {standardScores ? (
+                <BigFiveChart standardScores={standardScores} />
+              ) : (
+                <div
+                  className="rounded-3xl"
+                  style={{
+                    height: 260,
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                  }}
+                />
+              )}
+              <div style={{
+                background: 'var(--color-background-primary)',
+                border: '0.5px solid var(--color-border-tertiary)',
+                borderRadius: 'var(--border-radius-lg)',
+                padding: '1.25rem',
+              }} />
+            </div>
+            {/* Right column: facet accordion, no wrapping card */}
+            <div>
+              <BigFiveFacets report={result} standardScores={standardScores} />
+            </div>
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <BigFiveFacets report={result} />
         </motion.div>
       </div>
     );

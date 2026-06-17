@@ -492,6 +492,14 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] Snapshots RLS 性能优化
 
+\- \[x] BigFiveChart.tsx 重构：固定 viewBox 320×320（width='100%'，无 size prop）；cx=cy=160，R=110，Rinner=55，Router=145；删除 chartToggle 提示文字及三语言 i18n key；玫瑰图内圈改用 tDomains 本地化域名替代字母标签（font-size=8，label_r=Rinner×0.58，mid_angle=domain_angle+π/5）；外圈末梢追加 FACET_NAMES_ZH 子维度中文简称（径向旋转，mid∈(π/2,3π/2) 自动+180°防倒置）；bigfive-constants.ts 新增 FACET_NAMES_ZH；BigFiveFacets 域卡片改为按 DOMAIN_ORDER（O C E A N）顺序渲染
+\- \[x] BigFiveChart.tsx 翻转动画重构：将点击切换 view state 改为 Framer Motion 3D 卡片翻转（rotateY 0→180，perspective 1000px，preserve-3d，backfaceVisibility hidden）；正面雷达图/背面玫瑰图；玫瑰图起始角改为 ROSE_START=-π/2-π/5，使 O 的6个子维度以 -π/2（正上方）为中心对称，内圈域 mid_angle=-π/2+i×2π/5 与雷达轴对齐；删除径向旋转文字，改为引导线（stroke 0.8，opacity 0.6）+ 横排文字（text-anchor 按 cos(mid) 三档判定）；雷达多边形 fill 改为 rgba(128,128,128,0.1)（中性灰，stroke 保留 NEUROTICISM 色）
+\- \[x] BigFiveChart.tsx 玫瑰图重构：viewBox 380×380，cx=cy=190，R=125，RI=65，RO=145，R_LABEL=169（固定标签环）；子维度标签改用 useTranslations('bigfive') t('facets.xxx') 读取，删除 FACET_NAMES_ZH；引导线从扇区末梢→R_LABEL，横排文字在 R_LABEL+4，fontSize=11，text-anchor 按 cos(mid)>0.2→start/<-0.2→end
+\- \[x] bigfive-constants.ts 删除 FACET_NAMES_ZH；messages/{en,zh,zh-Hant}/bigfive/index.json facets 更新为短标签（en: Activity/Artistic等；zh: 羞怯/冲动/脆弱等短形式）
+\- \[x] BigFiveChart.tsx 玫瑰图交互：selectedDomain state；内圈域扇区 <g onClick stopPropagation 切换 selectedDomain>；透明 rect 置底让空白区冒泡至卡片翻转；仅渲染 selectedDomain 对应6个子维度的引导线+标签；外圈子维度扇区无 onClick，点击冒泡到卡片触发翻转
+\- \[x] BigFiveChart.tsx 玫瑰图三项增强：① hoveredDomain state，内圈 hover 时 stroke 改域色/strokeWidth=3/strokeOpacity=0.5（SVG filter 方案在 CSS 3D preserve-3d 背面不可靠，已改为 stroke 方案）；② 选中域（内圈+外圈6扇区）包在同一 <g transform="translate(CX,CY) scale(1.06) translate(-CX,-CY)">；③ estimateAngularWidth（CJK 0.65/拉丁 0.5）+ resolveCollisions（10次迭代，GAP=6/R_LABEL）对6个标签碰撞推开——英文长标签效果明显，中文短标签调整量小（<2px）属正常现象
+\- \[x] BigFiveFacets.tsx：域标题名字和子维度名字均改用域颜色（BIGFIVE_COLORS[fullName]），T分/竖线/定性标签颜色不变
+\- \[x] 大五结果页布局重组：max-w-2xl→max-w-4xl；结果区改为 1:1 两列网格（gridTemplateColumns '1fr 1fr' gap 1rem）；左列=翻转图卡+空占位卡片（var(--color-background-primary) border/padding）；右列=BigFiveFacets 直接渲染（无包裹卡片）
 \- \[x] 大五人格 insert 静默失败修复
 \- \[x] 大五提交端点未触发修复（page.tsx handleSubmit：currentProfile 时序未就绪导致 `if (!currentProfile) throw` 提前阻断 fetch，POST /api/psychology/bigfive 从未发出；改用 profileIdRef（useRef）+ useEffect 在 currentProfile?.id 变化时同步缓存，handleSubmit 直接读 profileIdRef.current 取 profile\_id，为空才报错——弃用「查 is\_self=true 默认档案」的兜底方案，因为会把结果存到错误档案下；不改动按钮渲染条件）
 
@@ -567,6 +575,15 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 \- \[x] 时区城市名多语言（timezones.ts regions 字段改为 ianaName\_key；TimezoneSelector 改用 t('regions.{key}')；8语言 ui.json onboarding.timezonePicker.regions 对象，含 Pacific\_Marquesas 兜底）
 
 \- \[x] timezones.ts 新增 Africa/Casablanca、Asia/Beirut、Asia/Jerusalem 三条时区；8语言 regions 全量更新（城市名扩充至主要首都/大城市，各语言本地化拼写）
+
+\- \[x] 大五标准分（bigfive/result/route.ts）：GET 匹配常模后计算 standard\_scores { domains, facets }；zToLabel（5档极高/高/中/低/极低）+ toStandardEntry（T分20-80，无百分位）；domain\_scores 字母键↔DOMAIN\_LETTER\_MAP 全名键映射；facet key 用 .toUpperCase() 匹配 norms statistics（修正 CAUTIONESS→CAUTIOUSNESS 拼写，需在 Supabase 手动执行 UPDATE）；15级候选显式枚举6字段 + applyNullableFilter；无常模时 standard\_scores=null；响应去掉 norm\_sample\_size
+
+\- \[x] 大五结果展示重构：BigFiveFacets 进度条基于 T分（T20→0% / T80→100%），右侧格式改为「{t} | {label}」无 T 前缀，无百分位文字；standardScores=null 时渲染空占位 div；BigFiveRadar 改用 standard\_scores.domains T 值（T20-80，最小值20最大值80），增加 T=50 平均参考环，standardScores=null 时只渲染空网格框架；page.tsx 删除 normLabel state 及 normRef 显示；en/zh/zh-Hant messages 删除 normRef/higherThan/normLoading 键
+
+\- \[x] 大五图表重构：新建 apps/web/src/lib/bigfive-constants.ts（BIGFIVE\_COLORS/DOMAIN\_ORDER/DOMAIN\_FACETS/DOMAIN\_LETTER/DOMAIN\_FULL）；新建 BigFiveChart.tsx（radar/rose 双视图，点击切换）—— 雷达图：OCEAN顺序O顶顺时针，4同心五边形网格，数据多边形NEUROTICISM色+0.12透明，顶点圆点用域色，域名标签；玫瑰图：30子维度扇形（annular sector，Rinner=size×0.17，Router=size×0.40，T20-80映射半径），内圈5域饼图+字母标签；BigFiveFacets 改用 BIGFIVE\_COLORS+DOMAIN\_FULL，定性标签去色统一用 muted-foreground，数字竖线标签按固定宽度对齐；page.tsx 以 BigFiveChart 替换 BigFiveRadar，standardScores=null 时显示空占位；en/zh/zh-Hant 新增 chartToggle 键
+- \[x] BigFiveChart.tsx 玫瑰图几何扩展+标签重构：viewBox 440×440，CX=CY=220，R\_radar=135，RI=75，RO=150；常驻显示全部30个子维度标签（删除 selectedDomain 依赖），两圈交错——posInDomain%2===0（第1/3/5个）→R\_LABEL\_OUTER=188，posInDomain%2===1（第2/4/6个）→R\_LABEL\_INNER=168；引导线从扇区末梢→标签环（stroke 0.8，strokeOpacity 0.4），fontSize=9；完全删除 estimateAngularWidth/resolveCollisions 碰撞推开算法；messages/{en,zh,zh-Hant}/bigfive/index.json Anger 值改为单词（"Anger"/"愤怒"）
+- \[x] BigFiveChart.tsx 删除 selectedDomain：移除 selectedDomain state / setSelectedDomain / 内圈 onClick+stopPropagation / scale(1.06) transform；内圈扇区恢复纯静态渲染；hoveredDomain stroke 效果保留；卡片翻转不变
+- \[x] BigFiveChart.tsx 删除 hoveredDomain 及透明背景 rect：移除 hoveredDomain state / onMouseEnter / onMouseLeave / 条件 stroke；内圈扇区改为固定 stroke="hsl(var(--background))" strokeWidth=1.5；删除 fill="transparent" rect；玫瑰图全静态，整卡片点击翻转
 
 \- \[ ] 解读prompt编写（用户负责，发给Gemini讨论后集成）
 

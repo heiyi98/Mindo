@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { calculateBigFive } from '@mindo/core';
 import type { BigFiveUserAnswer } from '@mindo/core';
+
+const serviceClient = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 function calcAgeGroup(birthDate: string): string {
   const birth = new Date(birthDate);
@@ -107,16 +113,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hard-delete all previous records for this profile
+    // Hard-delete all previous records for this profile (service role bypasses RLS)
     console.log('[bigfive] deleting old records for profile_id:', profile_id, 'keeping id:', inserted.id);
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await serviceClient
       .from('bigfive_assessments')
       .delete()
       .eq('profile_id', profile_id)
       .neq('id', inserted.id);
 
     if (deleteError) {
-      console.error('[bigfive] delete old records error:', deleteError);
+      console.error('[bigfive] delete error:', deleteError);
     }
 
     return NextResponse.json({ result: report, fromCache: false });

@@ -2,43 +2,101 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import type { BigFiveReport } from '@mindo/core';
+import type { StandardScores } from '@/components/divination/bigfive/BigFiveFacets';
 
-interface BigFiveRadarProps {
-  report: BigFiveReport;
+const DOMAIN_TO_FULL: Record<string, string> = {
+  N: 'NEUROTICISM',
+  E: 'EXTRAVERSION',
+  O: 'OPENNESS',
+  A: 'AGREEABLENESS',
+  C: 'CONSCIENTIOUSNESS',
+};
+
+const MIN_T = 20;
+const MAX_T = 80;
+
+function tToScale(t: number): number {
+  return (t - MIN_T) / (MAX_T - MIN_T);
 }
 
-export default function BigFiveRadar({ report }: BigFiveRadarProps) {
+interface BigFiveRadarProps {
+  standardScores: StandardScores | null | undefined;
+}
+
+export default function BigFiveRadar({ standardScores }: BigFiveRadarProps) {
   const t = useTranslations('bigfive.domains');
   const size = 300;
   const center = size / 2;
   const radius = 110;
-  const MAX_SCORE = 120;
 
   const domains = ['O', 'C', 'E', 'A', 'N'];
 
   const points = useMemo(() => {
     return domains.map((d, i) => {
-      const domain = report.domains.find(r => r.domain === d);
-      const score = domain?.score || 0;
-      const scale = score / MAX_SCORE;
+      const entry = standardScores?.domains[DOMAIN_TO_FULL[d]];
+      const scale = entry ? tToScale(entry.t) : 0;
       const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
       return {
         domain: d,
-        score,
         x: center + radius * scale * Math.cos(angle),
         y: center + radius * scale * Math.sin(angle),
         labelX: center + (radius * 1.3) * Math.cos(angle),
         labelY: center + (radius * 1.3) * Math.sin(angle),
       };
     });
-  }, [report]);
+  }, [standardScores]);
+
+  if (!standardScores) {
+    return (
+      <div
+        className="w-full h-full flex items-center justify-center"
+        style={{ color: 'hsl(var(--muted-foreground) / 0.2)' }}
+      >
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${size} ${size}`}
+          style={{ maxWidth: 300 }}
+        >
+          {domains.map((_, i) => {
+            const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+            const x = center + radius * Math.cos(angle);
+            const y = center + radius * Math.sin(angle);
+            return (
+              <line
+                key={i}
+                x1={center} y1={center}
+                x2={x} y2={y}
+                stroke="currentColor" strokeWidth="1" strokeDasharray="3 2"
+              />
+            );
+          })}
+          <polygon
+            points={domains.map((_, i) => {
+              const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+              return `${center + radius * Math.cos(angle)},${center + radius * Math.sin(angle)}`;
+            }).join(' ')}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+        </svg>
+      </div>
+    );
+  }
 
   const polygonPoints = points.map(p => `${p.x},${p.y}`).join(' ');
 
   const gridRing = domains.map((_, i) => {
     const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
     return `${center + radius * Math.cos(angle)},${center + radius * Math.sin(angle)}`;
+  }).join(' ');
+
+  // Reference ring at T=50 (average)
+  const avgRing = domains.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+    const r = radius * tToScale(50);
+    return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
   }).join(' ');
 
   return (
@@ -52,6 +110,13 @@ export default function BigFiveRadar({ report }: BigFiveRadarProps) {
       >
         <g style={{ color: 'hsl(var(--foreground) / 0.15)' }}>
           <polygon points={gridRing} fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <polygon
+            points={avgRing}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeDasharray="4 3"
+          />
           {domains.map((_, i) => {
             const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
             return (

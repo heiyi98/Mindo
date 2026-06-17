@@ -2,6 +2,31 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+function zToLabel(z: number): '极高' | '高' | '中' | '低' | '极低' {
+  if (z > 1.5) return '极高';
+  if (z > 0.5) return '高';
+  if (z >= -0.5) return '中';
+  if (z >= -1.5) return '低';
+  return '极低';
+}
+
+function toStandardEntry(raw: number, mean: number, std: number) {
+  const z = (raw - mean) / std;
+  const t = Math.round(Math.min(80, Math.max(20, 50 + 10 * z)));
+  return { t, label: zToLabel(z), z: Math.round(z * 100) / 100 };
+}
+
+// domain_scores uses letter keys (N/E/O/A/C); norms statistics uses full names
+const DOMAIN_LETTER_MAP: Record<string, string> = {
+  NEUROTICISM: 'N',
+  EXTRAVERSION: 'E',
+  OPENNESS: 'O',
+  AGREEABLENESS: 'A',
+  CONSCIENTIOUSNESS: 'C',
+};
+
+const DOMAIN_KEYS = ['NEUROTICISM', 'EXTRAVERSION', 'OPENNESS', 'AGREEABLENESS', 'CONSCIENTIOUSNESS'];
+
 interface NormRow {
   statistics: Record<string, unknown>;
   sample_size: number;
@@ -22,59 +47,58 @@ interface NormParams {
   age_group: string | null;
 }
 
+function applyNullableFilter(
+  query: any,
+  column: string,
+  value: string | null
+) {
+  return value === null
+    ? query.is(column, null)
+    : query.eq(column, value);
+}
+
 async function matchNorm(
   supabase: SupabaseClient,
   params: NormParams
-): Promise<{ norm: NormRow | null; label: string | null }> {
-  const { region_country: rc, region_level1: r1, region_level2: r2, region_level3: r3, gender, age_group: age } = params;
+): Promise<NormRow | null> {
+  const { region_country: country, region_level1: level1, region_level2: level2, region_level3: level3, gender, age_group } = params;
 
-  type Filter = Record<string, string | null>;
-  const steps: Array<{ filter: Filter; skip: boolean; label: string }> = [
-    // a. level3-gender-age
-    { filter: { region_level3: r3, gender, age_group: age }, skip: !r3 || !gender || !age, label: [r3, gender, age].filter(Boolean).join('-') },
-    // b. level3-gender-全age
-    { filter: { region_level3: r3, gender, age_group: null }, skip: !r3 || !gender, label: [r3, gender].filter(Boolean).join('-') },
-    // c. level3-全gender-全age
-    { filter: { region_level3: r3, gender: null, age_group: null }, skip: !r3, label: r3 || '' },
-    // d. level2-gender-age
-    { filter: { region_level2: r2, gender, age_group: age }, skip: !r2 || !gender || !age, label: [r2, gender, age].filter(Boolean).join('-') },
-    // e. level2-gender-全age
-    { filter: { region_level2: r2, gender, age_group: null }, skip: !r2 || !gender, label: [r2, gender].filter(Boolean).join('-') },
-    // f. level2-全gender-全age
-    { filter: { region_level2: r2, gender: null, age_group: null }, skip: !r2, label: r2 || '' },
-    // g. level1-gender-age
-    { filter: { region_level1: r1, gender, age_group: age }, skip: !r1 || !gender || !age, label: [r1, gender, age].filter(Boolean).join('-') },
-    // h. level1-gender-全age
-    { filter: { region_level1: r1, gender, age_group: null }, skip: !r1 || !gender, label: [r1, gender].filter(Boolean).join('-') },
-    // i. level1-全gender-全age
-    { filter: { region_level1: r1, gender: null, age_group: null }, skip: !r1, label: r1 || '' },
-    // j. country-gender-age
-    { filter: { region_country: rc, gender, age_group: age }, skip: !rc || !gender || !age, label: [rc, gender, age].filter(Boolean).join('-') },
-    // k. country-gender-全age
-    { filter: { region_country: rc, gender, age_group: null }, skip: !rc || !gender, label: [rc, gender].filter(Boolean).join('-') },
-    // l. country-全gender-全age
-    { filter: { region_country: rc, gender: null, age_group: null }, skip: !rc, label: rc || '' },
-    // m. 全country-gender-age
-    { filter: { region_country: null, gender, age_group: age }, skip: !gender || !age, label: [gender, age].filter(Boolean).join('-') },
-    // n. 全country-gender-全age
-    { filter: { region_country: null, gender, age_group: null }, skip: !gender, label: gender || '' },
-    // o. 全country-全gender-全age (终极兜底)
-    { filter: { region_country: null, gender: null, age_group: null }, skip: false, label: 'global' },
+  const candidates = [
+    // level3 层
+    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: gender, ag: age_group },
+    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: gender, ag: null      },
+    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: null,   ag: null      },
+    // level2 层（level3 退出）
+    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: gender, ag: null      },
+    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: null,   ag: null      },
+    // level1 层
+    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: gender, ag: null      },
+    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: null,   ag: null      },
+    // country 层
+    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: gender, ag: null      },
+    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: null,   ag: null      },
+    // 全地区（所有 region 字段为 null）
+    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: gender, ag: null      },
+    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: null,   ag: null      },
   ];
 
-  for (const step of steps) {
-    if (step.skip) continue;
+  for (const c of candidates) {
     let query = supabase.from('bigfive_norms').select('*');
-    for (const [key, val] of Object.entries(step.filter)) {
-      query = val === null ? query.is(key, null) : query.eq(key, val);
-    }
+    query = applyNullableFilter(query, 'region_country', c.rc);
+    query = applyNullableFilter(query, 'region_level1',  c.rl1);
+    query = applyNullableFilter(query, 'region_level2',  c.rl2);
+    query = applyNullableFilter(query, 'region_level3',  c.rl3);
+    query = applyNullableFilter(query, 'gender',         c.g);
+    query = applyNullableFilter(query, 'age_group',      c.ag);
     const { data } = await query.maybeSingle();
-    if (data && (data as NormRow).sample_size > 0) {
-      return { norm: data as NormRow, label: step.label };
-    }
+    if (data && (data as NormRow).sample_size > 0) return data as NormRow;
   }
 
-  return { norm: null, label: null };
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -100,7 +124,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const { norm, label } = await matchNorm(supabase, {
+  const norm = await matchNorm(supabase, {
     region_country: assessment.region_country,
     region_level1: assessment.region_level1,
     region_level2: assessment.region_level2,
@@ -109,12 +133,34 @@ export async function GET(request: Request) {
     age_group: assessment.age_group,
   });
 
+  let standard_scores: object | null = null;
+  if (norm) {
+    const stats = norm.statistics as Record<string, { mean: number; std: number }>;
+
+    const domains: Record<string, object> = {};
+    for (const key of DOMAIN_KEYS) {
+      const letterKey = DOMAIN_LETTER_MAP[key];
+      const rawScore = (assessment.domain_scores as Record<string, number>)[letterKey];
+      if (stats[key] && rawScore != null) {
+        domains[key] = toStandardEntry(rawScore, stats[key].mean, stats[key].std);
+      }
+    }
+
+    const facets: Record<string, object> = {};
+    for (const [key, val] of Object.entries(assessment.facet_scores as Record<string, number>)) {
+      const normKey = key.toUpperCase();
+      if (stats[normKey] && val != null) {
+        facets[key] = toStandardEntry(val, stats[normKey].mean, stats[normKey].std);
+      }
+    }
+
+    standard_scores = { domains, facets };
+  }
+
   return NextResponse.json({
     domain_scores: assessment.domain_scores as Record<string, number>,
     facet_scores: assessment.facet_scores as Record<string, number>,
-    standard_scores: null,
-    norm_group: label,
-    norm_sample_size: norm?.sample_size ?? null,
+    standard_scores,
     region: {
       country: assessment.region_country,
       level1: assessment.region_level1,
