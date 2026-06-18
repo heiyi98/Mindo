@@ -25,6 +25,8 @@
       "sending": "发送中...",
       "checkEmail": "请查收邮件中的登录链接",
       "continueWithGoogle": "使用 Google 账号登录",
+      "continueWithFacebook": "使用 Facebook 账号登录",
+      "continueWithX": "使用 X 账号登录",
       "or": "或"
     },
     "error": {

@@ -19,11 +19,11 @@ const STEM_PINYIN: Record<string, string> = {
 };
 
 const ELEMENT_COLORS: Record<string, string> = {
-  Wood:  '#10b981',
-  Fire:  '#f43f5e',
-  Earth: '#f59e0b',
-  Metal: '#94a3b8',
-  Water: '#3b82f6',
+  Wood:  '#388E3C',
+  Fire:  '#D32F2F',
+  Earth: '#F57F17',
+  Metal: '#757575',
+  Water: '#1976D2',
   gray:  '#6b7280',
 };
 

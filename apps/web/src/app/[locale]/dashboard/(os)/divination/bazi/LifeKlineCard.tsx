@@ -22,7 +22,7 @@ const DIZHI_ZH: Record<string, string> = {
 };
 
 const ELEMENT_COLORS: Record<string, string> = {
-  Wood: '#10b981', Fire: '#f43f5e', Earth: '#f59e0b', Metal: '#94a3b8', Water: '#3b82f6',
+  Wood: '#388E3C', Fire: '#D32F2F', Earth: '#F57F17', Metal: '#757575', Water: '#1976D2',
 };
 const WUXING_SHENG: Record<string, string> = {
   Wood: 'Fire', Fire: 'Earth', Earth: 'Metal', Metal: 'Water', Water: 'Wood',
@@ -180,11 +180,11 @@ function ThumbnailChart({ years }: { years: YearScore[] }) {
         const pts = slice.map((y, i) =>
           `${toX(i).toFixed(1)},${toY(y.energies[key as keyof typeof y.energies] as number).toFixed(1)}`
         ).join(' ');
-        const color = key === 'bijie' ? '#3b82f6'
-          : key === 'shishang' ? '#10b981'
-          : key === 'caixin' ? '#f43f5e'
-          : key === 'guansha' ? '#f59e0b'
-          : '#94a3b8';
+        const color = key === 'bijie' ? '#1976D2'
+          : key === 'shishang' ? '#388E3C'
+          : key === 'caixin' ? '#D32F2F'
+          : key === 'guansha' ? '#F57F17'
+          : '#757575';
         return (
           <polyline key={key} points={pts}
             fill="none" stroke={color} strokeWidth={1.2} opacity={0.7} />
