@@ -10,19 +10,23 @@ import {
   DOMAIN_LETTER,
 } from '@/lib/bigfive-constants';
 
-// ── Fixed geometry ────────────────────────────────────────────────────────────
-const VB            = 440;
-const CX            = 220;
-const CY            = 220;
-const R             = 135;           // radar outer radius
-const RI            = 75;            // rose inner radius
-const RO            = 150;           // rose outer radius
-const R_LABEL_OUTER = RO + 38;       // = 188, positions 0,2,4 within domain (1st,3rd,5th)
-const R_LABEL_INNER = RO + 18;       // = 168, positions 1,3,5 within domain (2nd,4th,6th)
+// ── 终极分形黄金参数：底座 = 55，大环边距 = 55，小环边距 = 55 * 0.618 ──────────
+const VB            = 540;           // 画布收缩至 540，安全且紧凑
+const CX            = 270;
+const CY            = 270;
+const R             = 110;           // 雷达图背景网格半径 (边界 = 65分)
+const RO            = 123;           // 玫瑰图最外围极限半径
+const RI            = 55;            // 玫瑰图内圈基底半径
+
+const X             = 55;            // 边距基准常数
+const R_LABEL_INNER = RO + Math.round(X * 0.618); // 小环半径 = 157
+const R_LABEL_OUTER = RO + X;                     // 大环半径 = 178
+
 const STEP          = (2 * Math.PI) / 5;
 const FSTEP         = (2 * Math.PI) / 30;
-const GRIDS         = [0.25, 0.5, 0.75, 1.0];
-// O centered at top: shift start so O's 6 facets are symmetric around -π/2
+
+// 💡 雷达图网格：15分一级 (20-65区间，跨度45)。即 35(1/3), 50(2/3), 65(1.0)
+const GRIDS         = [1/3, 2/3, 1.0]; 
 const ROSE_START    = -Math.PI / 2 - Math.PI / 5;
 
 function pt(r: number, a: number) {
@@ -46,8 +50,14 @@ function piePath(r: number, a1: number, a2: number): string {
   return `M${CX},${CY} L${p1.x},${p1.y} A${r},${r},0,${lg},1,${p2.x},${p2.y}Z`;
 }
 
+// 玫瑰图子维度映射保持不变（20底线确立花瓣张力）
 function tScale(t: number): number {
   return Math.max(0, Math.min(1, (t - 20) / 60));
+}
+
+// 雷达图截断基线映射：圆心 20，边界 65 (有效跨度 45)
+function tScaleRadar(t: number): number {
+  return Math.max(0, (t - 20) / 45);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -58,7 +68,7 @@ interface BigFiveChartProps {
 
 export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
   const [flipped, setFlipped] = useState(false);
-  const tDomains = useTranslations('bigfive.domains');
+  const tChartDomains = useTranslations('bigfive.chart_domains');
   const t = useTranslations('bigfive');
 
   // ── Radar data ──────────────────────────────────────────────────────────────
@@ -66,8 +76,9 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
     DOMAIN_ORDER.map((domain, i) => {
       const angle = -Math.PI / 2 + STEP * i;
       const entry = standardScores.domains[domain];
-      const scale = entry ? tScale(entry.t) : 0;
-      const { x: lx, y: ly } = pt(R + 18, angle);
+      const scale = entry ? tScaleRadar(entry.t) : 0;
+      // 为放大的字体留出更多空间 (R + 28)
+      const { x: lx, y: ly } = pt(R + 28, angle);
       return {
         domain, angle, color: BIGFIVE_COLORS[domain],
         letter: DOMAIN_LETTER[domain],
@@ -103,12 +114,12 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
     return out;
   }, [standardScores.facets]);
 
-  // Inner pie: O centered at top, mid aligned with radar axes
+  // Inner pie
   const innerPies = useMemo(() =>
     DOMAIN_ORDER.map((domain, di) => {
       const a1  = ROSE_START + STEP * di;
       const mid = -Math.PI / 2 + STEP * di;
-      const { x: lx, y: ly } = pt(RI * 0.58, mid);
+      const { x: lx, y: ly } = pt(RI * 0.62, mid);
       return {
         domain, letter: DOMAIN_LETTER[domain],
         color: BIGFIVE_COLORS[domain],
@@ -123,27 +134,39 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
     <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%"
       style={{ display: 'block', overflow: 'visible' }}>
       <g>
-        {GRIDS.map(scale => (
-          <polygon key={scale}
-            points={radarPoints.map(p => { const { x, y } = pt(R * scale, p.angle); return `${x},${y}`; }).join(' ')}
-            fill="none" stroke="hsl(var(--border))" strokeWidth={0.5}
-          />
-        ))}
+        {/* 强化网格质感：内层网格稍淡，最外层边界(1.0)加粗加深，形成绝对的实体墙 */}
+        {GRIDS.map(scale => {
+          const isBoundary = scale === 1.0;
+          return (
+            <polygon key={scale}
+              points={radarPoints.map(p => { const { x, y } = pt(R * scale, p.angle); return `${x},${y}`; }).join(' ')}
+              fill="none" 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth={isBoundary ? 1.5 : 1} 
+              strokeOpacity={isBoundary ? 0.4 : 0.2}
+            />
+          );
+        })}
         {radarPoints.map(p => {
           const { x, y } = pt(R, p.angle);
           return <line key={p.domain} x1={CX} y1={CY} x2={x} y2={y}
-            stroke="hsl(var(--border))" strokeWidth={0.5} />;
+            stroke="hsl(var(--foreground))" strokeWidth={1} strokeOpacity={0.2} />;
         })}
+        
+        {/* 雷达图数据连线 */}
         <polygon points={radarPolygon}
-          fill="rgba(128,128,128,0.1)"
-          stroke={BIGFIVE_COLORS.NEUROTICISM} strokeWidth={1.5} />
+          fill="rgba(128,128,128,0.12)"
+          stroke="hsl(var(--foreground))" strokeWidth={2} />
         {radarPoints.map(p => (
           <circle key={p.domain} cx={p.x} cy={p.y} r={5} fill={p.color} />
         ))}
+        
+        {/* 雷达图文字：继承系统字体，字重设为 300 贴合胶囊，去除黑体 */}
         {radarPoints.map(p => (
           <text key={p.domain} x={p.lx} y={p.ly}
-            textAnchor="middle" dominantBaseline="middle" fontSize={11} fill={p.color}>
-            {tDomains(p.letter as Parameters<typeof tDomains>[0])}
+            textAnchor="middle" dominantBaseline="middle" 
+            fontFamily="inherit" fontWeight={300} fontSize={13} fill={p.color}>
+            {tChartDomains(p.letter as Parameters<typeof tChartDomains>[0])}
           </text>
         ))}
       </g>
@@ -155,7 +178,6 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
     <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%"
       style={{ display: 'block', overflow: 'visible' }}>
       <g>
-        {/* Per-domain groups: outer donut sectors + inner pie */}
         {DOMAIN_ORDER.map((domain, di) => {
           const innerPie      = innerPies[di];
           const domainSectors = roseSectors.filter(s => s.domain === domain);
@@ -170,15 +192,14 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
                 stroke="hsl(var(--background))" strokeWidth={1.5} />
               <text x={innerPie.lx} y={innerPie.ly}
                 textAnchor="middle" dominantBaseline="middle"
-                fontSize={8} fontWeight={500} fill="white"
+                fontFamily="inherit" fontWeight={300} fontSize={9} fill="white"
                 style={{ pointerEvents: 'none' }}>
-                {tDomains(innerPie.letter as Parameters<typeof tDomains>[0])}
+                {tChartDomains(innerPie.letter as Parameters<typeof tChartDomains>[0])}
               </text>
             </g>
           );
         })}
 
-        {/* All 30 facet labels — alternating outer/inner rings to reduce overlap */}
         {roseSectors.map((s, i) => {
           const posInDomain = i % 6;
           const labelR = posInDomain % 2 === 0 ? R_LABEL_OUTER : R_LABEL_INNER;
@@ -186,8 +207,30 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
           const linePt = pt(s.segR, mid);
           const ringPt = pt(labelR, mid);
           const textPt = pt(labelR + 4, mid);
-          const c      = Math.cos(mid);
-          const anchor = c > 0.2 ? 'start' : c < -0.2 ? 'end' : 'middle';
+
+          const sin = Math.sin(mid);
+          const cos = Math.cos(mid);
+          const isTopHalf = sin < 0;
+
+          let anchor: "start" | "middle" | "end" = "middle";
+          if (sin < -0.8 || sin > 0.8) {
+            anchor = 'middle'; 
+          } else if (cos > 0) {
+            anchor = 'start';  
+          } else {
+            anchor = 'end';    
+          }
+
+          const rawText = t(`facets.${s.facet}` as Parameters<typeof t>[0]);
+          let lines = [rawText];
+          if (rawText.includes('-')) {
+            const idx = rawText.indexOf('-');
+            lines = [rawText.slice(0, idx + 1), rawText.slice(idx + 1)];
+          } else if (rawText.length > 10 && rawText.includes(' ')) {
+            const parts = rawText.split(' ');
+            lines = [parts[0], parts.slice(1).join(' ')];
+          }
+
           return (
             <g key={`label-${s.key}`}>
               <line
@@ -198,9 +241,23 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
               <text
                 x={textPt.x} y={textPt.y}
                 textAnchor={anchor} dominantBaseline="middle"
-                fontSize={9} fill={s.color}
+                fontFamily="inherit" fontWeight={300} fontSize={9} fill={s.color}
               >
-                {t(`facets.${s.facet}` as Parameters<typeof t>[0])}
+                {lines.map((line, lIdx) => {
+                  let dy = "0";
+                  if (lines.length > 1) {
+                    if (isTopHalf) {
+                      dy = lIdx === 0 ? "-1.1em" : "1.1em"; 
+                    } else {
+                      dy = lIdx === 0 ? "0" : "1.1em";      
+                    }
+                  }
+                  return (
+                    <tspan key={lIdx} x={textPt.x} dy={dy}>
+                      {line}
+                    </tspan>
+                  );
+                })}
               </text>
             </g>
           );
@@ -209,7 +266,6 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
     </svg>
   );
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div
       className="p-6 rounded-3xl"
@@ -228,11 +284,9 @@ export default function BigFiveChart({ standardScores }: BigFiveChartProps) {
         transition={{ duration: 0.5, ease: 'easeInOut' }}
         style={{ transformStyle: 'preserve-3d', position: 'relative' }}
       >
-        {/* Front: Radar */}
         <div style={{ backfaceVisibility: 'hidden' }}>
           {svgRadar}
         </div>
-        {/* Back: Rose */}
         <div style={{
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',

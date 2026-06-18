@@ -16,8 +16,6 @@ export type { LinPillar, FortuneGroupEnergies, FortuneResult, MonthScore, YearSc
 
 // 心理测量
 export { calculateBigFive, getQuestionCount } from './psychology/bigfive';
-export { buildQuestions } from './psychology/bigfive/alheimsins';
-export type { BigFiveQuestion } from './psychology/bigfive/alheimsins';
 export type {
   BigFiveDomain,
   BigFiveFacet,

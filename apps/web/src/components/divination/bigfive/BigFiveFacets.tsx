@@ -72,7 +72,8 @@ export default function BigFiveFacets({ report, standardScores }: BigFiveFacetsP
             >
               <div className="flex items-center gap-3 flex-1">
                 <span
-                  className="text-sm font-light w-24 text-left"
+                  // 💡 修复：将宽度从 w-24 提升到绝对安全的 150px，并防止压缩
+                  className="text-sm font-light w-[150px] text-left flex-shrink-0"
                   style={{ color }}
                 >
                   {t(domain.domain as any)}
@@ -139,7 +140,8 @@ export default function BigFiveFacets({ report, standardScores }: BigFiveFacetsP
                           className="flex items-center gap-3 pt-2"
                         >
                           <span
-                            className="text-xs font-light w-32 text-left flex-shrink-0"
+                            // 💡 修复：将宽度从 w-32 提升到绝对安全的 150px
+                            className="text-xs font-light w-[150px] text-left flex-shrink-0"
                             style={{ color }}
                           >
                             {tFacets(facet.facet as any)}
