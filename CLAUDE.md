@@ -452,6 +452,8 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] 密码认证流程（LoginForm 三模式：密码登录/注册Magic Link/重置Magic Link；/auth/set-password 新用户设密码页；/auth/reset-password 重置密码页；/api/auth/confirm 按 type 路由到对应页面）
 
+\- \[x] 账户安全面板（profile/page.tsx 合并重构：邮箱行+OAuth绑定/解绑+密码设置/修改整合为一个卡片；/api/account/has-password 用 Admin SDK 查询 encrypted_password 判断是否已设置密码）
+
 \- \[x] 仪表盘主页（八字命盘、五行五维图）
 
 \- \[x] ProfileCard（姓名/生日/年龄/真太阳时）

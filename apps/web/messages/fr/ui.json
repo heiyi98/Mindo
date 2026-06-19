@@ -110,6 +110,33 @@
     "profileModal": {
       "timezone": "Fuseau horaire",
       "unknown": "Inconnu"
+    },
+    "linkedAccounts": {
+      "title": "Sécurité du compte",
+      "email": "E-mail",
+      "changeEmail": "Modifier",
+      "emailSent": "E-mail de vérification envoyé, veuillez vérifier votre boîte de réception",
+      "noEmail": "Aucun e-mail lié",
+      "bindEmailHint": "Nous recommandons de lier un e-mail pour éviter de perdre l'accès à votre compte",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "Lié",
+      "notLinked": "Non lié",
+      "link": "Lier",
+      "unlink": "Délier",
+      "unlinkError": "Au moins une méthode de connexion doit rester active",
+      "newEmailPlaceholder": "Entrer un nouvel e-mail",
+      "password": "Mot de passe",
+      "passwordSet": "Défini",
+      "passwordNotSet": "Non défini",
+      "setPassword": "Définir",
+      "changePassword": "Modifier",
+      "newPasswordPlaceholder": "Nouveau mot de passe (8 caractères minimum)",
+      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "passwordSuccess": "Mot de passe mis à jour",
+      "confirm": "Confirmer",
+      "cancel": "Annuler"
     }
   },
   "divination": {

@@ -110,6 +110,33 @@
     "profileModal": {
       "timezone": "タイムゾーン",
       "unknown": "不明"
+    },
+    "linkedAccounts": {
+      "title": "アカウントセキュリティ",
+      "email": "メールアドレス",
+      "changeEmail": "変更",
+      "emailSent": "確認メールを送信しました。受信トレイをご確認ください",
+      "noEmail": "メールアドレスが未登録",
+      "bindEmailHint": "アカウントの損失を防ぐため、メールアドレスの登録をお勧めします",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "連携済み",
+      "notLinked": "未連携",
+      "link": "連携",
+      "unlink": "連携解除",
+      "unlinkError": "少なくとも1つのログイン方法を残してください",
+      "newEmailPlaceholder": "新しいメールアドレスを入力",
+      "password": "パスワード",
+      "passwordSet": "設定済み",
+      "passwordNotSet": "未設定",
+      "setPassword": "設定",
+      "changePassword": "変更",
+      "newPasswordPlaceholder": "新しいパスワード（8文字以上）",
+      "confirmPasswordPlaceholder": "新しいパスワードを確認",
+      "passwordMismatch": "パスワードが一致しません",
+      "passwordSuccess": "パスワードを更新しました",
+      "confirm": "確認",
+      "cancel": "キャンセル"
     }
   },
   "divination": {

@@ -221,6 +221,33 @@
         "mbti": "MBTI Analysis",
         "enneagram": "Enneagram Analysis"
       }
+    },
+    "linkedAccounts": {
+      "title": "Account Security",
+      "email": "Email",
+      "changeEmail": "Change",
+      "emailSent": "Verification email sent, please check your inbox",
+      "noEmail": "No email linked",
+      "bindEmailHint": "We recommend linking an email to prevent account loss",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "link": "Link",
+      "unlink": "Unlink",
+      "unlinkError": "At least one login method must remain",
+      "newEmailPlaceholder": "Enter new email",
+      "password": "Password",
+      "passwordSet": "Set",
+      "passwordNotSet": "Not set",
+      "setPassword": "Set",
+      "changePassword": "Change",
+      "newPasswordPlaceholder": "New password (min 8 characters)",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "passwordMismatch": "Passwords do not match",
+      "passwordSuccess": "Password updated",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
     }
   },
   "dashboard": {

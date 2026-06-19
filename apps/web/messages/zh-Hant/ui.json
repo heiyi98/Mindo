@@ -210,17 +210,44 @@
       "save": "保存"
     },
     "assets": {
-      "title": "我的资产",
-      "empty": "暂无已购报告。",
-      "basedOn": "基于",
+      "title": "我的資產",
+      "empty": "暫無已購報告。",
+      "basedOn": "基於",
       "types": {
-        "bazi": "四柱命盘解读",
-        "ziwei": "紫微斗数解读",
-        "western": "西洋星盘解读",
+        "bazi": "四柱命盤解讀",
+        "ziwei": "紫微斗數解讀",
+        "western": "西洋星盤解讀",
         "bigfive": "大五人格分析",
         "mbti": "MBTI分析",
         "enneagram": "九型人格分析"
       }
+    },
+    "linkedAccounts": {
+      "title": "帳戶安全",
+      "email": "電子郵件",
+      "changeEmail": "更換",
+      "emailSent": "驗證郵件已發送，請查收",
+      "noEmail": "未綁定電子郵件",
+      "bindEmailHint": "建議綁定電子郵件，防止帳戶丟失",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "已綁定",
+      "notLinked": "未綁定",
+      "link": "綁定",
+      "unlink": "解除綁定",
+      "unlinkError": "至少保留一種登入方式",
+      "newEmailPlaceholder": "輸入新電子郵件",
+      "password": "密碼",
+      "passwordSet": "已設定",
+      "passwordNotSet": "未設定",
+      "setPassword": "設定",
+      "changePassword": "修改",
+      "newPasswordPlaceholder": "新密碼（至少8位）",
+      "confirmPasswordPlaceholder": "確認新密碼",
+      "passwordMismatch": "兩次密碼不一致",
+      "passwordSuccess": "密碼已更新",
+      "confirm": "確認",
+      "cancel": "取消"
     }
   },
   "dashboard": {

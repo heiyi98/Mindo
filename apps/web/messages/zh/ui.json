@@ -221,6 +221,33 @@
         "mbti": "MBTI分析",
         "enneagram": "九型人格分析"
       }
+    },
+    "linkedAccounts": {
+      "title": "账户安全",
+      "email": "邮箱",
+      "changeEmail": "更换",
+      "emailSent": "验证邮件已发送，请查收",
+      "noEmail": "未绑定邮箱",
+      "bindEmailHint": "建议绑定邮箱，防止账户丢失",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "已绑定",
+      "notLinked": "未绑定",
+      "link": "绑定",
+      "unlink": "解绑",
+      "unlinkError": "至少保留一种登录方式",
+      "newEmailPlaceholder": "输入新邮箱",
+      "password": "密码",
+      "passwordSet": "已设置",
+      "passwordNotSet": "未设置",
+      "setPassword": "设置",
+      "changePassword": "修改",
+      "newPasswordPlaceholder": "新密码（至少8位）",
+      "confirmPasswordPlaceholder": "确认新密码",
+      "passwordMismatch": "两次密码不一致",
+      "passwordSuccess": "密码已更新",
+      "confirm": "确认",
+      "cancel": "取消"
     }
   },
   "dashboard": {

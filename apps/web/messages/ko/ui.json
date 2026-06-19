@@ -110,6 +110,33 @@
     "profileModal": {
       "timezone": "시간대",
       "unknown": "알 수 없음"
+    },
+    "linkedAccounts": {
+      "title": "계정 보안",
+      "email": "이메일",
+      "changeEmail": "변경",
+      "emailSent": "인증 이메일이 전송되었습니다. 받은 편지함을 확인하세요",
+      "noEmail": "연결된 이메일 없음",
+      "bindEmailHint": "계정 분실을 방지하기 위해 이메일 연결을 권장합니다",
+      "google": "Google",
+      "facebook": "Facebook",
+      "linked": "연결됨",
+      "notLinked": "연결 안 됨",
+      "link": "연결",
+      "unlink": "연결 해제",
+      "unlinkError": "최소 하나의 로그인 방법이 남아 있어야 합니다",
+      "newEmailPlaceholder": "새 이메일 입력",
+      "password": "비밀번호",
+      "passwordSet": "설정됨",
+      "passwordNotSet": "설정 안 됨",
+      "setPassword": "설정",
+      "changePassword": "변경",
+      "newPasswordPlaceholder": "새 비밀번호 (8자 이상)",
+      "confirmPasswordPlaceholder": "새 비밀번호 확인",
+      "passwordMismatch": "비밀번호가 일치하지 않습니다",
+      "passwordSuccess": "비밀번호가 업데이트되었습니다",
+      "confirm": "확인",
+      "cancel": "취소"
     }
   },
   "divination": {
