@@ -1,0 +1,117 @@
+'use client'
+import { useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+export default function SetPasswordPage() {
+  const t = useTranslations('auth.setPassword')
+  const router = useRouter()
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirm) {
+      setError(t('passwordMismatch'))
+      return
+    }
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_self', true)
+        .single()
+      if (profile) {
+        router.push('/dashboard')
+      } else {
+        router.push('/onboarding')
+      }
+    } else {
+      router.push('/onboarding')
+    }
+    setLoading(false)
+  }
+
+  const handleSkip = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_self', true)
+        .single()
+      if (profile) {
+        router.push('/dashboard')
+        return
+      }
+    }
+    router.push('/onboarding')
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-center" style={{ color: 'hsl(var(--foreground))' }}>
+            {t('title')}
+          </h1>
+          <p className="text-sm text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            {t('subtitle')}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder={t('passwordPlaceholder')}
+            required
+            minLength={8}
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          <input
+            type="password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            placeholder={t('confirmPlaceholder')}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50 transition-opacity"
+          >
+            {loading ? '...' : t('submit')}
+          </button>
+        </form>
+
+        <button
+          onClick={handleSkip}
+          className="w-full text-sm text-center"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          {t('skip')}
+        </button>
+      </div>
+    </div>
+  )
+}

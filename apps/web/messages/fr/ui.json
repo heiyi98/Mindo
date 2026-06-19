@@ -1,4 +1,45 @@
 {
+  "auth": {
+    "login": {
+      "title": "Se connecter à Mindo",
+      "emailPlaceholder": "Entrez votre e-mail",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "sendLink": "Envoyer le lien magique",
+      "sending": "Envoi en cours...",
+      "checkEmail": "Vérifiez votre e-mail pour le lien de connexion",
+      "continueWithGoogle": "Continuer avec Google",
+      "continueWithFacebook": "Continuer avec Facebook",
+      "or": "ou",
+      "loginTitle": "Se connecter",
+      "registerTitle": "Créer un compte",
+      "forgotPassword": "Mot de passe oublié",
+      "backToLogin": "Retour à la connexion",
+      "sendRegisterLink": "Envoyer le lien d'inscription",
+      "sendResetLink": "Envoyer le lien de réinitialisation",
+      "registerSent": "Lien d'inscription envoyé — vérifiez vos e-mails",
+      "resetSent": "Lien de réinitialisation envoyé — vérifiez vos e-mails"
+    },
+    "setPassword": {
+      "title": "Définir votre mot de passe",
+      "subtitle": "Définissez un mot de passe pour vous connecter directement la prochaine fois",
+      "passwordPlaceholder": "Mot de passe (8 caractères minimum)",
+      "confirmPlaceholder": "Confirmer le mot de passe",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "submit": "Définir le mot de passe",
+      "skip": "Passer pour l'instant"
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Définissez votre nouveau mot de passe",
+      "passwordPlaceholder": "Nouveau mot de passe (8 caractères minimum)",
+      "confirmPlaceholder": "Confirmer le nouveau mot de passe",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "submit": "Réinitialiser le mot de passe"
+    },
+    "error": {
+      "message": "Erreur d'authentification. Veuillez réessayer."
+    }
+  },
   "onboarding": {
     "cityPicker": {
       "label": "Ville de naissance"

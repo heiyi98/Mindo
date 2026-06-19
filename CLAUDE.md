@@ -108,6 +108,10 @@ packages/config/   ← 共享TypeScript/ESLint配置
 
 /{locale}/auth/login/                  → 登录页
 
+/{locale}/auth/set-password/           → 新用户注册后设置密码
+
+/{locale}/auth/reset-password/         → 忘记密码后重置密码
+
 ```
 
 
@@ -445,6 +449,8 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 \- \[x] 全球行政时区映射表（administrative-timezones.ts）
 
 \- \[x] 落地页、登录页、认证回调
+
+\- \[x] 密码认证流程（LoginForm 三模式：密码登录/注册Magic Link/重置Magic Link；/auth/set-password 新用户设密码页；/auth/reset-password 重置密码页；/api/auth/confirm 按 type 路由到对应页面）
 
 \- \[x] 仪表盘主页（八字命盘、五行五维图）
 

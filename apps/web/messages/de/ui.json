@@ -1,4 +1,45 @@
 {
+  "auth": {
+    "login": {
+      "title": "Bei Mindo anmelden",
+      "emailPlaceholder": "E-Mail-Adresse eingeben",
+      "passwordPlaceholder": "Passwort eingeben",
+      "sendLink": "Magic Link senden",
+      "sending": "Wird gesendet...",
+      "checkEmail": "Prüfen Sie Ihre E-Mails für den Anmeldelink",
+      "continueWithGoogle": "Mit Google fortfahren",
+      "continueWithFacebook": "Mit Facebook fortfahren",
+      "or": "oder",
+      "loginTitle": "Anmelden",
+      "registerTitle": "Neues Konto erstellen",
+      "forgotPassword": "Passwort vergessen",
+      "backToLogin": "Zurück zur Anmeldung",
+      "sendRegisterLink": "Registrierungslink senden",
+      "sendResetLink": "Zurücksetzungslink senden",
+      "registerSent": "Registrierungslink gesendet — prüfen Sie Ihre E-Mails",
+      "resetSent": "Zurücksetzungslink gesendet — prüfen Sie Ihre E-Mails"
+    },
+    "setPassword": {
+      "title": "Passwort festlegen",
+      "subtitle": "Legen Sie ein Passwort fest, um sich beim nächsten Mal direkt anzumelden",
+      "passwordPlaceholder": "Passwort (mindestens 8 Zeichen)",
+      "confirmPlaceholder": "Passwort bestätigen",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein",
+      "submit": "Passwort festlegen",
+      "skip": "Überspringen"
+    },
+    "resetPassword": {
+      "title": "Passwort zurücksetzen",
+      "subtitle": "Legen Sie Ihr neues Passwort fest",
+      "passwordPlaceholder": "Neues Passwort (mindestens 8 Zeichen)",
+      "confirmPlaceholder": "Neues Passwort bestätigen",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein",
+      "submit": "Passwort zurücksetzen"
+    },
+    "error": {
+      "message": "Authentifizierungsfehler. Bitte versuchen Sie es erneut."
+    }
+  },
   "onboarding": {
     "cityPicker": {
       "label": "Geburtsstadt"

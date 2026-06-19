@@ -1,4 +1,45 @@
 {
+  "auth": {
+    "login": {
+      "title": "Mindoにサインイン",
+      "emailPlaceholder": "メールアドレスを入力",
+      "passwordPlaceholder": "パスワードを入力",
+      "sendLink": "マジックリンクを送信",
+      "sending": "送信中...",
+      "checkEmail": "サインインリンクのメールを確認してください",
+      "continueWithGoogle": "Googleで続ける",
+      "continueWithFacebook": "Facebookで続ける",
+      "or": "または",
+      "loginTitle": "ログイン",
+      "registerTitle": "新規登録",
+      "forgotPassword": "パスワードを忘れた",
+      "backToLogin": "ログインに戻る",
+      "sendRegisterLink": "登録リンクを送信",
+      "sendResetLink": "リセットリンクを送信",
+      "registerSent": "登録リンクを送信しました — メールを確認してください",
+      "resetSent": "リセットリンクを送信しました — メールを確認してください"
+    },
+    "setPassword": {
+      "title": "パスワードを設定",
+      "subtitle": "パスワードを設定すると、次回から直接ログインできます",
+      "passwordPlaceholder": "パスワード（8文字以上）",
+      "confirmPlaceholder": "パスワードを確認",
+      "passwordMismatch": "パスワードが一致しません",
+      "submit": "パスワードを設定",
+      "skip": "後で設定する"
+    },
+    "resetPassword": {
+      "title": "パスワードをリセット",
+      "subtitle": "新しいパスワードを設定してください",
+      "passwordPlaceholder": "新しいパスワード（8文字以上）",
+      "confirmPlaceholder": "新しいパスワードを確認",
+      "passwordMismatch": "パスワードが一致しません",
+      "submit": "パスワードをリセット"
+    },
+    "error": {
+      "message": "認証エラーが発生しました。もう一度お試しください。"
+    }
+  },
   "onboarding": {
     "cityPicker": {
       "label": "出生地"

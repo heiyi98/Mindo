@@ -1,4 +1,45 @@
 {
+  "auth": {
+    "login": {
+      "title": "Iniciar sesión en Mindo",
+      "emailPlaceholder": "Introduce tu correo electrónico",
+      "passwordPlaceholder": "Introduce tu contraseña",
+      "sendLink": "Enviar enlace mágico",
+      "sending": "Enviando...",
+      "checkEmail": "Revisa tu correo para el enlace de inicio de sesión",
+      "continueWithGoogle": "Continuar con Google",
+      "continueWithFacebook": "Continuar con Facebook",
+      "or": "o",
+      "loginTitle": "Iniciar sesión",
+      "registerTitle": "Crear cuenta nueva",
+      "forgotPassword": "Olvidé mi contraseña",
+      "backToLogin": "Volver al inicio de sesión",
+      "sendRegisterLink": "Enviar enlace de registro",
+      "sendResetLink": "Enviar enlace de restablecimiento",
+      "registerSent": "Enlace de registro enviado — revisa tu correo",
+      "resetSent": "Enlace de restablecimiento enviado — revisa tu correo"
+    },
+    "setPassword": {
+      "title": "Establecer contraseña",
+      "subtitle": "Establece una contraseña para iniciar sesión directamente la próxima vez",
+      "passwordPlaceholder": "Contraseña (mínimo 8 caracteres)",
+      "confirmPlaceholder": "Confirmar contraseña",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "submit": "Establecer contraseña",
+      "skip": "Omitir por ahora"
+    },
+    "resetPassword": {
+      "title": "Restablecer contraseña",
+      "subtitle": "Establece tu nueva contraseña",
+      "passwordPlaceholder": "Nueva contraseña (mínimo 8 caracteres)",
+      "confirmPlaceholder": "Confirmar nueva contraseña",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "submit": "Restablecer contraseña"
+    },
+    "error": {
+      "message": "Error de autenticación. Por favor, inténtalo de nuevo."
+    }
+  },
   "onboarding": {
     "cityPicker": {
       "label": "Ciudad de nacimiento"

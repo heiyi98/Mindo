@@ -21,11 +21,38 @@
     "login": {
       "title": "Sign in to Mindo",
       "emailPlaceholder": "Enter your email",
+      "passwordPlaceholder": "Enter your password",
       "sendLink": "Send magic link",
       "sending": "Sending...",
       "checkEmail": "Check your email for a sign-in link",
       "continueWithGoogle": "Continue with Google",
-      "or": "or"
+      "continueWithFacebook": "Continue with Facebook",
+      "or": "or",
+      "loginTitle": "Log In",
+      "registerTitle": "New user? Register",
+      "forgotPassword": "Forgot password",
+      "backToLogin": "Back to login",
+      "sendRegisterLink": "Send registration link",
+      "sendResetLink": "Send reset link",
+      "registerSent": "Registration link sent — check your email",
+      "resetSent": "Reset link sent — check your email"
+    },
+    "setPassword": {
+      "title": "Set Your Password",
+      "subtitle": "Set a password so you can log in directly next time",
+      "passwordPlaceholder": "Password (min 8 characters)",
+      "confirmPlaceholder": "Confirm password",
+      "passwordMismatch": "Passwords do not match",
+      "submit": "Set Password",
+      "skip": "Skip for now"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Set your new password",
+      "passwordPlaceholder": "New password (min 8 characters)",
+      "confirmPlaceholder": "Confirm new password",
+      "passwordMismatch": "Passwords do not match",
+      "submit": "Reset Password"
     },
     "error": {
       "message": "Authentication error. Please try again."

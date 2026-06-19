@@ -1,4 +1,45 @@
 {
+  "auth": {
+    "login": {
+      "title": "Accedi a Mindo",
+      "emailPlaceholder": "Inserisci la tua email",
+      "passwordPlaceholder": "Inserisci la tua password",
+      "sendLink": "Invia link magico",
+      "sending": "Invio in corso...",
+      "checkEmail": "Controlla la tua email per il link di accesso",
+      "continueWithGoogle": "Continua con Google",
+      "continueWithFacebook": "Continua con Facebook",
+      "or": "oppure",
+      "loginTitle": "Accedi",
+      "registerTitle": "Nuovo utente? Registrati",
+      "forgotPassword": "Password dimenticata",
+      "backToLogin": "Torna all'accesso",
+      "sendRegisterLink": "Invia link di registrazione",
+      "sendResetLink": "Invia link di reimpostazione",
+      "registerSent": "Link di registrazione inviato — controlla la tua email",
+      "resetSent": "Link di reimpostazione inviato — controlla la tua email"
+    },
+    "setPassword": {
+      "title": "Imposta la password",
+      "subtitle": "Imposta una password per accedere direttamente la prossima volta",
+      "passwordPlaceholder": "Password (minimo 8 caratteri)",
+      "confirmPlaceholder": "Conferma password",
+      "passwordMismatch": "Le password non corrispondono",
+      "submit": "Imposta password",
+      "skip": "Salta per ora"
+    },
+    "resetPassword": {
+      "title": "Reimposta password",
+      "subtitle": "Imposta la tua nuova password",
+      "passwordPlaceholder": "Nuova password (minimo 8 caratteri)",
+      "confirmPlaceholder": "Conferma nuova password",
+      "passwordMismatch": "Le password non corrispondono",
+      "submit": "Reimposta password"
+    },
+    "error": {
+      "message": "Errore di autenticazione. Riprova."
+    }
+  },
   "onboarding": {
     "cityPicker": {
       "label": "Città di nascita"

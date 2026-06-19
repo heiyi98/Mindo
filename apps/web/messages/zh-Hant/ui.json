@@ -19,16 +19,43 @@
   },
   "auth": {
     "login": {
-      "title": "登录 Mindo",
-      "emailPlaceholder": "请输入邮箱",
-      "sendLink": "发送登录链接",
-      "sending": "发送中...",
-      "checkEmail": "请查收邮件中的登录链接",
-      "continueWithGoogle": "使用 Google 账号登录",
-      "or": "或"
+      "title": "登入 Mindo",
+      "emailPlaceholder": "請輸入電子郵件",
+      "passwordPlaceholder": "請輸入密碼",
+      "sendLink": "發送登入連結",
+      "sending": "發送中...",
+      "checkEmail": "請查收郵件中的登入連結",
+      "continueWithGoogle": "使用 Google 帳號登入",
+      "continueWithFacebook": "使用 Facebook 帳號登入",
+      "or": "或",
+      "loginTitle": "登入",
+      "registerTitle": "新用戶註冊",
+      "forgotPassword": "忘記密碼",
+      "backToLogin": "返回登入",
+      "sendRegisterLink": "發送註冊連結",
+      "sendResetLink": "發送重置連結",
+      "registerSent": "註冊連結已發送，請查收郵件",
+      "resetSent": "重置連結已發送，請查收郵件"
+    },
+    "setPassword": {
+      "title": "設定密碼",
+      "subtitle": "為您的帳戶設定密碼，下次可直接登入",
+      "passwordPlaceholder": "設定密碼（至少8位）",
+      "confirmPlaceholder": "確認密碼",
+      "passwordMismatch": "兩次輸入的密碼不一致",
+      "submit": "確認設定",
+      "skip": "跳過，稍後再說"
+    },
+    "resetPassword": {
+      "title": "重置密碼",
+      "subtitle": "設定您的新密碼",
+      "passwordPlaceholder": "新密碼（至少8位）",
+      "confirmPlaceholder": "確認新密碼",
+      "passwordMismatch": "兩次輸入的密碼不一致",
+      "submit": "確認重置"
     },
     "error": {
-      "message": "认证失败，请重试"
+      "message": "認證失敗，請重試"
     }
   },
   "onboarding": {

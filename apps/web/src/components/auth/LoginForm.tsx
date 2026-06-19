@@ -3,37 +3,21 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
+type Mode = 'login' | 'register' | 'forgot'
+
 export function LoginForm() {
   const t = useTranslations('auth')
+  const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [password, setPassword] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [facebookLoading, setFacebookLoading] = useState(false)
-  const [xLoading, setXLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/confirm?next=/`
-      }
-    })
-    if (error) {
-      setError(error.message)
-    } else {
-      setSent(true)
-    }
-    setLoading(false)
-  }
-
   const handleOAuthLogin = async (
-    provider: 'google' | 'facebook' | 'twitter',
+    provider: 'google' | 'facebook',
     setProviderLoading: (v: boolean) => void
   ) => {
     setProviderLoading(true)
@@ -47,24 +31,60 @@ export function LoginForm() {
     setProviderLoading(false)
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setError(error.message)
+    setLoading(false)
+  }
+
+  const handleSendMagicLink = async (e: React.FormEvent, shouldCreateUser: boolean) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser,
+        emailRedirectTo: `${window.location.origin}/api/auth/confirm?next=/`
+      }
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setSent(true)
+    }
+    setLoading(false)
+  }
+
   if (sent) {
     return (
-      <div className="text-center text-foreground">
-        <p>{t('login.checkEmail')}</p>
+      <div className="text-center text-foreground space-y-4">
+        <p className="text-sm font-light" style={{ color: 'hsl(var(--foreground))' }}>
+          {mode === 'forgot' ? t('login.resetSent') : t('login.registerSent')}
+        </p>
+        <button
+          onClick={() => { setSent(false); setMode('login'); setEmail('') }}
+          className="text-xs"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          {t('login.backToLogin')}
+        </button>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Google */}
+      {/* OAuth 按钮 */}
       <button
         onClick={() => handleOAuthLogin('google', setGoogleLoading)}
         disabled={googleLoading}
-        className="w-full py-3 rounded-lg border border-border
-                   text-foreground font-medium flex items-center
-                   justify-center gap-3 disabled:opacity-50
-                   hover:bg-muted transition-colors"
+        className="w-full py-3 rounded-lg border border-border text-foreground font-medium flex items-center justify-center gap-3 disabled:opacity-50 hover:bg-muted transition-colors"
       >
         <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -75,34 +95,15 @@ export function LoginForm() {
         {googleLoading ? t('login.sending') : t('login.continueWithGoogle')}
       </button>
 
-      {/* Facebook */}
       <button
         onClick={() => handleOAuthLogin('facebook', setFacebookLoading)}
         disabled={facebookLoading}
-        className="w-full py-3 rounded-lg border border-border
-                   text-foreground font-medium flex items-center
-                   justify-center gap-3 disabled:opacity-50
-                   hover:bg-muted transition-colors"
+        className="w-full py-3 rounded-lg border border-border text-foreground font-medium flex items-center justify-center gap-3 disabled:opacity-50 hover:bg-muted transition-colors"
       >
         <svg width="18" height="18" viewBox="0 0 24 24">
           <path fill="#1877F2" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
         </svg>
         {facebookLoading ? t('login.sending') : t('login.continueWithFacebook')}
-      </button>
-
-      {/* X / Twitter */}
-      <button
-        onClick={() => handleOAuthLogin('twitter', setXLoading)}
-        disabled={xLoading}
-        className="w-full py-3 rounded-lg border border-border
-                   text-foreground font-medium flex items-center
-                   justify-center gap-3 disabled:opacity-50
-                   hover:bg-muted transition-colors"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-        </svg>
-        {xLoading ? t('login.sending') : t('login.continueWithX')}
       </button>
 
       <div className="flex items-center gap-3">
@@ -111,26 +112,103 @@ export function LoginForm() {
         <div className="flex-1 h-px bg-border"/>
       </div>
 
-      <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder={t('login.emailPlaceholder')}
-          required
-          className="w-full px-4 py-3 rounded-lg bg-muted text-foreground
-                     border border-border focus:outline-none focus:border-ring"
-        />
-        {error && <p className="text-destructive text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-lg bg-primary text-primary-foreground
-                     font-medium disabled:opacity-50 transition-opacity"
-        >
-          {loading ? t('login.sending') : t('login.sendLink')}
-        </button>
-      </form>
+      {/* 登录模式 */}
+      {mode === 'login' && (
+        <form onSubmit={handleLogin} className="flex flex-col gap-3">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder={t('login.emailPlaceholder')}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder={t('login.passwordPlaceholder')}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50 transition-opacity"
+          >
+            {loading ? t('login.sending') : t('login.loginTitle')}
+          </button>
+          <div className="flex justify-between text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <button type="button" onClick={() => { setMode('register'); setError('') }}>
+              {t('login.registerTitle')}
+            </button>
+            <button type="button" onClick={() => { setMode('forgot'); setError('') }}>
+              {t('login.forgotPassword')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* 注册模式 */}
+      {mode === 'register' && (
+        <form onSubmit={e => handleSendMagicLink(e, true)} className="flex flex-col gap-3">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder={t('login.emailPlaceholder')}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50 transition-opacity"
+          >
+            {loading ? t('login.sending') : t('login.sendRegisterLink')}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError('') }}
+            className="text-xs text-center"
+            style={{ color: 'hsl(var(--muted-foreground))' }}
+          >
+            {t('login.backToLogin')}
+          </button>
+        </form>
+      )}
+
+      {/* 忘记密码模式 */}
+      {mode === 'forgot' && (
+        <form onSubmit={e => handleSendMagicLink(e, false)} className="flex flex-col gap-3">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder={t('login.emailPlaceholder')}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50 transition-opacity"
+          >
+            {loading ? t('login.sending') : t('login.sendResetLink')}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError('') }}
+            className="text-xs text-center"
+            style={{ color: 'hsl(var(--muted-foreground))' }}
+          >
+            {t('login.backToLogin')}
+          </button>
+        </form>
+      )}
     </div>
   )
 }
