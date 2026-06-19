@@ -267,6 +267,20 @@
     "profiles": {
       "addProfile": "Add Profile",
       "manageProfiles": "Manage Profiles"
+    },
+    "edit": "Edit",
+    "done": "Done",
+    "widgetDrawer": {
+      "title": "Add Widgets",
+      "added": "Added"
+    },
+    "widgetNames": {
+      "profile-card": "Profile Card",
+      "bazi-chart": "Four Pillars Chart",
+      "wuxing-radar": "Five Element Radar",
+      "daymaster": "Day Master",
+      "bigfive-radar": "Big Five Radar",
+      "western-chart": "Western Chart"
     }
   },
   "divination": {

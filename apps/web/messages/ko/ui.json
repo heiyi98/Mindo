@@ -140,6 +140,22 @@
       "cancel": "취소"
     }
   },
+  "dashboard": {
+    "edit": "편집",
+    "done": "완료",
+    "widgetDrawer": {
+      "title": "위젯 추가",
+      "added": "추가됨"
+    },
+    "widgetNames": {
+      "profile-card": "프로필 카드",
+      "bazi-chart": "사주 차트",
+      "wuxing-radar": "오행 레이더",
+      "daymaster": "일주",
+      "bigfive-radar": "빅파이브 레이더",
+      "western-chart": "서양 점성술 차트"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "당신의 오행 명식을 해독합니다" },

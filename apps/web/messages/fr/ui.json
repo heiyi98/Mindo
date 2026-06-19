@@ -140,6 +140,22 @@
       "cancel": "Annuler"
     }
   },
+  "dashboard": {
+    "edit": "Modifier",
+    "done": "Terminer",
+    "widgetDrawer": {
+      "title": "Ajouter des widgets",
+      "added": "Ajouté"
+    },
+    "widgetNames": {
+      "profile-card": "Carte de profil",
+      "bazi-chart": "Thème des quatre piliers",
+      "wuxing-radar": "Radar des cinq éléments",
+      "daymaster": "Maître du jour",
+      "bigfive-radar": "Radar Big Five",
+      "western-chart": "Thème occidental"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "Décoder votre thème natal élémentaire" },

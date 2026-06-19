@@ -140,6 +140,22 @@
       "cancel": "Cancelar"
     }
   },
+  "dashboard": {
+    "edit": "Editar",
+    "done": "Listo",
+    "widgetDrawer": {
+      "title": "Agregar widgets",
+      "added": "Agregado"
+    },
+    "widgetNames": {
+      "profile-card": "Tarjeta de perfil",
+      "bazi-chart": "Carta de los cuatro pilares",
+      "wuxing-radar": "Radar de los cinco elementos",
+      "daymaster": "Maestro del día",
+      "bigfive-radar": "Radar de los cinco grandes",
+      "western-chart": "Carta occidental"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "Descifra tu carta natal elemental" },

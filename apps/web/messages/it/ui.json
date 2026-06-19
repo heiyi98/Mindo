@@ -140,6 +140,22 @@
       "cancel": "Annulla"
     }
   },
+  "dashboard": {
+    "edit": "Modifica",
+    "done": "Fine",
+    "widgetDrawer": {
+      "title": "Aggiungi widget",
+      "added": "Aggiunto"
+    },
+    "widgetNames": {
+      "profile-card": "Scheda profilo",
+      "bazi-chart": "Grafico dei quattro pilastri",
+      "wuxing-radar": "Radar dei cinque elementi",
+      "daymaster": "Maestro del giorno",
+      "bigfive-radar": "Radar Big Five",
+      "western-chart": "Grafico occidentale"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "Decodifica il tuo tema natale elementale" },

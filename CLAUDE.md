@@ -594,6 +594,11 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 - \[x] BigFiveChart.tsx 玫瑰图几何扩展+标签重构：viewBox 440×440，CX=CY=220，R\_radar=135，RI=75，RO=150；常驻显示全部30个子维度标签（删除 selectedDomain 依赖），两圈交错——posInDomain%2===0（第1/3/5个）→R\_LABEL\_OUTER=188，posInDomain%2===1（第2/4/6个）→R\_LABEL\_INNER=168；引导线从扇区末梢→标签环（stroke 0.8，strokeOpacity 0.4），fontSize=9；完全删除 estimateAngularWidth/resolveCollisions 碰撞推开算法；messages/{en,zh,zh-Hant}/bigfive/index.json Anger 值改为单词（"Anger"/"愤怒"）
 - \[x] BigFiveChart.tsx 删除 selectedDomain：移除 selectedDomain state / setSelectedDomain / 内圈 onClick+stopPropagation / scale(1.06) transform；内圈扇区恢复纯静态渲染；hoveredDomain stroke 效果保留；卡片翻转不变
 - \[x] BigFiveChart.tsx 删除 hoveredDomain 及透明背景 rect：移除 hoveredDomain state / onMouseEnter / onMouseLeave / 条件 stroke；内圈扇区改为固定 stroke="hsl(var(--background))" strokeWidth=1.5；删除 fill="transparent" rect；玫瑰图全静态，整卡片点击翻转
+- \[x] 密码登录流程（LoginForm三模式login/register/forgot；/auth/set-password页/auth/reset-password页；/api/auth/confirm按type分支；9语言ui.json新增auth.setPassword/auth.resetPassword块）
+- \[x] 账户安全面板（/api/account/has-password用Admin SDK读encrypted\_password；email更换/Google+Facebook OAuth绑解绑/密码设置修改合并一卡；9语言account.linkedAccounts）
+- \[x] 账户安全独立页（/dashboard/profile/account/page.tsx；profile/page.tsx改为导航菜单含Shield入口；9语言account.manageAccount）
+- \[x] 仪表盘6列网格重构：dashboard/(os)/page.tsx完全重写为6列CSS Grid（gridTemplateColumns repeat(6,1fr)，gridAutoRows由ResizeObserver实时计算正方形格子）；dnd-kit拖拽排列（SortableContext+arrayMove+repackLayout）；编辑模式（抖动动画/X删除按钮/右侧280px Widget抽屉）；移动端自动单列；布局持久化至users.dashboard\_layout（GET/PATCH /api/dashboard/layout）；Widget注册表（src/config/dashboard-widgets.ts：LayoutItem/WidgetDef/WIDGET\_REGISTRY/DEFAULT\_LAYOUT/repackLayout）；6个Widget组件（src/components/dashboard/widgets/：ProfileCardWidget复用ProfileCard，其余占位）；9语言ui.json新增dashboard.edit/done/widgetDrawer/widgetNames
+- 注意：users表需手动在Supabase执行 ALTER TABLE users ADD COLUMN IF NOT EXISTS dashboard\_layout JSONB;
 
 \- \[ ] 解读prompt编写（用户负责，发给Gemini讨论后集成）
 

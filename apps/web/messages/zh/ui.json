@@ -267,6 +267,20 @@
     "profiles": {
       "addProfile": "添加档案",
       "manageProfiles": "管理档案"
+    },
+    "edit": "编辑",
+    "done": "完成",
+    "widgetDrawer": {
+      "title": "添加组件",
+      "added": "已添加"
+    },
+    "widgetNames": {
+      "profile-card": "档案卡片",
+      "bazi-chart": "八字命盘",
+      "wuxing-radar": "五行雷达",
+      "daymaster": "日主",
+      "bigfive-radar": "大五人格",
+      "western-chart": "西洋星盘"
     }
   },
   "divination": {

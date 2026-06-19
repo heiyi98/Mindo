@@ -140,6 +140,22 @@
       "cancel": "キャンセル"
     }
   },
+  "dashboard": {
+    "edit": "編集",
+    "done": "完了",
+    "widgetDrawer": {
+      "title": "ウィジェットを追加",
+      "added": "追加済み"
+    },
+    "widgetNames": {
+      "profile-card": "プロフィールカード",
+      "bazi-chart": "四柱推命チャート",
+      "wuxing-radar": "五行レーダー",
+      "daymaster": "日主",
+      "bigfive-radar": "ビッグファイブレーダー",
+      "western-chart": "西洋占星術チャート"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "あなたの五行命式を解読する" },

@@ -140,6 +140,22 @@
       "cancel": "Abbrechen"
     }
   },
+  "dashboard": {
+    "edit": "Bearbeiten",
+    "done": "Fertig",
+    "widgetDrawer": {
+      "title": "Widgets hinzufügen",
+      "added": "Hinzugefügt"
+    },
+    "widgetNames": {
+      "profile-card": "Profilkarte",
+      "bazi-chart": "Vier-Pfeiler-Diagramm",
+      "wuxing-radar": "Fünf-Elemente-Radar",
+      "daymaster": "Tagesmeister",
+      "bigfive-radar": "Big-Five-Radar",
+      "western-chart": "Westliches Horoskop"
+    }
+  },
   "divination": {
     "oracle": "Oracle",
     "bazi": { "desc": "Dein elementares Geburtshoroskop entschlüsseln" },
