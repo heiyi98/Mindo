@@ -175,9 +175,10 @@
     "system": "跟随系统"
   },
   "account": {
-    "title": "账户",
-    "email": "邮箱",
-    "manageProfiles": "管理档案",
+    "title": "帳戶",
+    "email": "電子郵件",
+    "manageProfiles": "管理檔案",
+    "manageAccount": "帳戶安全",
     "assetsLabel": "我的资产",
     "language": "语言",
     "signOut": "退出登录",

@@ -107,6 +107,7 @@
     }
   },
   "account": {
+    "manageAccount": "계정 보안",
     "profileModal": {
       "timezone": "시간대",
       "unknown": "알 수 없음"

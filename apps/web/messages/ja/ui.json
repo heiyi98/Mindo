@@ -107,6 +107,7 @@
     }
   },
   "account": {
+    "manageAccount": "アカウントセキュリティ",
     "profileModal": {
       "timezone": "タイムゾーン",
       "unknown": "不明"

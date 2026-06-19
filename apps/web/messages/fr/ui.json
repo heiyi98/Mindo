@@ -107,6 +107,7 @@
     }
   },
   "account": {
+    "manageAccount": "Sécurité du compte",
     "profileModal": {
       "timezone": "Fuseau horaire",
       "unknown": "Inconnu"

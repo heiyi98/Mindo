@@ -98,6 +98,8 @@ packages/config/   ← 共享TypeScript/ESLint配置
 
 /{locale}/dashboard/profile/assets/    → 资产管理
 
+/{locale}/dashboard/profile/account/  → 账户安全（邮箱/OAuth绑定/密码）
+
 /{locale}/dashboard/forum/             → 论坛（待开发）
 
 /{locale}/dashboard/shop/              → 商城（待开发）
@@ -452,7 +454,7 @@ WuxingAssessment: { wuxing, role, strengthLabel, effect, impacts }
 
 \- \[x] 密码认证流程（LoginForm 三模式：密码登录/注册Magic Link/重置Magic Link；/auth/set-password 新用户设密码页；/auth/reset-password 重置密码页；/api/auth/confirm 按 type 路由到对应页面）
 
-\- \[x] 账户安全面板（profile/page.tsx 合并重构：邮箱行+OAuth绑定/解绑+密码设置/修改整合为一个卡片；/api/account/has-password 用 Admin SDK 查询 encrypted_password 判断是否已设置密码）
+\- \[x] 账户安全面板（/api/account/has-password 用 Admin SDK 查询 encrypted_password 判断是否已设置密码；账户安全卡片已从 profile/page.tsx 移出，独立为 /dashboard/profile/account/page.tsx；profile/page.tsx 精简为纯导航菜单，含「账户安全」入口链接）
 
 \- \[x] 仪表盘主页（八字命盘、五行五维图）
 
