@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
 import ProfileSwitcher from '@/components/dashboard/ProfileSwitcher';
-import StarChartWheel from '@/components/divination/western/StarChartWheel';
-import PlanetList from '@/components/divination/western/PlanetList';
-import HouseList from '@/components/divination/western/HouseList';
+import StarChartWheel from '@/components/modules/western/StarChartWheel';
+import PlanetList from '@/components/modules/western/PlanetList';
+import HouseList from '@/components/modules/western/HouseList';
 import type { StarChartResult, FullModeResult, DateModeResult } from '@mindo/core';
 
 export default function WesternPage() {
@@ -124,7 +124,7 @@ export default function WesternPage() {
             border: '1px solid hsl(var(--border))',
           }}
         >
-          <StarChartWheel result={fullResult} />
+          <StarChartWheel profileId={currentProfile?.id ?? ''} />
         </motion.div>
       )}
 

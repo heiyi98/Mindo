@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
-import type { StandardScores } from '@/components/divination/bigfive/BigFiveFacets';
+import type { StandardScores } from '@/components/modules/bigfive/BigFiveFacets';
 
 const DOMAIN_TO_FULL: Record<string, string> = {
   N: 'NEUROTICISM',

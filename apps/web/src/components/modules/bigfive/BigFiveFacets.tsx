@@ -84,6 +84,7 @@ export default function BigFiveFacets({ report, standardScores }: BigFiveFacetsP
                   style={{ background: 'hsl(var(--muted))' }}
                 >
                   <motion.div
+                    key={ss?.t}
                     initial={{ width: 0 }}
                     animate={{ width: ss ? `${tToPercent(ss.t)}%` : '0%' }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -151,6 +152,7 @@ export default function BigFiveFacets({ report, standardScores }: BigFiveFacetsP
                             style={{ background: 'hsl(var(--muted))' }}
                           >
                             <motion.div
+                              key={fs?.t}
                               initial={{ width: 0 }}
                               animate={{ width: fs ? `${tToPercent(fs.t)}%` : '0%' }}
                               transition={{ duration: 0.6, ease: 'easeOut' }}

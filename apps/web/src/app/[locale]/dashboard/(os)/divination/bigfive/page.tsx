@@ -5,12 +5,12 @@ import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
-import QuestionCard from '@/components/divination/bigfive/QuestionCard';
-import BigFiveChart from '@/components/divination/bigfive/BigFiveChart';
-import BigFiveFacets from '@/components/divination/bigfive/BigFiveFacets';
-import BigFiveIntro from '@/components/divination/bigfive/BigFiveIntro';
-import type { RegionData } from '@/components/divination/bigfive/BigFiveIntro';
-import type { StandardScores } from '@/components/divination/bigfive/BigFiveFacets';
+import QuestionCard from '@/components/modules/bigfive/QuestionCard';
+import BigFiveChart from '@/components/modules/bigfive/BigFiveChart';
+import BigFiveFacets from '@/components/modules/bigfive/BigFiveFacets';
+import BigFiveIntro from '@/components/modules/bigfive/BigFiveIntro';
+import type { RegionData } from '@/components/modules/bigfive/BigFiveIntro';
+import type { StandardScores } from '@/components/modules/bigfive/BigFiveFacets';
 import type { BigFiveReport, BigFiveDomain, BigFiveFacet } from '@mindo/core';
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
@@ -55,6 +55,8 @@ export default function BigFivePage() {
   const [error, setError] = useState('');
   const [checkingCache, setCheckingCache] = useState(true);
   const profileIdRef = useRef<string | null>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState(120);
 
   useEffect(() => {
     setContent({ left: <ProfileSwitcher /> });
@@ -64,6 +66,21 @@ export default function BigFivePage() {
   useEffect(() => {
     profileIdRef.current = currentProfile?.id ?? null;
   }, [currentProfile?.id]);
+
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    const calc = (w: number) => {
+      const contentW = Math.min(w - 32, 576);
+      setCellSize(Math.floor((contentW - 3 * 16) / 4));
+    };
+    calc(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) calc(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pageState]);
 
   const {
     currentQuestion,
@@ -164,75 +181,65 @@ export default function BigFivePage() {
 
   if (pageState === 'result' && result) {
     return (
-      <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-xs font-light tracking-[0.3em] uppercase"
-            style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
-          >
-            {t('resultTitle')}
-          </motion.h1>
+      <div ref={outerRef} className="w-full px-4 py-6">
+        <div className="max-w-xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <motion.h1
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs font-light tracking-[0.3em] uppercase"
+              style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
+            >
+              {t('resultTitle')}
+            </motion.h1>
 
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            onClick={async () => {
-              if (!currentProfile) return;
-              await fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`, {
-                method: 'DELETE',
-              });
-              setResult(null);
-              setStandardScores(null);
-              setRegionData(null);
-              reset();
-              setPageState('intro');
-            }}
-            className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-            style={{
-              color: 'hsl(var(--muted-foreground))',
-              border: '1px solid hsl(var(--border))',
-            }}
-          >
-            {t('retake')}
-          </motion.button>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {/* Left column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {standardScores ? (
-                <BigFiveChart standardScores={standardScores} />
-              ) : (
-                <div
-                  className="rounded-3xl"
-                  style={{
-                    height: 260,
-                    background: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                  }}
-                />
-              )}
-              <div style={{
-                background: 'var(--color-background-primary)',
-                border: '0.5px solid var(--color-border-tertiary)',
-                borderRadius: 'var(--border-radius-lg)',
-                padding: '1.25rem',
-              }} />
-            </div>
-            {/* Right column: facet accordion, no wrapping card */}
-            <div>
-              <BigFiveFacets report={result} standardScores={standardScores} />
-            </div>
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              onClick={async () => {
+                if (!currentProfile) return;
+                await fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`, {
+                  method: 'DELETE',
+                });
+                setResult(null);
+                setStandardScores(null);
+                setRegionData(null);
+                reset();
+                setPageState('intro');
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                color: 'hsl(var(--muted-foreground))',
+                border: '1px solid hsl(var(--border))',
+              }}
+            >
+              {t('retake')}
+            </motion.button>
           </div>
-        </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gridAutoRows: `${cellSize}px`,
+                gap: '16px',
+              }}
+            >
+              <div style={{ gridColumn: '1 / span 2', gridRow: '1 / span 2', aspectRatio: '1/1' }}>
+                <BigFiveChart profileId={currentProfile.id} />
+              </div>
+              <div style={{ gridColumn: '3 / span 2', gridRow: '1 / -1', height: 'auto', alignSelf: 'start' }}>
+                <BigFiveFacets report={result} standardScores={standardScores} />
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     );
   }
