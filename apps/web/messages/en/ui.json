@@ -187,6 +187,11 @@
     "deleteConfirmDesc": "This will permanently delete your account and all data. Type DELETE to confirm.",
     "cancel": "Cancel",
     "confirmDelete": "Delete Forever",
+    "identity": {
+      "noName": "No display name",
+      "copyLink": "Copy profile",
+      "copied": "Copied"
+    },
     "profiles": {
       "title": "Profiles",
       "self": "Me",
@@ -301,5 +306,17 @@
     "buyReading": "Unlock AI Reading · $19.99",
     "readingUnlocked": "AI Reading Unlocked",
     "loading": "Loading..."
+  },
+  "social": {
+    "follow": "Follow",
+    "followBack": "Follow Back",
+    "following": "Following",
+    "unfollow": "Unfollow",
+    "mutualFollow": "You follow each other",
+    "thisIsYou": "This is your profile",
+    "notFound": "User not found",
+    "noName": "No display name",
+    "followers": "Followers",
+    "following_list": "Following"
   }
 }

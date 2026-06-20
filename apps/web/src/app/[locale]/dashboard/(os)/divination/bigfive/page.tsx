@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Check } from 'lucide-react';
 import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
 import QuestionCard from '@/components/modules/bigfive/QuestionCard';
 import BigFiveChart from '@/components/modules/bigfive/BigFiveChart';
@@ -54,6 +54,8 @@ export default function BigFivePage() {
   const [regionData, setRegionData] = useState<RegionData | null>(null);
   const [error, setError] = useState('');
   const [checkingCache, setCheckingCache] = useState(true);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const profileIdRef = useRef<string | null>(null);
   const outerRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(120);
@@ -106,6 +108,7 @@ export default function BigFivePage() {
     if (data && data.domain_scores && data.facet_scores) {
       setResult(reconstructReport(data.domain_scores, data.facet_scores));
       setStandardScores(data.standard_scores ?? null);
+      setAssessmentId(data.id ?? null);
       return true;
     }
     return false;
@@ -118,6 +121,7 @@ export default function BigFivePage() {
     setResult(null);
     setStandardScores(null);
     setRegionData(null);
+    setAssessmentId(null);
     setPageState('intro');
     setCheckingCache(true);
 
@@ -131,6 +135,13 @@ export default function BigFivePage() {
   const handleStart = (region: RegionData | null) => {
     setRegionData(region);
     setPageState('quiz');
+  };
+
+  // 导入成功后重新拉取结果
+  const handleImportSuccess = async () => {
+    if (!currentProfile) return;
+    const found = await fetchAndSetResult(currentProfile.id);
+    if (found) setPageState('result');
   };
 
   const handleSubmit = async () => {
@@ -168,6 +179,14 @@ export default function BigFivePage() {
     }
   };
 
+  const handleCopyId = () => {
+    if (!assessmentId) return;
+    navigator.clipboard.writeText(assessmentId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   if (checkingCache) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -179,7 +198,7 @@ export default function BigFivePage() {
     );
   }
 
-  if (pageState === 'result' && result) {
+  if (pageState === 'result' && result && currentProfile) {
     return (
       <div ref={outerRef} className="w-full px-4 py-6">
         <div className="max-w-xl mx-auto space-y-6">
@@ -193,29 +212,49 @@ export default function BigFivePage() {
               {t('resultTitle')}
             </motion.h1>
 
-            <motion.button
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              onClick={async () => {
-                if (!currentProfile) return;
-                await fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`, {
-                  method: 'DELETE',
-                });
-                setResult(null);
-                setStandardScores(null);
-                setRegionData(null);
-                reset();
-                setPageState('intro');
-              }}
-              className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-              style={{
-                color: 'hsl(var(--muted-foreground))',
-                border: '1px solid hsl(var(--border))',
-              }}
+              className="flex items-center gap-2"
             >
-              {t('retake')}
-            </motion.button>
+              {/* 分享按钮 */}
+              <button
+                onClick={handleCopyId}
+                disabled={!assessmentId}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-30"
+                style={{
+                  color: 'hsl(var(--muted-foreground))',
+                  border: '1px solid hsl(var(--border))',
+                }}
+              >
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+                {copied ? t('shareCopied') : t('share')}
+              </button>
+
+              {/* 重新测量按钮 */}
+              <button
+                onClick={async () => {
+                  if (!currentProfile) return;
+                  await fetch(`/api/psychology/bigfive/result?profileId=${currentProfile.id}`, {
+                    method: 'DELETE',
+                  });
+                  setResult(null);
+                  setStandardScores(null);
+                  setRegionData(null);
+                  setAssessmentId(null);
+                  reset();
+                  setPageState('intro');
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                style={{
+                  color: 'hsl(var(--muted-foreground))',
+                  border: '1px solid hsl(var(--border))',
+                }}
+              >
+                {t('retake')}
+              </button>
+            </motion.div>
           </div>
 
           <motion.div
@@ -256,7 +295,13 @@ export default function BigFivePage() {
   }
 
   if (pageState === 'intro') {
-    return <BigFiveIntro onStart={handleStart} />;
+    return (
+      <BigFiveIntro
+        onStart={handleStart}
+        onImportSuccess={handleImportSuccess}
+        profileId={currentProfile?.id ?? null}
+      />
+    );
   }
 
   if (loadingQuestions) {

@@ -69,12 +69,18 @@ export async function POST(request: Request) {
 
     const result = calculateStarChart(input);
 
-    // 存入快照
+    // 查询 display_name 和 handle
     const { data: selfProfile } = await supabase
       .from('profiles')
       .select('display_name')
       .eq('user_id', user.id)
       .eq('is_self', true)
+      .single();
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('handle')
+      .eq('id', user.id)
       .single();
 
     await supabase.from('astrology_snapshots').insert({
@@ -83,7 +89,7 @@ export async function POST(request: Request) {
       calculation_result: result,
       profile_display_name: profile.display_name ?? null,
       user_display_name: selfProfile?.display_name ?? null,
-      user_handle: null,
+      user_handle: userData?.handle ?? null,
     });
 
     return NextResponse.json({ result, fromCache: false });

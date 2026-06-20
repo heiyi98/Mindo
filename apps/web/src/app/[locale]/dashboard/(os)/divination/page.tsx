@@ -3,7 +3,62 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
-import { Sparkles, Star, Globe, Brain, Layers, Wand2, Map as MapIcon } from 'lucide-react';
+import { Brain, Layers, Wand2, Map as MapIcon } from 'lucide-react';
+
+// 自定义图标
+function BaziIcon({ size = 18, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={style}>
+      <mask id="bazi-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32" style={{ maskType: 'luminance' }}>
+        <path d="M32 0H0V32H32V0Z" fill="black"/>
+        <path d="M30 7.5H2a2 2 0 00-2 2v13a2 2 0 002 2h28a2 2 0 002-2v-13a2 2 0 00-2-2Z" fill="white"/>
+        <path d="M7.5 9.5H2V15h5.5V9.5ZM15 9.5H9.5V15H15V9.5ZM30 9.5h-5.5V15H30V9.5ZM7.5 17H2v5.5h5.5V17ZM15 17H9.5v5.5H15V17ZM22.5 17H17v5.5h5.5V17ZM30 17h-5.5v5.5H30V17Z" fill="black"/>
+      </mask>
+      <g mask="url(#bazi-mask)">
+        <path d="M32 0H0V32H32V0Z" fill="currentColor"/>
+      </g>
+    </svg>
+  );
+}
+
+function ZiweiIcon({ size = 18, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={style}>
+      <mask id="ziwei-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32" style={{ maskType: 'luminance' }}>
+        <path d="M32 0H0V32H32V0Z" fill="black"/>
+        <path d="M27 3H5a2 2 0 00-2 2v22a2 2 0 002 2h22a2 2 0 002-2V5a2 2 0 00-2-2Z" fill="white"/>
+        <path d="M9 5H5v4h4V5ZM15 5h-4v4h4V5ZM21 5h-4v4h4V5ZM27 5h-4v4h4V5ZM9 11H5v4h4v-4ZM27 11h-4v4h4v-4ZM9 17H5v4h4v-4ZM27 17h-4v4h4v-4ZM21 11H11v10h10V11ZM15 23h-4v4h4v-4ZM21 23h-4v4h4v-4ZM27 23h-4v4h4v-4Z" fill="black"/>
+      </mask>
+      <g mask="url(#ziwei-mask)">
+        <path d="M32 0H0V32H32V0Z" fill="currentColor"/>
+      </g>
+    </svg>
+  );
+}
+
+function WesternIcon({ size = 18, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={style}>
+      <mask id="western-mask" maskUnits="userSpaceOnUse" x="-21" y="-21" width="74" height="74" style={{ maskType: 'luminance' }}>
+        <path d="M32 0H0V32H32V0Z" fill="black"/>
+        <path d="M16 16H0C0 18.81.74 21.57 2.14 24L16 16Z" fill="white"/>
+        <circle cx="16" cy="16" r="12" stroke="white" strokeWidth="2" fill="none"/>
+        <circle cx="16" cy="16" r="5" stroke="white" strokeWidth="2" fill="none"/>
+        <line x1="0" y1="16" x2="32" y2="16" stroke="white" strokeWidth="2"/>
+        <line x1="2.14" y1="8" x2="29.86" y2="24" stroke="white" strokeWidth="2"/>
+        <line x1="8" y1="2.14" x2="24" y2="29.86" stroke="white" strokeWidth="2"/>
+        <line x1="16" y1="0" x2="16" y2="32" stroke="white" strokeWidth="2"/>
+        <line x1="24" y1="2.14" x2="8" y2="29.86" stroke="white" strokeWidth="2"/>
+        <line x1="29.86" y1="8" x2="2.14" y2="24" stroke="white" strokeWidth="2"/>
+        <circle cx="16" cy="16" r="4" fill="black"/>
+        <circle cx="16" cy="16" r="25" stroke="black" strokeWidth="24" fill="none"/>
+      </mask>
+      <g mask="url(#western-mask)">
+        <path d="M32 0H0V32H32V0Z" fill="currentColor"/>
+      </g>
+    </svg>
+  );
+}
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
 import ProfileSwitcher from '@/components/dashboard/ProfileSwitcher';
@@ -37,7 +92,7 @@ const CATEGORIES: { key: string; labelKey: string; cards: CardDef[] }[] = [
         id: 'bazi',
         nameKey: 'assessments.bazi.name',
         descKey: 'assessments.divination.bazi.desc',
-        Icon: Sparkles,
+        Icon: BaziIcon,
         href: '/dashboard/divination/bazi',
         status: 'active',
         color: 'indigo',
@@ -46,7 +101,7 @@ const CATEGORIES: { key: string; labelKey: string; cards: CardDef[] }[] = [
         id: 'ziwei',
         nameKey: 'assessments.ziwei.name',
         descKey: 'assessments.divination.ziwei.desc',
-        Icon: Star,
+        Icon: ZiweiIcon,
         status: 'coming_soon',
         color: 'indigo',
       },
@@ -54,7 +109,7 @@ const CATEGORIES: { key: string; labelKey: string; cards: CardDef[] }[] = [
         id: 'western',
         nameKey: 'assessments.western.name',
         descKey: 'assessments.divination.western.desc',
-        Icon: Globe,
+        Icon: WesternIcon,
         href: '/dashboard/divination/western',
         status: 'active',
         color: 'indigo',

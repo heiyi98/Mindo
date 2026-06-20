@@ -187,6 +187,22 @@
     "deleteConfirmDesc": "此操作将永久删除你的账户和所有数据。输入 DELETE 以确认。",
     "cancel": "取消",
     "confirmDelete": "永久删除",
+    "identity": {
+      "noName": "未设置昵称",
+      "copyLink": "复制主页",
+      "copied": "已复制",
+      "edit": "编辑",
+      "editTitle": "编辑个人信息",
+      "nameLabel": "昵称",
+      "namePlaceholder": "设置你的昵称",
+      "nameTooLong": "昵称最多50个字符",
+      "handleLabel": "ID",
+      "handleHint": "3-30位，仅限字母、数字、下划线",
+      "handleInvalid": "ID格式不正确，仅限字母、数字、下划线（3-30位）",
+      "handleTaken": "该ID已被使用",
+      "save": "保存",
+      "saveFailed": "保存失败，请重试"
+    },
     "profiles": {
       "title": "档案管理",
       "self": "我",
@@ -301,5 +317,26 @@
     "buyReading": "解锁AI解读 · $19.99",
     "readingUnlocked": "AI解读已解锁",
     "loading": "加载中..."
+  },
+  "social": {
+    "follow": "关注",
+    "followBack": "回关",
+    "following": "已关注",
+    "unfollow": "取消关注",
+    "mutualFollow": "互相关注",
+    "thisIsYou": "这是你的主页",
+    "notFound": "用户不存在",
+    "noName": "未设置昵称",
+    "followers": "粉丝",
+    "following_list": "关注",
+    "sendMessage": "发消息",
+    "messagesTitle": "消息",
+    "noConversations": "暂无会话，去关注一些人开始聊天吧",
+    "selectConversation": "选择一个会话开始聊天",
+    "startConversation": "发送第一条消息吧",
+    "inputPlaceholder": "输入消息...",
+    "searchPlaceholder": "搜索用户...",
+    "searchResults": "搜索结果",
+    "searchNoResults": "未找到用户"
   }
 }

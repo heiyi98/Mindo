@@ -227,13 +227,19 @@ async function computeAndSave(
     .eq('is_self', true)
     .single();
 
+  const { data: userData } = await supabase
+    .from('users')
+    .select('handle')
+    .eq('id', userId)
+    .single();
+
   await supabase.from('bazi_snapshots').insert({
     profile_id: profile.id,
     user_id: userId,
     calculation_result: snapshot,
     profile_display_name: profile.display_name ?? null,
     user_display_name: selfProfile?.display_name ?? null,
-    user_handle: null,
+    user_handle: userData?.handle ?? null,
   });
 
   return snapshot;

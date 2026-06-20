@@ -83,6 +83,12 @@ export async function POST(request: Request) {
       .eq('is_self', true)
       .single();
 
+    const { data: userData } = await supabase
+      .from('users')
+      .select('handle')
+      .eq('id', user.id)
+      .single();
+
     // INSERT new record first
     const { data: inserted, error: insertError } = await supabase
       .from('bigfive_assessments')
@@ -100,7 +106,7 @@ export async function POST(request: Request) {
         gender: profile.gender || null,
         profile_display_name: profile.display_name ?? null,
         user_display_name: selfProfile?.display_name ?? null,
-        user_handle: null,
+        user_handle: userData?.handle ?? null,
       })
       .select('id')
       .single();

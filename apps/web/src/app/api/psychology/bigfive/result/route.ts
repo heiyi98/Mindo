@@ -16,7 +16,6 @@ function toStandardEntry(raw: number, mean: number, std: number) {
   return { t, label: zToLabel(z), z: Math.round(z * 100) / 100 };
 }
 
-// domain_scores uses letter keys (N/E/O/A/C); norms statistics uses full names
 const DOMAIN_LETTER_MAP: Record<string, string> = {
   NEUROTICISM: 'N',
   EXTRAVERSION: 'E',
@@ -47,43 +46,31 @@ interface NormParams {
   age_group: string | null;
 }
 
-function applyNullableFilter(
-  query: any,
-  column: string,
-  value: string | null
-) {
+function applyNullableFilter(query: any, column: string, value: string | null) {
   return value === null
     ? query.is(column, null)
     : query.eq(column, value);
 }
 
-async function matchNorm(
-  supabase: SupabaseClient,
-  params: NormParams
-): Promise<NormRow | null> {
+async function matchNorm(supabase: SupabaseClient, params: NormParams): Promise<NormRow | null> {
   const { region_country: country, region_level1: level1, region_level2: level2, region_level3: level3, gender, age_group } = params;
 
   const candidates = [
-    // level3 层
-    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: gender, ag: age_group },
-    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: gender, ag: null      },
-    { rc: country, rl1: level1,  rl2: level2, rl3: level3, g: null,   ag: null      },
-    // level2 层（level3 退出）
-    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: gender, ag: age_group },
-    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: gender, ag: null      },
-    { rc: country, rl1: level1,  rl2: level2, rl3: null,   g: null,   ag: null      },
-    // level1 层
-    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: gender, ag: age_group },
-    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: gender, ag: null      },
-    { rc: country, rl1: level1,  rl2: null,   rl3: null,   g: null,   ag: null      },
-    // country 层
-    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: gender, ag: age_group },
-    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: gender, ag: null      },
-    { rc: country, rl1: null,    rl2: null,   rl3: null,   g: null,   ag: null      },
-    // 全地区（所有 region 字段为 null）
-    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: gender, ag: age_group },
-    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: gender, ag: null      },
-    { rc: null,    rl1: null,    rl2: null,   rl3: null,   g: null,   ag: null      },
+    { rc: country, rl1: level1, rl2: level2, rl3: level3, g: gender, ag: age_group },
+    { rc: country, rl1: level1, rl2: level2, rl3: level3, g: gender, ag: null },
+    { rc: country, rl1: level1, rl2: level2, rl3: level3, g: null,   ag: null },
+    { rc: country, rl1: level1, rl2: level2, rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: level1, rl2: level2, rl3: null,   g: gender, ag: null },
+    { rc: country, rl1: level1, rl2: level2, rl3: null,   g: null,   ag: null },
+    { rc: country, rl1: level1, rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: level1, rl2: null,   rl3: null,   g: gender, ag: null },
+    { rc: country, rl1: level1, rl2: null,   rl3: null,   g: null,   ag: null },
+    { rc: country, rl1: null,   rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: country, rl1: null,   rl2: null,   rl3: null,   g: gender, ag: null },
+    { rc: country, rl1: null,   rl2: null,   rl3: null,   g: null,   ag: null },
+    { rc: null,    rl1: null,   rl2: null,   rl3: null,   g: gender, ag: age_group },
+    { rc: null,    rl1: null,   rl2: null,   rl3: null,   g: gender, ag: null },
+    { rc: null,    rl1: null,   rl2: null,   rl3: null,   g: null,   ag: null },
   ];
 
   for (const c of candidates) {
@@ -158,6 +145,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    id: assessment.id,              // ← 新增
     domain_scores: assessment.domain_scores as Record<string, number>,
     facet_scores: assessment.facet_scores as Record<string, number>,
     standard_scores,

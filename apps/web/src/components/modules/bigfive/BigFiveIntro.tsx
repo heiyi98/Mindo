@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Search, MapPin, Loader2, X, CheckCircle2 } from 'lucide-react';
+import { Search, MapPin, Loader2, X, CheckCircle2, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export interface RegionData {
@@ -25,9 +25,11 @@ interface CityResult {
 
 interface BigFiveIntroProps {
   onStart: (regionData: RegionData | null) => void;
+  onImportSuccess: () => void;
+  profileId: string | null;
 }
 
-export default function BigFiveIntro({ onStart }: BigFiveIntroProps) {
+export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: BigFiveIntroProps) {
   const t = useTranslations('bigfive');
   const locale = useLocale();
   const [query, setQuery] = useState('');
@@ -36,6 +38,11 @@ export default function BigFiveIntro({ onStart }: BigFiveIntroProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedCity, setSelectedCity] = useState<CityResult | null>(null);
   const [regionData, setRegionData] = useState<RegionData | null>(null);
+
+  // 导入状态
+  const [importId, setImportId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 500);
@@ -77,11 +84,37 @@ export default function BigFiveIntro({ onStart }: BigFiveIntroProps) {
     });
   };
 
+  const handleImport = async () => {
+    if (!importId.trim() || !profileId || importing) return;
+    setImporting(true);
+    setImportError(null);
+
+    const res = await fetch('/api/psychology/bigfive/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assessment_id: importId.trim(), profile_id: profileId }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setImportError(data.error === 'not_found'
+        ? t('intro.importNotFound')
+        : t('intro.importFailed')
+      );
+      setImporting(false);
+      return;
+    }
+
+    setImporting(false);
+    onImportSuccess();
+  };
+
   return (
     <div className="w-full max-w-md mx-auto px-4 py-6 space-y-8">
-      {/* placeholder for future intro content */}
       <div />
 
+      {/* 城市选择 */}
       <div className="space-y-2">
         <label
           className="text-xs font-light tracking-wider uppercase"
@@ -177,6 +210,7 @@ export default function BigFiveIntro({ onStart }: BigFiveIntroProps) {
         </div>
       </div>
 
+      {/* 开始按钮 */}
       <div className="flex flex-col items-center gap-3 pt-2">
         <button
           onClick={() => onStart(regionData)}
@@ -195,6 +229,63 @@ export default function BigFiveIntro({ onStart }: BigFiveIntroProps) {
         >
           {t('intro.skip')}
         </button>
+      </div>
+
+      {/* 分隔线 */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px" style={{ background: 'hsl(var(--border))' }} />
+        <span className="text-xs font-light" style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}>
+          {t('intro.importOr')}
+        </span>
+        <div className="flex-1 h-px" style={{ background: 'hsl(var(--border))' }} />
+      </div>
+
+      {/* 导入区块 */}
+      <div className="space-y-2">
+        <label
+          className="text-xs font-light tracking-wider uppercase"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          {t('intro.importLabel')}
+        </label>
+        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground) / 0.6)' }}>
+          {t('intro.importHint')}
+        </p>
+        <div className="flex gap-2 mt-2">
+          <input
+            type="text"
+            value={importId}
+            onChange={e => { setImportId(e.target.value); setImportError(null); }}
+            placeholder={t('intro.importPlaceholder')}
+            className="flex-1 rounded-xl py-3 px-4 text-sm outline-none"
+            style={{
+              background: 'hsl(var(--card))',
+              border: `1px solid ${importError ? 'hsl(var(--destructive))' : 'hsl(var(--border))'}`,
+              color: 'hsl(var(--foreground))',
+            }}
+          />
+          <button
+            onClick={handleImport}
+            disabled={!importId.trim() || importing || !profileId}
+            className="flex items-center gap-1.5 px-4 rounded-xl text-sm font-light transition-opacity disabled:opacity-30"
+            style={{
+              background: 'hsl(var(--muted))',
+              color: 'hsl(var(--foreground))',
+              border: '1px solid hsl(var(--border))',
+            }}
+          >
+            {importing
+              ? <Loader2 size={14} className="animate-spin" />
+              : <Download size={14} />
+            }
+            {t('intro.importBtn')}
+          </button>
+        </div>
+        {importError && (
+          <p className="text-xs font-light" style={{ color: 'hsl(var(--destructive))' }}>
+            {importError}
+          </p>
+        )}
       </div>
     </div>
   );
