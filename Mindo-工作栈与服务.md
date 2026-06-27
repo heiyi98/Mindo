@@ -24,7 +24,7 @@
   - 重要规范：新增字段必须先在Supabase执行SQL，再写代码
 
 ## AI服务
-- **Gemini 1.5 Pro**（Google）
+- **Gemini 3.1 Pro**（Google）
   - 用途：八字AI解读生成
   - 调用路径：/api/ai/reading（后端，不暴露Prompt）
   - 语言策略：永远用中文生成，其他语言通过AI翻译后缓存

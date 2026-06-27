@@ -1,6 +1,7 @@
 // 八字命理
 export { analyzeBazi, toBaziSnapshot } from './bazi/analysis';
 export { preparePhase1Input } from './bazi/preparePhase1Input';
+export { buildShishenMetadata } from './bazi/preparePhase1Input';
 export { computeWuxingAssessment } from './bazi/yongshen';
 export type {
   BaziAnalysis,

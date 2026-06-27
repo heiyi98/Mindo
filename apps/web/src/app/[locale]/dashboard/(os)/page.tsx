@@ -21,6 +21,7 @@ import StarChartWheel from '@/components/modules/western/StarChartWheel';
 
 import { WIDGET_REGISTRY, DEFAULT_LAYOUT, repackLayout } from '@/config/dashboard-widgets';
 import type { LayoutItem } from '@/config/dashboard-widgets';
+import { GridProvider, useGridContext } from '@/contexts/GridContext';
 
 function renderCard(id: string, profileId: string) {
   switch (id) {
@@ -35,18 +36,12 @@ function renderCard(id: string, profileId: string) {
   }
 }
 
-function DroppableCell({ col, row }: {
-  col: number;
-  row: number;
-}) {
+function DroppableCell({ col, row }: { col: number; row: number }) {
   const { setNodeRef } = useDroppable({ id: `cell-${col}-${row}` });
   return (
     <div
       ref={setNodeRef}
-      style={{
-        gridColumn: col,
-        gridRow: row,
-      }}
+      style={{ gridColumn: col, gridRow: row }}
     />
   );
 }
@@ -112,10 +107,35 @@ function DraggableCard({
   );
 }
 
-export default function DashboardPage() {
+// Apply GridContext expansions to layout for rendering only.
+// `layout` (base) is kept pure for drag logic; this derives display positions.
+function applyExpansions(layout: LayoutItem[], expandedCards: Map<string, number>): LayoutItem[] {
+  if (expandedCards.size === 0) return layout;
+  return layout.map(item => {
+    let row = item.row;
+    let rowSpan = item.rowSpan;
+    for (const [cardId, extraRows] of expandedCards) {
+      const src = layout.find(i => i.id === cardId);
+      if (!src) continue;
+      if (item.id === cardId) {
+        rowSpan += extraRows;
+      } else {
+        const colOverlap =
+          item.col < src.col + src.colSpan &&
+          item.col + item.colSpan > src.col;
+        const isBelow = item.row >= src.row + src.rowSpan;
+        if (colOverlap && isBelow) row += extraRows;
+      }
+    }
+    return { ...item, row, rowSpan };
+  });
+}
+
+function DashboardGrid() {
   const t = useTranslations('dashboard');
   const { setContent } = useTopBar();
   const { currentProfile } = useCurrentProfile();
+  const { expandedCards } = useGridContext()!;
 
   const [layout, setLayout]         = useState<LayoutItem[]>(DEFAULT_LAYOUT);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -194,8 +214,6 @@ export default function DashboardPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  // Pre-compute cell grid dimensions; always render cells in edit mode so
-  // they are measured by dnd-kit before the first drag starts.
   const maxRow     = layout.reduce((max, item) => Math.max(max, item.row + item.rowSpan - 1), 3);
   const numCellRows = isEditMode ? maxRow + 2 : 0;
 
@@ -225,13 +243,10 @@ export default function DashboardPage() {
     const containerRect = containerRef.current.getBoundingClientRect();
     const gap = 16;
     const step = cellSize + gap;
-    // 当前鼠标位置 = 按下时位置 + 拖动偏移
     const currentX = activator.clientX + event.delta.x - containerRect.left;
     const currentY = activator.clientY + event.delta.y - containerRect.top;
-    // 鼠标所在格子
     const mouseCol = Math.floor(currentX / step) + 1;
     const mouseRow = Math.floor(currentY / step) + 1;
-    // 减去鼠标在卡片内的偏移，得到卡片左上角格子
     const rawCol = mouseCol - dragOffsetRef.current.colOffset;
     const rawRow = mouseRow - dragOffsetRef.current.rowOffset;
     const col = Math.max(1, Math.min(rawCol, 7 - dragItemRef.current.colSpan));
@@ -262,19 +277,13 @@ export default function DashboardPage() {
         const moved = { ...di, col: hc.col, row: hc.row };
         const others = prev.filter(item => item.id !== activeId);
 
-        // 检测冲突并把冲突的卡片往下推
-        // 检测两张卡片是否重叠
         const overlaps = (a: LayoutItem, b: LayoutItem) => {
           const colOk = a.col < b.col + b.colSpan && a.col + a.colSpan > b.col;
           const rowOk = a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row;
           return colOk && rowOk;
         };
 
-        // 为一张卡片找最近的空位（从左上角开始扫描）
-        const findEmptySlot = (
-          item: LayoutItem,
-          placed: LayoutItem[]
-        ): { col: number; row: number } => {
+        const findEmptySlot = (item: LayoutItem, placed: LayoutItem[]): { col: number; row: number } => {
           for (let row = 1; row < 100; row++) {
             for (let col = 1; col <= 7 - item.colSpan; col++) {
               const candidate = { ...item, col, row };
@@ -286,9 +295,7 @@ export default function DashboardPage() {
         };
 
         const resolveConflicts = (items: typeof others, incoming: typeof moved): typeof others => {
-          // placed从incoming开始，逐步加入已解决的卡片
           const placed: LayoutItem[] = [incoming];
-          // 按左上角优先排序（row小优先，row相同则col小优先）
           const sorted = [...items].sort((a, b) =>
             a.row !== b.row ? a.row - b.row : a.col - b.col
           );
@@ -334,7 +341,6 @@ export default function DashboardPage() {
         colSpan: def.defaultColSpan,
         rowSpan: def.defaultRowSpan,
       };
-      // 找最近空位
       for (let row = 1; row < 100; row++) {
         for (let col = 1; col <= 7 - newItem.colSpan; col++) {
           const candidate = { ...newItem, col, row };
@@ -343,14 +349,17 @@ export default function DashboardPage() {
             const rowOk = candidate.row < p.row + p.rowSpan && candidate.row + candidate.rowSpan > p.row;
             return colOk && rowOk;
           });
-          if (!conflict) {
-            return [...prev, { ...newItem, col, row }];
-          }
+          if (!conflict) return [...prev, { ...newItem, col, row }];
         }
       }
       return [...prev, newItem];
     });
   }, []);
+
+  if (!currentProfile) return null;
+
+  // Display layout: expansions applied for rendering; base layout kept pure for drag logic
+  const displayLayout = applyExpansions(layout, expandedCards);
 
   return (
     <>
@@ -379,16 +388,12 @@ export default function DashboardPage() {
               width: '100%',
             }}
           >
-            {/* Droppable cell layer — rendered behind cards, only in edit mode on desktop */}
             {!isMobile && Array.from({ length: numCellRows * 6 }, (_, i) => {
               const col = (i % 6) + 1;
               const row = Math.floor(i / 6) + 1;
-              return (
-                <DroppableCell key={`cell-${col}-${row}`} col={col} row={row} />
-              );
+              return <DroppableCell key={`cell-${col}-${row}`} col={col} row={row} />;
             })}
 
-            {/* 整块高亮覆盖层：高于卡片层，低于DragOverlay */}
             {!isMobile && hoverCell && dragItem && (
               <div
                 style={{
@@ -404,8 +409,7 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Card layer */}
-            {layout.map(item => (
+            {displayLayout.map(item => (
               <DraggableCard
                 key={item.id}
                 item={item}
@@ -414,7 +418,7 @@ export default function DashboardPage() {
                 isMobile={isMobile}
                 onDelete={handleDelete}
               >
-                {renderCard(item.id, currentProfile?.id ?? '')}
+                {renderCard(item.id, currentProfile.id)}
               </DraggableCard>
             ))}
           </div>
@@ -431,7 +435,7 @@ export default function DashboardPage() {
                   opacity: 0.9,
                 }}
               >
-                {renderCard(dragItem.id, currentProfile?.id ?? '')}
+                {renderCard(dragItem.id, currentProfile.id)}
               </div>
             )}
           </DragOverlay>
@@ -474,5 +478,13 @@ export default function DashboardPage() {
         )}
       </div>
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <GridProvider>
+      <DashboardGrid />
+    </GridProvider>
   );
 }

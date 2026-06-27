@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import type { StandardScores } from '@/components/modules/bigfive/BigFiveFacets';
 import { BIGFIVE_COLORS, DOMAIN_ORDER, DOMAIN_FACETS, DOMAIN_LETTER } from '@/lib/bigfive-constants';
 
 const VB = 540; const CX = 270; const CY = 270;
-const R = 110; const RO = 123; const RI = 55; const X = 55;
+const R = 140; const RO = 156; const RI = 70; const X = 48;
 const R_LABEL_INNER = RO + Math.round(X * 0.618); const R_LABEL_OUTER = RO + X;
 const STEP = (2 * Math.PI) / 5; const FSTEP = (2 * Math.PI) / 30;
 const GRIDS = [1/3, 2/3, 1.0]; const ROSE_START = -Math.PI / 2 - Math.PI / 5;
@@ -30,11 +31,13 @@ function tScaleRadar(t: number) { return Math.max(0, (t - 20) / 45); }
 
 export default function BigFiveChart({ profileId }: { profileId: string }) {
   const [flipped, setFlipped] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [standardScores, setStandardScores] = useState<StandardScores | null>(null);
   const tChartDomains = useTranslations('bigfive.chart_domains');
   const t = useTranslations('bigfive');
 
   useEffect(() => {
+    setStandardScores(null);
     if (!profileId) return;
     fetch(`/api/psychology/bigfive/result?profile_id=${profileId}`)
       .then(r => r.json())
@@ -88,10 +91,12 @@ export default function BigFiveChart({ profileId }: { profileId: string }) {
   );
 
   return (
+    <>
     <div
-      className="p-6 rounded-2xl shadow-sm border"
-      style={{ cursor: 'pointer', userSelect: 'none', background: 'hsl(var(--card))', width: '100%', height: '100%', perspective: '1000px' }}
+      className="rounded-2xl border"
+      style={{ cursor: 'pointer', userSelect: 'none', background: 'hsl(var(--card))', width: '100%', height: '100%', perspective: '1000px', overflow: 'hidden' }}
       onClick={() => setFlipped(f => !f)}
+      onDoubleClick={(e) => { e.preventDefault(); setModalOpen(true); }}
     >
       <motion.div animate={{ rotateY: flipped ? 180 : 0 }} transition={{ duration: 0.5, ease: 'easeInOut' }} style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}>
         <div style={{ backfaceVisibility: 'hidden', width: '100%', height: '100%' }}>
@@ -137,5 +142,102 @@ export default function BigFiveChart({ profileId }: { profileId: string }) {
         </div>
       </motion.div>
     </div>
+
+      {modalOpen && typeof window !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            style={{
+              width: '50vw', minHeight: '50vw',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: 'hsl(var(--card))',
+              borderRadius: '20px',
+              border: '1px solid hsl(var(--border))',
+              position: 'relative',
+              padding: '16px',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setModalOpen(false)}
+              style={{
+                position: 'absolute', top: 12, right: 12,
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'hsl(var(--muted))',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'hsl(var(--muted-foreground))',
+                fontSize: 16, zIndex: 10,
+              }}
+            >✕</button>
+
+            {/* 窗口内容：继承翻转状态，点击翻转 */}
+            <div
+              style={{ width: '100%', aspectRatio: '1/1', perspective: '1000px', cursor: 'pointer' }}
+              onClick={() => setFlipped(f => !f)}
+            >
+              <motion.div
+                animate={{ rotateY: flipped ? 180 : 0 }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+                style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
+              >
+                {/* 正面：五维雷达图 */}
+                <div style={{ backfaceVisibility: 'hidden', width: '100%', height: '100%' }}>
+                  <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
+                    <g>
+                      {GRIDS.map(scale => <polygon key={scale} points={radarPoints.map(p => `${pt(R * scale, p.angle).x},${pt(R * scale, p.angle).y}`).join(' ')} fill="none" stroke="hsl(var(--foreground))" strokeWidth={scale === 1.0 ? 1.5 : 1} strokeOpacity={scale === 1.0 ? 0.4 : 0.2} />)}
+                      {radarPoints.map(p => <line key={p.domain} x1={CX} y1={CY} x2={pt(R, p.angle).x} y2={pt(R, p.angle).y} stroke="hsl(var(--foreground))" strokeWidth={1} strokeOpacity={0.2} />)}
+                      <polygon points={radarPolygon} fill="rgba(128,128,128,0.12)" stroke="hsl(var(--foreground))" strokeWidth={2} />
+                      {radarPoints.map(p => <circle key={p.domain} cx={p.x} cy={p.y} r={5} fill={p.color} />)}
+                      {radarPoints.map(p => <text key={p.domain} x={p.lx} y={p.ly} textAnchor="middle" dominantBaseline="middle" fontFamily="inherit" fontWeight={300} fontSize={13} fill={p.color}>{tChartDomains(p.letter as any)}</text>)}
+                    </g>
+                  </svg>
+                </div>
+                {/* 背面：玫瑰图 */}
+                <div style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                  <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
+                    <g>
+                      {DOMAIN_ORDER.map((domain, di) => (
+                        <g key={domain}>
+                          {roseSectors.filter(s => s.domain === domain).map(s => <path key={s.key} d={s.path} fill={s.color} stroke="hsl(var(--background))" strokeWidth={1.5} />)}
+                          <path d={innerPies[di].path} fill={innerPies[di].color} fillOpacity={0.9} stroke="hsl(var(--background))" strokeWidth={1.5} />
+                          <text x={innerPies[di].lx} y={innerPies[di].ly} textAnchor="middle" dominantBaseline="middle" fontFamily="inherit" fontWeight={300} fontSize={9} fill="white" style={{ pointerEvents: 'none' }}>{tChartDomains(innerPies[di].letter as any)}</text>
+                        </g>
+                      ))}
+                      {roseSectors.map((s, i) => {
+                        const labelR = (i % 6) % 2 === 0 ? R_LABEL_OUTER : R_LABEL_INNER;
+                        const mid = s.midAngle; const linePt = pt(s.segR, mid); const ringPt = pt(labelR, mid); const textPt = pt(labelR + 4, mid);
+                        let anchor: any = "middle"; if (Math.sin(mid) < -0.8 || Math.sin(mid) > 0.8) anchor = 'middle'; else if (Math.cos(mid) > 0) anchor = 'start'; else anchor = 'end';
+                        const rawText = t(`facets.${s.facet}` as any);
+                        let lines = [rawText];
+                        if (rawText.includes('-')) { const idx = rawText.indexOf('-'); lines = [rawText.slice(0, idx + 1), rawText.slice(idx + 1)]; }
+                        else if (rawText.length > 10 && rawText.includes(' ')) { const parts = rawText.split(' '); lines = [parts[0], parts.slice(1).join(' ')]; }
+                        return (
+                          <g key={`label-${s.key}`}>
+                            <line x1={linePt.x} y1={linePt.y} x2={ringPt.x} y2={ringPt.y} stroke={s.color} strokeWidth={0.8} strokeOpacity={0.4} />
+                            <text x={textPt.x} y={textPt.y} textAnchor={anchor} dominantBaseline="middle" fontFamily="inherit" fontWeight={300} fontSize={9} fill={s.color}>
+                              {lines.map((line, lIdx) => <tspan key={lIdx} x={textPt.x} dy={lines.length > 1 ? (Math.sin(mid) < 0 ? (lIdx === 0 ? "-1.1em" : "1.1em") : (lIdx === 0 ? "0" : "1.1em")) : "0"}>{line}</tspan>)}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  </svg>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

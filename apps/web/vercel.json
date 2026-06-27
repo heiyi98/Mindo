@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reading-recovery",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Copy, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Check, MapPin } from 'lucide-react';
 import { useBigFiveQuiz } from '@/hooks/useBigFiveQuiz';
 import QuestionCard from '@/components/modules/bigfive/QuestionCard';
 import BigFiveChart from '@/components/modules/bigfive/BigFiveChart';
@@ -109,6 +109,13 @@ export default function BigFivePage() {
       setResult(reconstructReport(data.domain_scores, data.facet_scores));
       setStandardScores(data.standard_scores ?? null);
       setAssessmentId(data.id ?? null);
+      setRegionData(data.region ? {
+        country: data.region.country,
+        level1: data.region.level1,
+        level2: data.region.level2,
+        level3: data.region.level3,
+        display_name: data.region.display_name,
+      } : null);
       return true;
     }
     return false;
@@ -137,7 +144,6 @@ export default function BigFivePage() {
     setPageState('quiz');
   };
 
-  // 导入成功后重新拉取结果
   const handleImportSuccess = async () => {
     if (!currentProfile) return;
     const found = await fetchAndSetResult(currentProfile.id);
@@ -199,9 +205,12 @@ export default function BigFivePage() {
   }
 
   if (pageState === 'result' && result && currentProfile) {
+    const normLabel = regionData?.display_name ?? t('normGlobal');
+
     return (
       <div ref={outerRef} className="w-full px-4 py-6">
         <div className="max-w-xl mx-auto space-y-6">
+          {/* 标题行 */}
           <div className="flex items-center justify-between">
             <motion.h1
               initial={{ opacity: 0, y: -10 }}
@@ -218,7 +227,6 @@ export default function BigFivePage() {
               transition={{ delay: 0.3 }}
               className="flex items-center gap-2"
             >
-              {/* 分享按钮 */}
               <button
                 onClick={handleCopyId}
                 disabled={!assessmentId}
@@ -232,7 +240,6 @@ export default function BigFivePage() {
                 {copied ? t('shareCopied') : t('share')}
               </button>
 
-              {/* 重新测量按钮 */}
               <button
                 onClick={async () => {
                   if (!currentProfile) return;
@@ -256,6 +263,22 @@ export default function BigFivePage() {
               </button>
             </motion.div>
           </div>
+
+          {/* 常模地区提示 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="flex items-center gap-1.5"
+          >
+            <MapPin size={11} style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }} />
+            <span
+              className="text-xs font-light"
+              style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
+            >
+              {t('normLabel', { region: normLabel })}
+            </span>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}

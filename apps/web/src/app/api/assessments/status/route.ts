@@ -25,11 +25,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  // Query each dedicated table in parallel
   const [baziRes, westernRes, bigfiveRes] = await Promise.all([
     supabase
       .from('bazi_snapshots')
-      .select('id, ai_reading')
+      .select('id, ai_reading, ai_reading_theme1')
       .eq('profile_id', profileId)
       .maybeSingle(),
     supabase
@@ -44,20 +43,33 @@ export async function GET(request: Request) {
       .maybeSingle(),
   ]);
 
-  const completionMap: Record<string, { isCompleted: boolean; hasAiReading: boolean }> = {
-    bazi:    { isCompleted: !!baziRes.data,    hasAiReading: !!baziRes.data?.ai_reading },
-    western: { isCompleted: !!westernRes.data, hasAiReading: !!westernRes.data?.ai_reading },
-    bigfive: { isCompleted: !!bigfiveRes.data, hasAiReading: false },
+  const completionMap: Record<string, { isCompleted: boolean; hasAiReading: boolean; snapshotId: string | null }> = {
+    bazi: {
+      isCompleted: !!baziRes.data,
+      hasAiReading: !!baziRes.data?.ai_reading_theme1,
+      snapshotId: baziRes.data?.id ?? null,
+    },
+    western: {
+      isCompleted: !!westernRes.data,
+      hasAiReading: !!westernRes.data?.ai_reading,
+      snapshotId: westernRes.data?.id ?? null,
+    },
+    bigfive: {
+      isCompleted: !!bigfiveRes.data,
+      hasAiReading: false,
+      snapshotId: bigfiveRes.data?.id ?? null,
+    },
   };
 
   const status = ASSESSMENTS.map(assessment => {
-    const completion = completionMap[assessment.id] ?? { isCompleted: false, hasAiReading: false };
+    const completion = completionMap[assessment.id] ?? { isCompleted: false, hasAiReading: false, snapshotId: null };
     return {
       id: assessment.id,
       category: assessment.category,
       isAvailable: assessment.isAvailable,
       isCompleted: completion.isCompleted,
       hasAiReading: completion.hasAiReading,
+      snapshotId: completion.snapshotId,
     };
   });
 

@@ -5,6 +5,32 @@
   "day": "日",
   "hour": "时",
   "daymaster": "日主",
+  "tiangan": {
+    "Jia": "甲",
+    "Yi": "乙",
+    "Bing": "丙",
+    "Ding": "丁",
+    "Wu": "戊",
+    "Ji": "己",
+    "Geng": "庚",
+    "Xin": "辛",
+    "Ren": "壬",
+    "Gui": "癸"
+  },
+  "dizhi": {
+    "Zi": "子",
+    "Chou": "丑",
+    "Yin": "寅",
+    "Mao": "卯",
+    "Chen": "辰",
+    "Si": "巳",
+    "Wu": "午",
+    "Wei": "未",
+    "Shen": "申",
+    "You": "酉",
+    "Xu": "戌",
+    "Hai": "亥"
+  },
   "shishen": {
     "BiJian": "比肩",
     "JieCai": "劫财",
@@ -19,7 +45,10 @@
     "DayMaster": "日主",
     "Unknown": ""
   },
+  "switchToShishen": "十神",
+  "switchToBazi": "八字",
   "unlockReading": "解锁完整解读",
+  "noReading": "还没有报告",
   "viewReading": "查看完整解读",
   "klineTitle": "人生K线图",
   "wuxing": {
@@ -39,5 +68,22 @@
     "modeDayun": "大运",
     "modeYear": "大运流年",
     "modeMonth": "大运流年流月"
+  },
+  "reading": {
+    "tab1": "人格底色",
+    "tab2": "心理机制",
+    "tab3": "现实投射",
+    "tab4": "系统优化",
+    "title1": "人格底层逻辑",
+    "title2": "心理防御与应对机制",
+    "title3": "现实场景投射",
+    "title4": "全局系统干预",
+    "generating": "生成中，请稍候...",
+    "noReading": "还没有报告",
+    "interactions": "机制交互",
+    "coreConflict": "核心矛盾",
+    "targeted": "针对性优化",
+    "buyReading": "生成报告",
+    "viewReading": "查看完整解读"
   }
 }

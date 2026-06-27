@@ -41,7 +41,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No profile found' }, { status: 404 });
     }
 
-    // ── 获取或计算八字快照 ───────────────────────────────────
     let baziSnapshot: BaziSnapshot;
     let fromCache = true;
 
@@ -66,7 +65,6 @@ export async function GET(request: Request) {
 
       if (isNewFormat) {
         if (!existingSnapshot.calculation_result?.pattern) {
-          // 懒迁移：新格式但缺少 pattern 字段
           console.log('[dashboard API] lazy migration: rebuilding pattern for snapshot:', existingSnapshot.id);
           const pillars = existingSnapshot.calculation_result.pillars as BaziSnapshot['pillars'];
           const migratedAnalysis = analyzeBazi({
@@ -90,7 +88,6 @@ export async function GET(request: Request) {
             existingSnapshot.calculation_result.meta,
             migratedScores as any,
           );
-          // 异步写回 DB，不阻塞本次响应
           supabase
             .from('bazi_snapshots')
             .update({ calculation_result: baziSnapshot })
@@ -102,7 +99,6 @@ export async function GET(request: Request) {
           baziSnapshot = existingSnapshot.calculation_result as BaziSnapshot;
         }
       } else {
-        // 旧格式：删除并重算
         await supabase
           .from('bazi_snapshots')
           .delete()
@@ -116,7 +112,6 @@ export async function GET(request: Request) {
       fromCache = false;
     }
 
-    // ── 获取或生成人生K线数据 ──────────────────────────────
     const { data: existingTimeline } = await supabase
       .from('life_timeline')
       .select('baseline_imbalance, baseline_energies, years')
@@ -220,26 +215,10 @@ async function computeAndSave(
 
   const snapshot = toBaziSnapshot(analysis, meta, energyScores as any);
 
-  const { data: selfProfile } = await supabase
-    .from('profiles')
-    .select('display_name')
-    .eq('user_id', userId)
-    .eq('is_self', true)
-    .single();
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('handle')
-    .eq('id', userId)
-    .single();
-
   await supabase.from('bazi_snapshots').insert({
     profile_id: profile.id,
     user_id: userId,
     calculation_result: snapshot,
-    profile_display_name: profile.display_name ?? null,
-    user_display_name: selfProfile?.display_name ?? null,
-    user_handle: userData?.handle ?? null,
   });
 
   return snapshot;

@@ -316,7 +316,8 @@
   "payment": {
     "buyReading": "解锁AI解读 · $19.99",
     "readingUnlocked": "AI解读已解锁",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "viewReading": "查看完整解读"
   },
   "social": {
     "follow": "关注",

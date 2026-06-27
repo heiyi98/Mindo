@@ -1,5 +1,6 @@
 export { analyzeBazi, toBaziSnapshot } from './analysis';
 export { preparePhase1Input } from './preparePhase1Input';
+export { buildShishenMetadata } from './preparePhase1Input';
 export { detectPattern } from './pattern';
 export { computeWuxingAssessment } from './yongshen';
 export { computeFortuneImbalance, generateLifeChart, getMonthPillar, getDayPillar } from './fortune';

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, birth_date, gender, display_name')
+      .select('id, birth_date, gender')
       .eq('id', profile_id)
       .eq('user_id', user.id)
       .single();
@@ -64,7 +64,6 @@ export async function POST(request: Request) {
     }
 
     const age_group = profile.birth_date ? calcAgeGroup(profile.birth_date) : null;
-
     const report = calculateBigFive(answers);
 
     const domain_scores: Record<string, number> = {};
@@ -76,20 +75,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: selfProfile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('user_id', user.id)
-      .eq('is_self', true)
-      .single();
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('handle')
-      .eq('id', user.id)
-      .single();
-
-    // INSERT new record first
     const { data: inserted, error: insertError } = await supabase
       .from('bigfive_assessments')
       .insert({
@@ -104,9 +89,6 @@ export async function POST(request: Request) {
         region_display_name,
         age_group,
         gender: profile.gender || null,
-        profile_display_name: profile.display_name ?? null,
-        user_display_name: selfProfile?.display_name ?? null,
-        user_handle: userData?.handle ?? null,
       })
       .select('id')
       .single();
@@ -119,7 +101,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hard-delete all previous records for this profile (service role bypasses RLS)
     console.log('[bigfive] deleting old records for profile_id:', profile_id, 'keeping id:', inserted.id);
     const { error: deleteError } = await serviceClient
       .from('bigfive_assessments')

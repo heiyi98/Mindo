@@ -16,7 +16,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing profile_id' }, { status: 400 });
     }
 
-    // 验证档案属于该用户
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // 检查已有快照
     const { data: existing } = await supabase
       .from('astrology_snapshots')
       .select('id, calculation_result')
@@ -39,11 +37,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ result: existing.calculation_result, fromCache: true });
     }
 
-    // 构建输入参数
     const birthDate = profile.birth_date as string;
     const [year, month, day] = birthDate.split('-').map(Number);
 
-    // 从出生城市经纬度估算时区偏移（简化：用经度/15）
     const timezoneOffset = profile.birth_lng
       ? Math.round(profile.birth_lng / 15)
       : 0;
@@ -69,27 +65,10 @@ export async function POST(request: Request) {
 
     const result = calculateStarChart(input);
 
-    // 查询 display_name 和 handle
-    const { data: selfProfile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('user_id', user.id)
-      .eq('is_self', true)
-      .single();
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('handle')
-      .eq('id', user.id)
-      .single();
-
     await supabase.from('astrology_snapshots').insert({
       profile_id,
       user_id: user.id,
       calculation_result: result,
-      profile_display_name: profile.display_name ?? null,
-      user_display_name: selfProfile?.display_name ?? null,
-      user_handle: userData?.handle ?? null,
     });
 
     return NextResponse.json({ result, fromCache: false });

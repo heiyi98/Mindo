@@ -95,6 +95,60 @@ function buildShishenMeta(
   };
 }
 
+// ── 导出：按十神中文名生成元数据行 ──────────────────────────────────────────
+export function buildShishenMetadata(snapshot: BaziSnapshot): Record<string, string[]> {
+  const shishenById = new Map(snapshot.shishen.shishenMap.map(n => [n.id, n.shishen]));
+  const visibilityById = new Map(snapshot.tougen.cangGanVisibility.map(v => [v.cangganId, v]));
+  const tougenByStemPos = new Map(snapshot.tougen.touGenResults.map(r => [r.stemPos, r]));
+
+  const nodesByShishen = new Map<ShiShen, typeof snapshot.energy.energyNodes>();
+  for (const node of snapshot.energy.energyNodes) {
+    const ss = shishenById.get(node.id);
+    if (!ss || ss === 'DayMaster') continue;
+    if (!nodesByShishen.has(ss)) nodesByShishen.set(ss, []);
+    nodesByShishen.get(ss)!.push(node);
+  }
+
+  const result: Record<string, string[]> = {};
+
+  for (const ssKey of ALL_TEN_SHISHEN) {
+    const ssZH = SHISHEN_ZH[ssKey] ?? ssKey;
+    const nodes = nodesByShishen.get(ssKey) ?? [];
+
+    if (nodes.length === 0) {
+      result[ssZH] = ['（无节点）'];
+      continue;
+    }
+
+    const lines: string[] = [];
+    for (const node of nodes) {
+      if (node.type === 'TianGan') {
+        const tougen = tougenByStemPos.get(node.pos);
+        const roots = tougen?.roots.map(r => POSITION_LABEL[r.branchPos]) ?? [];
+        const posLabel = POSITION_LABEL[node.pos];
+        if (roots.length > 0) {
+          lines.push(`${posLabel}：通根→${roots.join(' ')}`);
+        } else {
+          lines.push(`${posLabel}：（无通根）`);
+        }
+      } else {
+        const posLabel = POSITION_LABEL[node.pos];
+        if (node.disableReason === 'MuKuLocked') {
+          lines.push(`${posLabel}：墓库锁闭`);
+        } else if (visibilityById.get(node.id)?.tag === 'TouChu') {
+          const tianGanNode = snapshot.pillars.tianGanNodes.find(tg => tg.wuxing === node.wuxing);
+          const throughLabel = tianGanNode ? POSITION_LABEL[tianGanNode.pos] : '（未知）';
+          lines.push(`${posLabel}：透出→${throughLabel}`);
+        } else {
+          lines.push(`${posLabel}：（未透出）`);
+        }
+      }
+    }
+    result[ssZH] = lines;
+  }
+
+  return result;
+}
 
 export function preparePhase1Input(snapshot: BaziSnapshot): string {
   const lines: string[] = [];

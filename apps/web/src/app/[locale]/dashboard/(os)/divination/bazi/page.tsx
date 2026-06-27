@@ -9,19 +9,17 @@ import BaziChartCard from '@/components/modules/bazi/BaziChartCard';
 import WuxingRadarCard from '@/components/modules/bazi/WuxingRadarCard';
 import DayMasterCard from '@/components/modules/bazi/DayMasterCard';
 import BaziReadingCard from '@/components/modules/bazi/BaziReadingCard';
+import { GridProvider, useGridContext } from '@/contexts/GridContext';
 
-export default function BaziPage() {
-  const router = useRouter();
-  const { currentProfile } = useCurrentProfile();
-  const { setContent } = useTopBar();
+function BaziGrid({ profileId }: { profileId: string }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(120);
+  const { expandedCards } = useGridContext()!;
 
   useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
     const calc = (w: number) => {
-      // max-w-xl = 576px，减去 px-4 两侧(32px)，按4列计算
       const contentW = Math.min(w - 32, 576);
       setCellSize(Math.floor((contentW - 3 * 16) / 4));
     };
@@ -32,6 +30,42 @@ export default function BaziPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const baziExtraRows = expandedCards.get('bazi-chart') ?? 0;
+  const gap = 16;
+
+  return (
+    <div ref={outerRef} className="w-full px-4 py-6">
+      <div
+        className="max-w-xl mx-auto"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridAutoRows: `${cellSize}px`,
+          gap: `${gap}px`,
+        }}
+      >
+        <div style={{ gridColumn: '1 / span 4', gridRow: `1 / span ${2 + baziExtraRows}` }}>
+          <BaziChartCard profileId={profileId} />
+        </div>
+        <div style={{ gridColumn: '1 / span 2', gridRow: `${3 + baziExtraRows} / span 2` }}>
+          <WuxingRadarCard profileId={profileId} />
+        </div>
+        <div style={{ gridColumn: '3 / span 2', gridRow: `${3 + baziExtraRows} / span 3` }}>
+          <DayMasterCard profileId={profileId} />
+        </div>
+        <div style={{ gridColumn: '1 / span 2', gridRow: `${5 + baziExtraRows} / span 1` }}>
+          <BaziReadingCard profileId={profileId} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BaziPage() {
+  const router = useRouter();
+  const { currentProfile } = useCurrentProfile();
+  const { setContent } = useTopBar();
 
   useEffect(() => {
     setContent({
@@ -55,29 +89,8 @@ export default function BaziPage() {
   if (!currentProfile) return null;
 
   return (
-    <div ref={outerRef} className="w-full px-4 py-6">
-      <div
-        className="max-w-xl mx-auto"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gridAutoRows: `${cellSize}px`,
-          gap: '16px',
-        }}
-      >
-        <div style={{ gridColumn: '1 / span 4', gridRow: '1 / span 2' }}>
-          <BaziChartCard profileId={currentProfile.id} />
-        </div>
-        <div style={{ gridColumn: '1 / span 2', gridRow: '3 / span 2' }}>
-          <WuxingRadarCard profileId={currentProfile.id} />
-        </div>
-        <div style={{ gridColumn: '3 / span 2', gridRow: '3 / span 3' }}>
-          <DayMasterCard profileId={currentProfile.id} />
-        </div>
-        <div style={{ gridColumn: '1 / span 2', gridRow: '5 / span 1' }}>
-          <BaziReadingCard profileId={currentProfile.id} />
-        </div>
-      </div>
-    </div>
+    <GridProvider>
+      <BaziGrid profileId={currentProfile.id} />
+    </GridProvider>
   );
 }
