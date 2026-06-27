@@ -4,13 +4,11 @@ import './globals.css';
 
 const notoSansSC = Noto_Sans_SC({
   weight: ['300', '400', '500'],
-  subsets: ['chinese-simplified'],
   display: 'swap',
 });
 
 const notoSansTC = Noto_Sans_TC({
   weight: ['300', '400', '500'],
-  subsets: ['chinese-traditional'],
   display: 'swap',
 });
 
