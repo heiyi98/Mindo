@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslations } from 'next-intl'
-import { Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Sparkles, ArrowLeft, Sun, Moon, Share2, Download } from 'lucide-react'
+import { useTheme } from '@/components/theme/ThemeProvider'
+import { BaziOverviewChart, BaziShishenChart, BaziInteractionChart } from './BaziReadingChart'
+import { usePdfExport } from '@/hooks/usePdfExport'
 
 interface ThemeData {
   ai_reading_theme1: any | null
@@ -15,37 +19,144 @@ interface ThemeData {
 interface Props {
   snapshotId: string
   shishenMetadata: Record<string, string[]>
+  calculationResult: any
   initialData: ThemeData
+  locale: string
 }
 
-export default function BaziReadingView({ snapshotId, shishenMetadata, initialData }: Props) {
-  const t = useTranslations('bazi.reading')
+const ELEMENT_COLORS: Record<string, string> = {
+  Wood: '#388E3C', Fire: '#D32F2F', Earth: '#F57F17',
+  Metal: '#757575', Water: '#1976D2', gray: '#6b7280',
+}
+
+// 十神→五行映射（从日主推算，这里直接从calculationResult读节点五行）
+const SHISHEN_ZH_TO_KEY: Record<string, string> = {
+  '比肩': 'BiJian', '劫财': 'JieCai', '食神': 'ShiShen', '伤官': 'ShangGuan',
+  '偏财': 'PianCai', '正财': 'ZhengCai', '七杀': 'QiSha', '正官': 'ZhengGuan',
+  '偏印': 'PianYin', '正印': 'ZhengYin',
+}
+
+const ShortDivider = () => (
+  <div className="my-6">
+    <div className="w-8 border-t border-border/40" />
+  </div>
+)
+
+const LongDivider = () => (
+  <div className="my-8 border-t border-border/60" />
+)
+
+const SectionGap = () => <div className="mb-16" />
+
+export default function BaziReadingView({
+  snapshotId, shishenMetadata, calculationResult, initialData, locale,
+}: Props) {
+  const t = useTranslations('bazi')
+  const router = useRouter()
+  const { resolvedTheme, setTheme } = useTheme()
   const [data, setData] = useState<ThemeData>(initialData)
-  const [activeTab, setActiveTab] = useState<1 | 2 | 3 | 4>(1)
   const [generating, setGenerating] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  // 隐藏截图容器的refs
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const shishenRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const interactionRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  const { exportPdf } = usePdfExport(locale)
 
   const hasAnyTheme =
-    !!data.ai_reading_theme1 ||
-    !!data.ai_reading_theme2 ||
-    !!data.ai_reading_theme3 ||
-    !!data.ai_reading_theme4
+    !!data.ai_reading_theme1 || !!data.ai_reading_theme2 ||s
+    !!data.ai_reading_theme3 || !!data.ai_reading_theme4
+
+  // 日主中文
+  const dayStemZH = (() => {
+    if (!calculationResult) return ''
+    const dayStem: string = calculationResult.dayStem ?? ''
+    const tianGanNodes: any[] = calculationResult.pillars?.tianGanNodes ?? []
+    const dayStemNode = tianGanNodes.find((n: any) => n.pos === 'DayStem')
+    const wuxing: string = dayStemNode?.wuxing ?? ''
+    const yinyang: string = dayStemNode?.yinyang ?? ''
+    const stemZH = t(`tiangan.${dayStem}`) || dayStem
+    const wuxingZH = t(`wuxing.${wuxing}`) || wuxing
+    const yinyangZH = yinyang === 'Yang' ? '阳' : yinyang === 'Yin' ? '阴' : ''
+    return `${stemZH}（${yinyangZH}${wuxingZH}）`
+  })()
+
+  // 从shishenMap找十神对应的五行颜色、wuxing、yinyang
+  function getShishenInfo(shishenLabel: string, metaLines: string[]): {
+    color: string
+    wuxing: string
+    yinyang: string
+  } {
+    if (!calculationResult) return { color: ELEMENT_COLORS['gray'], wuxing: '', yinyang: '' }
+    const tianGanNodes: any[] = calculationResult.pillars?.tianGanNodes ?? []
+    const cangGanNodes: any[] = calculationResult.pillars?.cangGanNodes ?? []
+    const shishenMap: any[] = calculationResult.shishen?.shishenMap ?? []
+
+    const ssKey = SHISHEN_ZH_TO_KEY[shishenLabel]
+    if (ssKey) {
+      const ssNode = shishenMap.find((s: any) => s.shishen === ssKey)
+      if (ssNode) {
+        const tianNode = tianGanNodes.find((n: any) => n.id === ssNode.id)
+        if (tianNode?.wuxing) {
+          return {
+            color: ELEMENT_COLORS[tianNode.wuxing] ?? ELEMENT_COLORS['gray'],
+            wuxing: tianNode.wuxing,
+            yinyang: tianNode.yinyang ?? '',
+          }
+        }
+        const cangNode = cangGanNodes.find((n: any) => n.id === ssNode.id)
+        if (cangNode?.wuxing) {
+          return {
+            color: ELEMENT_COLORS[cangNode.wuxing] ?? ELEMENT_COLORS['gray'],
+            wuxing: cangNode.wuxing,
+            yinyang: cangNode.yinyang ?? '',
+          }
+        }
+      }
+    }
+
+    // fallback：从metaLines第一行的宫位找五行
+    for (const line of metaLines) {
+      if (line === '（无节点）') continue
+      const label = line.split('：')[0].trim()
+      const posKeyMap: Record<string, string> = {
+        '年干': 'YearStem', '月干': 'MonthStem', '日干': 'DayStem', '时干': 'HourStem',
+        '年支': 'YearBranch', '月支': 'MonthBranch', '日支': 'DayBranch', '时支': 'HourBranch',
+      }
+      const posKey = posKeyMap[label]
+      if (!posKey) continue
+      if (posKey.includes('Stem')) {
+        const node = tianGanNodes.find((n: any) => n.pos === posKey)
+        if (node?.wuxing) return {
+          color: ELEMENT_COLORS[node.wuxing] ?? ELEMENT_COLORS['gray'],
+          wuxing: node.wuxing,
+          yinyang: node.yinyang ?? '',
+        }
+      } else {
+        const benQi = cangGanNodes.find((cg: any) => cg.branchPos === posKey && cg.qi === 'BenQi')
+        if (benQi?.wuxing) return {
+          color: ELEMENT_COLORS[benQi.wuxing] ?? ELEMENT_COLORS['gray'],
+          wuxing: benQi.wuxing,
+          yinyang: benQi.yinyang ?? '',
+        }
+      }
+    }
+    return { color: ELEMENT_COLORS['gray'], wuxing: '', yinyang: '' }
+  }
 
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
       .channel(`reading-${snapshotId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bazi_snapshots',
-          filter: `id=eq.${snapshotId}`,
-        },
-        (payload) => {
-          setData(prev => ({ ...prev, ...payload.new }))
-        }
-      )
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public',
+        table: 'bazi_snapshots', filter: `id=eq.${snapshotId}`,
+      }, (payload) => {
+        setData(prev => ({ ...prev, ...payload.new }))
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [snapshotId])
@@ -64,185 +175,372 @@ export default function BaziReadingView({ snapshotId, shishenMetadata, initialDa
     }
   }
 
+  const handlePdfExport = async () => {
+    setExporting(true)
+    setShowShareMenu(false)
+    try {
+      await exportPdf(
+        {
+          theme1: data.ai_reading_theme1,
+          theme2: data.ai_reading_theme2,
+          theme3: data.ai_reading_theme3,
+          theme4: data.ai_reading_theme4,
+          dayStemZH,
+          shishenMetadata,
+        },
+        { overviewRef, shishenRefs, interactionRefs }
+      )
+    } catch (e) {
+      console.error('PDF导出失败:', e)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const TopBar = () => (
+    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
+      style={{ background: 'hsl(var(--background))', borderBottom: '1px solid hsl(var(--border)/0.4)' }}
+    >
+      <button
+        onClick={() => router.push(`/${locale}/dashboard/divination/bazi`)}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft size={16} />
+        <span>返回</span>
+      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+          className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+          style={{ background: 'hsl(var(--muted))' }}
+        >
+          {resolvedTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+      </div>
+    </div>
+  )
+
   if (!hasAnyTheme) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 flex flex-col items-center gap-6">
-        <Sparkles size={32} className="text-muted-foreground" />
-        <p className="text-sm text-muted-foreground text-center">
-          {generating ? t('generating') : t('noReading')}
-        </p>
-        {!generating && (
-          <button
-            onClick={handleGenerate}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light"
-            style={{
-              background: 'hsl(var(--foreground))',
-              color: 'hsl(var(--background))',
-            }}
-          >
-            <Sparkles size={14} />
-            {t('buyReading')}
-          </button>
-        )}
-      </div>
+      <>
+        <TopBar />
+        <div className="max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col items-center gap-6">
+          <Sparkles size={32} className="text-muted-foreground" />
+          <p className="text-sm text-muted-foreground text-center">
+            {generating ? t('reading.generating') : t('reading.noReading')}
+          </p>
+          {!generating && (
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light"
+              style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              <Sparkles size={14} />
+              {t('reading.buyReading')}
+            </button>
+          )}
+        </div>
+      </>
     )
   }
 
-  const tabs = [
-    { id: 1 as const, label: t('tab1') },
-    { id: 2 as const, label: t('tab2') },
-    { id: 3 as const, label: t('tab3') },
-    { id: 4 as const, label: t('tab4') },
-  ]
+  return (
+    <>
+      <TopBar />
+      <div className="max-w-2xl mx-auto px-4 pt-20 pb-16">
 
-  const themeKey = `ai_reading_theme${activeTab}` as keyof ThemeData
-  const currentTheme = data[themeKey]
+        {/* 分享按钮：界面右上角，固定在视口 */}
+        {hasAnyTheme && (
+          <div className="fixed right-6 top-16 z-40">
+            <div className="relative">
+              <button
+                onClick={() => setShowShareMenu(v => !v)}
+                className="flex items-center justify-center w-9 h-9 rounded-full shadow-md transition-colors"
+                style={{
+                  background: 'hsl(var(--foreground))',
+                  color: 'hsl(var(--background))',
+                }}
+              >
+                <Share2 size={16} />
+              </button>
+              {showShareMenu && (
+                <div
+                  className="absolute right-0 mt-2 rounded-xl shadow-lg overflow-hidden"
+                  style={{
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    minWidth: 140,
+                  }}
+                >
+                  <button
+                    onClick={handlePdfExport}
+                    disabled={exporting}
+                    className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-left hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    <Download size={14} />
+                    {exporting ? '生成中...' : 'PDF'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 隐藏截图容器：用于pdf导出截图，visibility:hidden保留布局但不可见 */}
+        <div style={{ position: 'absolute', left: -9999, top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+          {/* 总览命盘 */}
+          <div ref={overviewRef} style={{ width: 280, background: 'white' }}>
+            <BaziOverviewChart calculationResult={calculationResult} />
+          </div>
+          {/* 十神命盘 */}
+          {data.ai_reading_theme2 && (() => {
+            const mechanisms: any[] = data.ai_reading_theme2?.['主题二_内部机制'] ?? []
+            return mechanisms.map((m: any) => {
+              const label: string = m['机制标签'] ?? ''
+              const metaLines: string[] = shishenMetadata[label] ?? []
+              const hasValidMeta = metaLines.length > 0 && metaLines[0] !== '（无节点）'
+              if (!hasValidMeta || !calculationResult) return null
+              const { color: shishenColor, wuxing: shishenWuxing, yinyang: shishenYinyang } = getShishenInfo(label, metaLines)
+              if (!shishenWuxing) return null
+              return (
+                <div key={label} ref={el => { shishenRefs.current[label] = el }} style={{ width: 280, background: 'white' }}>
+                  <BaziShishenChart
+                    calculationResult={calculationResult}
+                    metaLines={metaLines}
+                    shishenColor={shishenColor}
+                    shishenWuxing={shishenWuxing}
+                    shishenYinyang={shishenYinyang}
+                  />
+                </div>
+              )
+            })
+          })()}
+          {/* 机制交互命盘 */}
+          {data.ai_reading_theme2 && (() => {
+            const interactions: any[] = data.ai_reading_theme2?.['机制交互'] ?? []
+            return interactions.map((item: any, i: number) => {
+              const relation: string = item['关系'] ?? ''
+              if (!calculationResult) return null
+              return (
+                <div key={i} ref={el => { interactionRefs.current[i] = el }} style={{ width: 280, background: 'white' }}>
+                  <BaziInteractionChart
+                    calculationResult={calculationResult}
+                    relation={relation}
+                  />
+                </div>
+              )
+            })
+          })()}
+        </div>
+
+        {/* 主题一：人格核心 */}
+        {data.ai_reading_theme1 && (
+          <section>
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-medium tracking-widest" style={{ fontSize: '28px' }}>人格核心</h2>
+                {dayStemZH && (
+                  <p className="text-xs text-muted-foreground mt-1">日主：{dayStemZH}</p>
+                )}
+              </div>
+              {calculationResult && (
+                <div className="flex-shrink-0">
+                  <BaziOverviewChart calculationResult={calculationResult} />
+                </div>
+              )}
+            </div>
+            <Theme1 data={data.ai_reading_theme1} />
+          </section>
+        )}
+
+        <SectionGap />
+
+        {/* 主题二：心理机制 */}
+        {data.ai_reading_theme2 && (
+          <section>
+            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>心理机制</h2>
+            <Theme2
+              data={data.ai_reading_theme2}
+              shishenMetadata={shishenMetadata}
+              calculationResult={calculationResult}
+              getShishenInfo={getShishenInfo}
+            />
+          </section>
+        )}
+
+        <SectionGap />
+
+        {/* 主题三：现实反应 */}
+        {data.ai_reading_theme3 && (
+          <section>
+            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>现实反应</h2>
+            <Theme3 data={data.ai_reading_theme3} />
+          </section>
+        )}
+
+        <SectionGap />
+
+        {/* 主题四：调优建议 */}
+        {data.ai_reading_theme4 && (
+          <section>
+            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>调优建议</h2>
+            <Theme4 data={data.ai_reading_theme4} />
+          </section>
+        )}
+
+        {generating && (
+          <p className="text-sm text-muted-foreground text-center mt-8">
+            {t('reading.generating')}
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
+
+function Theme1({ data }: { data: any }) {
+  const text: string = data['主题一_人格核心'] ?? ''
+  const paragraphs = text.split('\n\n').filter(Boolean)
+  return (
+    <div className="space-y-4">
+      {paragraphs.map((p, i) => (
+        <p key={i} className="text-sm leading-relaxed text-foreground/80">{p}</p>
+      ))}
+    </div>
+  )
+}
+
+function Theme2({
+  data, shishenMetadata, calculationResult, getShishenInfo,
+}: {
+  data: any
+  shishenMetadata: Record<string, string[]>
+  calculationResult: any
+  getShishenInfo: (label: string, metaLines: string[]) => { color: string; wuxing: string; yinyang: string }
+}) {
+  const mechanisms: any[] = data['主题二_内部机制'] ?? []
+  const interactions: any[] = data['机制交互'] ?? []
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="flex gap-2 mb-8 flex-wrap">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
-              activeTab === tab.id
-                ? 'bg-foreground text-background border-foreground'
-                : 'border-border text-muted-foreground hover:border-foreground/50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+    <div>
+      {mechanisms.map((m, i) => {
+        const label: string = m['机制标签'] ?? ''
+        const metaLines: string[] = shishenMetadata[label] ?? []
+        const hasValidMeta = metaLines.length > 0 && metaLines[0] !== '（无节点）'
+        const { color: shishenColor, wuxing: shishenWuxing, yinyang: shishenYinyang } = getShishenInfo(label, metaLines)
 
-      {!currentTheme ? (
-        <div className="text-muted-foreground text-sm">{t('generating')}</div>
-      ) : (
+        return (
+          <div key={i}>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground mb-1" style={{ fontSize: '18px' }}>{label}</p>
+                {hasValidMeta && (
+                  <div>
+                    {metaLines.map((line, j) => (
+                      <p key={j} className="text-xs text-muted-foreground font-mono">{line}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {hasValidMeta && calculationResult && shishenWuxing && (
+                <div className="flex-shrink-0">
+                  <BaziShishenChart
+                    calculationResult={calculationResult}
+                    metaLines={metaLines}
+                    shishenColor={shishenColor}
+                    shishenWuxing={shishenWuxing}
+                    shishenYinyang={shishenYinyang}
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-sm leading-relaxed text-foreground/80">{m['解析']}</p>
+            {i < mechanisms.length - 1 && <ShortDivider />}
+          </div>
+        )
+      })}
+
+      {interactions.length > 0 && (
         <>
-          {activeTab === 1 && <Theme1 data={currentTheme} t={t} />}
-          {activeTab === 2 && <Theme2 data={currentTheme} t={t} shishenMetadata={shishenMetadata} />}
-          {activeTab === 3 && <Theme3 data={currentTheme} t={t} />}
-          {activeTab === 4 && <Theme4 data={currentTheme} t={t} />}
+          <LongDivider />
+          <p className="text-muted-foreground tracking-widest uppercase mb-6" style={{ fontSize: '18px' }}>机制交互</p>
+          <div>
+            {interactions.map((item, i) => {
+              const relation: string = item['关系'] ?? ''
+              return (
+                <div key={i}>
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <p className="text-xs text-muted-foreground font-mono flex-1">{relation}</p>
+                    {calculationResult && (
+                      <div className="flex-shrink-0">
+                        <BaziInteractionChart
+                          calculationResult={calculationResult}
+                          relation={relation}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/80">{item['解析']}</p>
+                  {i < interactions.length - 1 && <ShortDivider />}
+                </div>
+              )
+            })}
+          </div>
         </>
       )}
     </div>
   )
 }
 
-function Theme1({ data, t }: { data: any; t: any }) {
-  const text: string = data['主题一_人格核心'] ?? ''
-  const paragraphs = text.split('\n\n').filter(Boolean)
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">{t('tab1')}</p>
-      <h2 className="text-lg font-medium mb-6">{t('title1')}</h2>
-      <div className="space-y-4">
-        {paragraphs.map((p, i) => (
-          <p key={i} className="text-sm leading-relaxed text-foreground/80">{p}</p>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function Theme2({ data, t, shishenMetadata }: { data: any; t: any; shishenMetadata: Record<string, string[]> }) {
-  const mechanisms: any[] = data['主题二_内部机制'] ?? []
-  const interactions: any[] = data['机制交互'] ?? []
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">{t('tab2')}</p>
-      <h2 className="text-lg font-medium mb-6">{t('title2')}</h2>
-      <div className="space-y-6">
-        {mechanisms.map((m, i) => {
-          const label: string = m['机制标签'] ?? ''
-          const metaLines: string[] = shishenMetadata[label] ?? []
-          return (
-            <div key={i}>
-              <p className="text-sm font-medium text-foreground mb-1">{label}</p>
-              {metaLines.length > 0 && metaLines[0] !== '（无节点）' && (
-                <div className="mb-2">
-                  {metaLines.map((line, j) => (
-                    <p key={j} className="text-xs text-muted-foreground font-mono">{line}</p>
-                  ))}
-                </div>
-              )}
-              <p className="text-sm leading-relaxed text-foreground/80">{m['解析']}</p>
-              {i < mechanisms.length - 1 && <div className="mt-6 border-t border-border/50" />}
-            </div>
-          )
-        })}
-      </div>
-      {interactions.length > 0 && (
-        <div className="mt-10">
-          <p className="text-xs text-muted-foreground tracking-widest uppercase mb-4">{t('interactions')}</p>
-          <div className="space-y-4">
-            {interactions.map((item, i) => (
-              <div key={i} className="border border-border rounded-md px-4 py-3">
-                <p className="text-xs text-muted-foreground font-mono mb-2">{item['关系']}</p>
-                <p className="text-sm leading-relaxed text-foreground/80">{item['解析']}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Theme3({ data, t }: { data: any; t: any }) {
+function Theme3({ data }: { data: any }) {
   const scenes = data['主题三_现实反应'] ?? {}
   const sceneKeys = ['交友', '工作', '事业', '约束', '积累', '爱情', '理想']
-  const [activeScene, setActiveScene] = useState('交友')
+  const validKeys = sceneKeys.filter(k => scenes[k])
   return (
     <div>
-      <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">{t('tab3')}</p>
-      <h2 className="text-lg font-medium mb-6">{t('title3')}</h2>
-      <div className="flex gap-2 flex-wrap mb-6">
-        {sceneKeys.map(key => (
-          <button
-            key={key}
-            onClick={() => setActiveScene(key)}
-            className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-              activeScene === key
-                ? 'bg-foreground text-background border-foreground'
-                : 'border-border text-muted-foreground hover:border-foreground/50'
-            }`}
-          >
-            {key}
-          </button>
-        ))}
-      </div>
-      <p className="text-sm leading-relaxed text-foreground/80">{scenes[activeScene] || ''}</p>
+      {validKeys.map((key, i) => (
+        <div key={key}>
+          <p className="font-medium text-foreground mb-3" style={{ fontSize: '18px' }}>{key}</p>
+          <p className="text-sm leading-relaxed text-foreground/80">{scenes[key]}</p>
+          {i < validKeys.length - 1 && <ShortDivider />}
+        </div>
+      ))}
     </div>
   )
 }
 
-function Theme4({ data, t }: { data: any; t: any }) {
+function Theme4({ data }: { data: any }) {
   const optimData = data['主题四_优化'] ?? {}
   const coreConflict: string = optimData['核心矛盾'] ?? ''
   const selfAlign: string = optimData['人生自洽建议'] ?? ''
   const targeted: Record<string, string> = optimData['针对性优化'] ?? {}
+  const targetedEntries = Object.entries(targeted).filter(([, v]) => v)
   return (
     <div>
-      <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">{t('tab4')}</p>
-      <h2 className="text-lg font-medium mb-6">{t('title4')}</h2>
-      <div className="border border-border rounded-md px-4 py-3 mb-6">
-        <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">{t('coreConflict')}</p>
-        <p className="text-sm font-medium text-foreground leading-relaxed">{coreConflict}</p>
-      </div>
-      <p className="text-sm leading-relaxed text-foreground/80 mb-8">{selfAlign}</p>
-      {Object.keys(targeted).length > 0 && (
+      {coreConflict && (
         <div>
-          <p className="text-xs text-muted-foreground tracking-widest uppercase mb-4">{t('targeted')}</p>
-          <div className="space-y-4">
-            {Object.entries(targeted).map(([scene, content]) => (
-              <div key={scene} className="border-l-2 border-border pl-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{scene}</p>
-                <p className="text-sm leading-relaxed text-foreground/80">{content}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-muted-foreground tracking-widest uppercase mb-3" style={{ fontSize: '18px' }}>核心矛盾</p>
+          <p className="text-sm leading-relaxed text-foreground/80">{coreConflict}</p>
+        </div>
+      )}
+      {coreConflict && selfAlign && <ShortDivider />}
+      {selfAlign && (
+        <div>
+          <p className="text-muted-foreground tracking-widest uppercase mb-3" style={{ fontSize: '18px' }}>人生自洽建议</p>
+          <p className="text-sm leading-relaxed text-foreground/80">{selfAlign}</p>
+        </div>
+      )}
+      {targetedEntries.length > 0 && <LongDivider />}
+      {targetedEntries.length > 0 && (
+        <div>
+          <p className="text-muted-foreground tracking-widest uppercase mb-6" style={{ fontSize: '18px' }}>针对性优化</p>
+          {targetedEntries.map(([scene, content], i) => (
+            <div key={scene}>
+              <p className="font-medium text-foreground mb-3" style={{ fontSize: '18px' }}>{scene}</p>
+              <p className="text-sm leading-relaxed text-foreground/80">{content}</p>
+              {i < targetedEntries.length - 1 && <ShortDivider />}
+            </div>
+          ))}
         </div>
       )}
     </div>
