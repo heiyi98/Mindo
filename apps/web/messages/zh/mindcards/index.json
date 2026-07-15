@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "片语"
+  },
+  "tabs": {
+    "recommend": "推荐",
+    "following": "关注"
+  },
+  "composer": {
+    "placeholder": "分享一段思绪……",
+    "attachWuxing": "附带我的五行数据",
+    "attachBigfive": "附带我的大五人格",
+    "attachDayMaster": "附带我的命主",
+    "publish": "发布",
+    "toolbar": {
+      "fontSize": "字号",
+      "bold": "加粗",
+      "italic": "斜体",
+      "underline": "下划线",
+      "color": "颜色",
+      "alignLeft": "左对齐",
+      "alignCenter": "居中对齐",
+      "alignRight": "右对齐",
+      "valignTop": "顶部对齐",
+      "valignCenter": "垂直居中",
+      "valignBottom": "底部对齐",
+      "vertical": "竖排",
+      "font": "字体",
+      "done": "完成",
+      "backgroundColor": "背景色",
+      "horizontal": "横排",
+      "privacyButton": "可见范围"
+    }
+  },
+  "visibility": {
+    "public": "所有人可见",
+    "followers": "仅粉丝可见",
+    "friends": "仅好友可见",
+    "private": "仅自己可见"
+  },
+  "empty": "暂无卡片",
+  "loadMore": "加载更多",
+  "arcMenu": {
+    "favorites": "收藏",
+    "publish": "发布片语",
+    "notifications": "通知"
+  },
+  "folders": {
+    "multiSelectTitle": "收藏到卡片夹",
+    "loading": "加载中……",
+    "newFolder": "新建卡片夹",
+    "namePlaceholder": "卡片夹名称",
+    "displayModeAlbum": "册子",
+    "displayModeStack": "集子",
+    "displayModeJournalComingSoon": "记录型（即将推出）",
+    "cancel": "取消",
+    "create": "创建",
+    "save": "保存",
+    "delete": "删除",
+    "deleteConfirmBody": "删除后，这些卡片将不再属于该卡片夹，卡片本身不会被删除",
+    "unsubscribe": "取消订阅",
+    "descriptionPlaceholder": "添加介绍（选填）"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "我的卡片",
+      "folders": "卡片夹",
+      "subscriptions": "订阅卡片夹"
+    }
+  }
+}

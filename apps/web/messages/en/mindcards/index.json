@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "Mind Cards"
+  },
+  "tabs": {
+    "recommend": "For You",
+    "following": "Following"
+  },
+  "composer": {
+    "placeholder": "Share a thought...",
+    "attachWuxing": "Attach my Five Elements",
+    "attachBigfive": "Attach my Big Five",
+    "attachDayMaster": "Attach my Day Master",
+    "publish": "Post",
+    "toolbar": {
+      "fontSize": "Font size",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "color": "Color",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "valignTop": "Align top",
+      "valignCenter": "Align middle",
+      "valignBottom": "Align bottom",
+      "vertical": "Vertical text",
+      "font": "Font",
+      "done": "Done",
+      "backgroundColor": "Background",
+      "horizontal": "Horizontal",
+      "privacyButton": "Visibility"
+    }
+  },
+  "visibility": {
+    "public": "Everyone",
+    "followers": "Followers only",
+    "friends": "Friends only",
+    "private": "Only me"
+  },
+  "empty": "No cards yet",
+  "loadMore": "Load more",
+  "arcMenu": {
+    "favorites": "Favorites",
+    "publish": "New card",
+    "notifications": "Notifications"
+  },
+  "folders": {
+    "multiSelectTitle": "Save to Collection",
+    "loading": "Loading...",
+    "newFolder": "New Collection",
+    "namePlaceholder": "Collection name",
+    "displayModeAlbum": "Album",
+    "displayModeStack": "Stack",
+    "displayModeJournalComingSoon": "Journal (coming soon)",
+    "cancel": "Cancel",
+    "create": "Create",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirmBody": "Deleting this collection won't delete the cards inside it — they'll just no longer belong to this collection.",
+    "unsubscribe": "Unsubscribe",
+    "descriptionPlaceholder": "Add a description (optional)"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "My Cards",
+      "folders": "Collections",
+      "subscriptions": "Subscribed"
+    }
+  }
+}

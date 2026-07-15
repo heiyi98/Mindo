@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "Tarjetas mentales"
+  },
+  "tabs": {
+    "recommend": "Para ti",
+    "following": "Siguiendo"
+  },
+  "composer": {
+    "placeholder": "Comparte un pensamiento...",
+    "attachWuxing": "Adjuntar mis Cinco Elementos",
+    "attachBigfive": "Adjuntar mi Big Five",
+    "attachDayMaster": "Adjuntar mi Maestro del Día",
+    "publish": "Publicar",
+    "toolbar": {
+      "fontSize": "Tamaño de fuente",
+      "bold": "Negrita",
+      "italic": "Cursiva",
+      "underline": "Subrayado",
+      "color": "Color",
+      "alignLeft": "Alinear a la izquierda",
+      "alignCenter": "Centrar",
+      "alignRight": "Alinear a la derecha",
+      "valignTop": "Alinear arriba",
+      "valignCenter": "Centrar verticalmente",
+      "valignBottom": "Alinear abajo",
+      "vertical": "Texto vertical",
+      "font": "Fuente",
+      "done": "Listo",
+      "backgroundColor": "Fondo",
+      "horizontal": "Horizontal",
+      "privacyButton": "Visibilidad"
+    }
+  },
+  "visibility": {
+    "public": "Todos",
+    "followers": "Solo seguidores",
+    "friends": "Solo amigos",
+    "private": "Solo yo"
+  },
+  "empty": "Aún no hay tarjetas",
+  "loadMore": "Cargar más",
+  "arcMenu": {
+    "favorites": "Favoritos",
+    "publish": "Nueva tarjeta",
+    "notifications": "Notificaciones"
+  },
+  "folders": {
+    "multiSelectTitle": "Guardar en colección",
+    "loading": "Cargando…",
+    "newFolder": "Nueva colección",
+    "namePlaceholder": "Nombre de la colección",
+    "displayModeAlbum": "Álbum",
+    "displayModeStack": "Pila",
+    "displayModeJournalComingSoon": "Diario (próximamente)",
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "deleteConfirmBody": "Eliminar esta colección no elimina las tarjetas que contiene: simplemente dejarán de pertenecer a esta colección.",
+    "unsubscribe": "Cancelar suscripción",
+    "descriptionPlaceholder": "Añade una descripción (opcional)"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "Mis tarjetas",
+      "folders": "Colecciones",
+      "subscriptions": "Suscripciones"
+    }
+  }
+}

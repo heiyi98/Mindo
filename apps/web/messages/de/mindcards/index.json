@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "Gedankenkarten"
+  },
+  "tabs": {
+    "recommend": "Für dich",
+    "following": "Folge ich"
+  },
+  "composer": {
+    "placeholder": "Teile einen Gedanken...",
+    "attachWuxing": "Meine Fünf Elemente anhängen",
+    "attachBigfive": "Meine Big Five anhängen",
+    "attachDayMaster": "Meinen Tagesmeister anhängen",
+    "publish": "Veröffentlichen",
+    "toolbar": {
+      "fontSize": "Schriftgröße",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "underline": "Unterstrichen",
+      "color": "Farbe",
+      "alignLeft": "Linksbündig",
+      "alignCenter": "Zentriert",
+      "alignRight": "Rechtsbündig",
+      "valignTop": "Oben ausrichten",
+      "valignCenter": "Vertikal zentrieren",
+      "valignBottom": "Unten ausrichten",
+      "vertical": "Vertikaler Text",
+      "font": "Schriftart",
+      "done": "Fertig",
+      "backgroundColor": "Hintergrund",
+      "horizontal": "Horizontal",
+      "privacyButton": "Sichtbarkeit"
+    }
+  },
+  "visibility": {
+    "public": "Alle",
+    "followers": "Nur Follower",
+    "friends": "Nur Freunde",
+    "private": "Nur ich"
+  },
+  "empty": "Noch keine Karten",
+  "loadMore": "Mehr laden",
+  "arcMenu": {
+    "favorites": "Favoriten",
+    "publish": "Neue Karte",
+    "notifications": "Benachrichtigungen"
+  },
+  "folders": {
+    "multiSelectTitle": "Zur Sammlung hinzufügen",
+    "loading": "Wird geladen …",
+    "newFolder": "Neue Sammlung",
+    "namePlaceholder": "Name der Sammlung",
+    "displayModeAlbum": "Album",
+    "displayModeStack": "Stapel",
+    "displayModeJournalComingSoon": "Journal (demnächst)",
+    "cancel": "Abbrechen",
+    "create": "Erstellen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "deleteConfirmBody": "Beim Löschen dieser Sammlung werden die enthaltenen Karten nicht gelöscht — sie gehören danach nur nicht mehr zu dieser Sammlung.",
+    "unsubscribe": "Abo beenden",
+    "descriptionPlaceholder": "Beschreibung hinzufügen (optional)"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "Meine Karten",
+      "folders": "Sammlungen",
+      "subscriptions": "Abonniert"
+    }
+  }
+}

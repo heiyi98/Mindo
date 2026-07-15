@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "Cartes d'esprit"
+  },
+  "tabs": {
+    "recommend": "Pour vous",
+    "following": "Abonnements"
+  },
+  "composer": {
+    "placeholder": "Partagez une pensée...",
+    "attachWuxing": "Joindre mes Cinq Éléments",
+    "attachBigfive": "Joindre mon Big Five",
+    "attachDayMaster": "Joindre mon maître du jour",
+    "publish": "Publier",
+    "toolbar": {
+      "fontSize": "Taille de police",
+      "bold": "Gras",
+      "italic": "Italique",
+      "underline": "Souligné",
+      "color": "Couleur",
+      "alignLeft": "Aligner à gauche",
+      "alignCenter": "Centrer",
+      "alignRight": "Aligner à droite",
+      "valignTop": "Aligner en haut",
+      "valignCenter": "Centrer verticalement",
+      "valignBottom": "Aligner en bas",
+      "vertical": "Texte vertical",
+      "font": "Police",
+      "done": "Terminé",
+      "backgroundColor": "Arrière-plan",
+      "horizontal": "Horizontal",
+      "privacyButton": "Visibilité"
+    }
+  },
+  "visibility": {
+    "public": "Tout le monde",
+    "followers": "Abonnés uniquement",
+    "friends": "Amis uniquement",
+    "private": "Moi uniquement"
+  },
+  "empty": "Aucune carte pour le moment",
+  "loadMore": "Charger plus",
+  "arcMenu": {
+    "favorites": "Favoris",
+    "publish": "Nouvelle carte",
+    "notifications": "Notifications"
+  },
+  "folders": {
+    "multiSelectTitle": "Ajouter à une collection",
+    "loading": "Chargement…",
+    "newFolder": "Nouvelle collection",
+    "namePlaceholder": "Nom de la collection",
+    "displayModeAlbum": "Album",
+    "displayModeStack": "Pile",
+    "displayModeJournalComingSoon": "Journal (bientôt disponible)",
+    "cancel": "Annuler",
+    "create": "Créer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "deleteConfirmBody": "La suppression de cette collection ne supprime pas les cartes qu'elle contient — elles n'appartiendront simplement plus à cette collection.",
+    "unsubscribe": "Se désabonner",
+    "descriptionPlaceholder": "Ajouter une description (facultatif)"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "Mes cartes",
+      "folders": "Collections",
+      "subscriptions": "Abonnements"
+    }
+  }
+}

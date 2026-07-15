@@ -1,0 +1,71 @@
+{
+  "entryCard": {
+    "title": "Carte della mente"
+  },
+  "tabs": {
+    "recommend": "Per te",
+    "following": "Seguiti"
+  },
+  "composer": {
+    "placeholder": "Condividi un pensiero...",
+    "attachWuxing": "Allega i miei Cinque Elementi",
+    "attachBigfive": "Allega il mio Big Five",
+    "attachDayMaster": "Allega il mio Maestro del Giorno",
+    "publish": "Pubblica",
+    "toolbar": {
+      "fontSize": "Dimensione carattere",
+      "bold": "Grassetto",
+      "italic": "Corsivo",
+      "underline": "Sottolineato",
+      "color": "Colore",
+      "alignLeft": "Allinea a sinistra",
+      "alignCenter": "Centra",
+      "alignRight": "Allinea a destra",
+      "valignTop": "Allinea in alto",
+      "valignCenter": "Centra verticalmente",
+      "valignBottom": "Allinea in basso",
+      "vertical": "Testo verticale",
+      "font": "Carattere",
+      "done": "Fatto",
+      "backgroundColor": "Sfondo",
+      "horizontal": "Orizzontale",
+      "privacyButton": "Visibilità"
+    }
+  },
+  "visibility": {
+    "public": "Tutti",
+    "followers": "Solo follower",
+    "friends": "Solo amici",
+    "private": "Solo io"
+  },
+  "empty": "Ancora nessuna carta",
+  "loadMore": "Carica altro",
+  "arcMenu": {
+    "favorites": "Preferiti",
+    "publish": "Nuova carta",
+    "notifications": "Notifiche"
+  },
+  "folders": {
+    "multiSelectTitle": "Salva nella raccolta",
+    "loading": "Caricamento…",
+    "newFolder": "Nuova raccolta",
+    "namePlaceholder": "Nome della raccolta",
+    "displayModeAlbum": "Album",
+    "displayModeStack": "Pila",
+    "displayModeJournalComingSoon": "Diario (in arrivo)",
+    "cancel": "Annulla",
+    "create": "Crea",
+    "save": "Salva",
+    "delete": "Elimina",
+    "deleteConfirmBody": "L'eliminazione di questa raccolta non elimina le carte al suo interno: smetteranno semplicemente di appartenere a questa raccolta.",
+    "unsubscribe": "Annulla iscrizione",
+    "descriptionPlaceholder": "Aggiungi una descrizione (facoltativo)"
+  },
+  "profile": {
+    "tabs": {
+      "mine": "Le mie carte",
+      "folders": "Raccolte",
+      "subscriptions": "Iscrizioni"
+    }
+  }
+}
