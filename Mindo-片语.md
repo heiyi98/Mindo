@@ -529,6 +529,8 @@ MVP 阶段的 `mind_card_favorites`（不分组收藏）**从未正式上线使�
 
 个人页"我的卡片"栏是第一个会渲染"当前用户自己发布的卡片"的入口——由于关注/推荐两个 tab 天然不会展示用户自己的卡片给自己看（不会关注自己），这类卡片此前从未被任何界面渲染过。冒烟测试时暴露出至少一行历史遗留数据的 `mind_cards.style` 列非 NULL、却缺 `card`/`runs` 字段（推测是该列刚建出、尚未补齐默认值时创建的卡片），导致 `MindCardBody` 崩溃。根因是原有兜底逻辑 `style ?? DEFAULT_MIND_CARD_STYLE` 只处理"整个 `style` 为 null/undefined"这一种情况，对"`style` 是非空但残缺的对象"无效。修复为按字段各自兜底（`style?.card ?? DEFAULT_MIND_CARD_CARD_STYLE`、`style?.runs ?? []`），未对历史数据做回填，这类残缺行现在会正常渲染成默认样式。
 
+**同一个坑踩了第二次**：`MindCardBody` 修完后，`MindCardDetailModal.tsx` 里独立算横竖版尺寸用的 `card.style?.card.vertical` 又崩了一次——第一层 `?.` 有加，但链到 `.card.vertical` 时忘了继续用 `?.`（`card` 本身可能是 undefined）。修法一样：`card.style?.card?.vertical ?? false`。这类"同一个可能残缺的字段，在多个文件里各自单独访问"的场景，必须每一处都独立检查兜底是否到位，改完共享组件不代表所有直接访问点都安全。
+
 ### 28.8 第二轮细化（外观/术语/权限调整，不改核心数据模型）
 
 **图标改动**（lucide）：圆弧菜单栏左侧入口 `Bookmark`→`Book`；卡片上打开多选窗口的收藏按钮 `Bookmark`→`Album`；默认收藏夹在列表/网格里的身份徽标改用 `BookHeart`（贴在 3:4 展示框左上角，是"这是默认收藏夹"的身份标记，不是"类型"信息，因此不受下面"展示框不显示类型图标"的规则约束）；收藏册（`album`）用 `BookText`，明信片（`stack`）用 `BookImage`，随笔册（`journal`，仍是禁用占位）用 `Notebook`——这三个类型图标只出现在新建/编辑表单里，不出现在展示框上。

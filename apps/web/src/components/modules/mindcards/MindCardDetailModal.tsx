@@ -23,7 +23,8 @@ export default function MindCardDetailModal({
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   if (!open) return null;
 
-  const vertical = card.style?.card.vertical ?? false;
+  // 同MindCardBody一样按字段各自兜底：老数据里style列可能非null但缺card/runs字段
+  const vertical = card.style?.card?.vertical ?? false;
 
   return (
     <div

@@ -620,7 +620,7 @@ Water: #1976D2
 - **CSS Grid** `repeat(n, 1fr)` **比 flex+justify-content/justify-between 更适合做"n个元素严格等宽分布"**：flex 分组+两端对齐容易导致组间距和组内距不一致；多行需要互相对齐（比如某一行的某个元素要精确对齐上一行第某列）时，让所有行共用同一套显式的 grid 列定义，比逐行手工核对像素可靠得多
 - **奇数/偶数等分点不能想当然嵌套**：把一段范围先按 A 份切、再往其中一份内部按 B 份切，不代表内部切出来的分割点会和外部按 A 份切的分割点在数学上重合（比如"5等分"套进"3等分"里的其中3份宽度，两者的分割点大多数对不上，除非显式计算好每个点该在整体的第几分之几，用绝对定位摆到算好的精确百分比位置）
 - **Fontsource 包 = Google Fonts 官方目录的打包镜像，技术名不代表设计血统**：`@fontsource/noto-sans-sc/tc/jp/kr` 等包名叫"Noto"，但字节内容跟 Adobe 发布的"Source Han Sans/Serif"完全一致，因为 Google 当年把同一份东西重新挂了自己的品牌对外发布——引入这类包时，界面上呈现给用户的名字要走独立的"技术名→显示名"映射表，不能让技术名直接暴露给用户
-- **对可能残缺的对象做兜底，要按字段各自兜底，不能只判断整个对象是否为 null/undefined**：`MindCardBody` 原来写的是 `style ?? DEFAULT_MIND_CARD_STYLE` 再解构出 `card`/`runs`——如果 `style` 列在数据库里非 NULL、但内容是残缺对象（比如 `{}`，只缺 `card`/`runs` 字段），这种值是 truthy，会跳过 `??` 的兜底，解构出来的字段仍是 `undefined`，照样崩溃。片语模块"我的卡片"个人页上线时，第一次渲染到用户自己发布的历史卡片（关注/推荐两个tab天然不会把你自己的卡片展示给你自己看，之前这些行从未被任何界面渲染过）就踩中了这类残缺行。正确写法是逐字段兜底：`style?.card ?? DEFAULT_CARD`、`style?.runs ?? []`
+- **对可能残缺的对象做兜底，要按字段各自兜底，不能只判断整个对象是否为 null/undefined**：`MindCardBody` 原来写的是 `style ?? DEFAULT_MIND_CARD_STYLE` 再解构出 `card`/`runs`——如果 `style` 列在数据库里非 NULL、但内容是残缺对象（比如 `{}`，只缺 `card`/`runs` 字段），这种值是 truthy，会跳过 `??` 的兜底，解构出来的字段仍是 `undefined`，照样崩溃。片语模块"我的卡片"个人页上线时，第一次渲染到用户自己发布的历史卡片（关注/推荐两个tab天然不会把你自己的卡片展示给你自己看，之前这些行从未被任何界面渲染过）就踩中了这类残缺行。正确写法是逐字段兜底：`style?.card ?? DEFAULT_CARD`、`style?.runs ?? []`。**这次踩坑的教训**：`MindCardBody` 修过之后，`MindCardDetailModal.tsx` 里独立写的 `card.style?.card.vertical`（只在第一层加了 `?.`，第二层 `.card.vertical` 忘了继续链下去）又崩了一次——同一个字段的兜底逻辑如果在多个文件里各自重复实现，必须每一处都检查到位，不能默认"共享组件已经修过就全局安全了"
 
 ## 已完成模块
 
