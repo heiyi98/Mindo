@@ -1,7 +1,6 @@
 'use client';
-import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Plus, Bell } from 'lucide-react';
+import { Book, Plus, Bell } from 'lucide-react';
 
 const HEIGHT = 84;
 const NOTCH_RADIUS = 36;
@@ -33,7 +32,6 @@ interface MindCardsArcMenuProps {
 }
 
 export default function MindCardsArcMenu({ onPublish, onOpenProfile }: MindCardsArcMenuProps) {
-  const t = useTranslations('mindcards');
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -56,8 +54,6 @@ export default function MindCardsArcMenu({ onPublish, onOpenProfile }: MindCards
 
         <button
           type="button"
-          aria-label={t('arcMenu.favorites')}
-          title={t('arcMenu.favorites')}
           onClick={onOpenProfile}
           className="absolute flex items-center justify-center"
           style={{
@@ -67,13 +63,11 @@ export default function MindCardsArcMenu({ onPublish, onOpenProfile }: MindCards
             color: 'hsl(var(--foreground))',
           }}
         >
-          <Bookmark size={20} />
+          <Book size={20} />
         </button>
 
         <button
           type="button"
-          aria-label={t('arcMenu.publish')}
-          title={t('arcMenu.publish')}
           onClick={onPublish}
           className="absolute flex items-center justify-center rounded-full"
           style={{
@@ -91,8 +85,6 @@ export default function MindCardsArcMenu({ onPublish, onOpenProfile }: MindCards
 
         <button
           type="button"
-          aria-label={t('arcMenu.notifications')}
-          title={t('arcMenu.notifications')}
           disabled
           className="absolute flex items-center justify-center"
           style={{

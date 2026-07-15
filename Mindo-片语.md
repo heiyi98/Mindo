@@ -486,7 +486,7 @@ interface MindCardRun {
 ### 28.1 核心概念
 
 - **"我的卡片"**：不是真实卡片夹，是虚拟视图（`mind_cards WHERE user_id = 当前用户`），不落表，不能改名/删除/被订阅
-- **"收藏夹"**：`mind_card_folders` 的一行，`is_default = true`，随账号创建时由 `handle_new_user()` 触发器同步建出，不可删除、不可改名，但可见度可以修改。除此之外和用户自建夹完全平等（一样能被订阅、一样能设可见度）
+- **"收藏夹"**：`mind_card_folders` 的一行，`is_default = true`，随账号创建时由 `handle_new_user()` 触发器同步建出，不可删除、不可改名、不可改介绍（第二轮补上的限制，见 28.8），但可见度和排序仍可修改。除此之外和用户自建夹完全平等（一样能被订阅、一样能设可见度、一样能拖拽排序）
 - **收藏图标点亮态**：不是独立布尔字段，是派生结果——这张卡片在当前用户名下任意一个卡片夹（含收藏夹）里存在关联记录，即为"已收藏"
 
 ### 28.2 数据库表
@@ -498,25 +498,28 @@ interface MindCardRun {
 
 ### 28.3 `handle_new_user()` 触发器更新
 
-注册时除了原有的 `insert into public.users`，同步插入一行默认收藏夹（`name='收藏夹'`、`folder_kind='collection'`、`display_mode='album'`、`visibility='private'`、`is_default=true`）。已为施工前所有老用户执行一次性补建脚本（先 `SELECT` 确认缺失名单，再 `INSERT`，避免误建重复默认夹），补建后验证：所有用户的 `is_default=true` 卡片夹行数均恰好为 1。
+注册时除了原有的 `insert into public.users`，同步插入一行默认收藏夹（`folder_kind='collection'`、`display_mode='album'`、`visibility='private'`、`is_default=true`）。已为施工前所有老用户执行一次性补建脚本（先 `SELECT` 确认缺失名单，再 `INSERT`，避免误建重复默认夹），补建后验证：所有用户的 `is_default=true` 卡片夹行数均恰好为 1。
+
+**`name` 字段的哨兵值约定（第二轮修订，见 28.8）**：默认收藏夹的 `name` 不再存字面量 `'收藏夹'`，改存空字符串 `''` 作为哨兵值，前端按 `is_default=true` 走 `mindcards.folders.default.name` 这个 i18n key 实时渲染显示名。选 `''` 而不是 `NULL`，是为了不必对 `mind_card_folders.name`（`NOT NULL`）做 `ALTER TABLE`。
 
 ### 28.4 API 一览
 
 - 卡片夹 CRUD：`POST /api/mind-cards/folders`、`PATCH /api/mind-cards/folders/:id`、`DELETE /api/mind-cards/folders/:id`
   - PATCH 允许字段：`name`/`visibility`/`order_index`/`description`。`description` 是施工时的实用决定——需求文档的 PATCH 清单里没写它，但这是它唯一的编辑入口，不放行就等于这个字段永远没法被设置
-  - `is_default=true` 的夹：`name` 变更静默忽略，`visibility` 仍可改
+  - `is_default=true` 的夹：`name`**和**`description` 变更均静默忽略（第二轮补上 `description` 的拦截，第一轮只挡了 `name`），`visibility`/`order_index` 仍可改
   - DELETE：`is_default=true` 直接 403；有卡片的夹前端二次确认后才真正删除，级联删除 `folder_items`，卡片本体和卡片在其他夹里的关联不受影响
+- 单张卡片：`PATCH /api/mind-cards/:id`（仅允许改 `visibility`，选中即生效不需二次确认，不接受 `content`/`style`——内容编辑明确排除）、`DELETE /api/mind-cards/:id`（仅限本人卡片，前端二次确认后调用，级联删除由外键处理）
 - 收藏/归类：`GET /api/mind-cards/:cardId/folder-status`（多选窗口用）、`POST`/`DELETE /api/mind-cards/:cardId/folders/:folderId`（首次入夹触发收藏通知）
 - 订阅：`POST`/`DELETE /api/mind-cards/folders/:folderId/subscribe`（订阅前校验夹对当前用户可见，否则 403）
 - 夹内卡片：`GET /api/mind-cards/folders/:folderId/cards`——双重过滤（卡片夹本身 `visibility` + 卡片自身 `visibility`，两层都通过才返回），游标分页
 - 个人页三栏：`GET /api/mind-cards/profile/mine`、`/profile/folders`、`/profile/subscriptions`，均接受可选 `?userId=` 查询参数（省略时默认当前用户）。本轮前端只以自己身份调用（个人页范围定为"仅查看自己"，圆弧菜单左侧按钮直接跳转），但接口本身已支持将来复用于查看他人主页，无需重新设计
 
-### 28.5 前端
+### 28.5 前端（第二轮后的现状）
 
-- `FolderMultiSelectPopover`：收藏书签图标点击后打开的多选窗口，取代了 MVP 阶段"点一下切换收藏"的简单开关。每次勾选立即生效（无"完成"按钮），点遮罩关闭；内置"新建卡片夹"迷你表单（名称+可见度必选，`display_mode` 二选一 + 一个禁用态的"记录型（即将推出）"占位），新建成功即自动勾选（新建=加入）
-- `/dashboard/mind-cards/profile`：个人页三栏（我的卡片 2 列网格 / 卡片夹列表 / 订阅卡片夹列表），物理位置仍在 `(os)` 路由组内（沿用片语模块其余页面的 Dock 导航，不同于刻意搬出 `(os)` 的报告页）。圆弧菜单栏左侧原本 `disabled` 的收藏入口按钮，本轮解除禁用并跳转到这里
+- `FolderMultiSelectPopover`：收藏图标（第二轮改用 `Album` 图标，见 28.8）点击后打开的多选窗口，取代了 MVP 阶段"点一下切换收藏"的简单开关。每次勾选立即生效（无"完成"按钮），点遮罩关闭；新建卡片集走共享组件 `MindCardFolderCreateForm`（见 28.8），新建成功即自动勾选（新建=加入）
+- `/dashboard/mind-cards/profile`：个人页三栏（我的卡片 2 列网格 / 卡片集网格 / 订阅卡片集网格）。**第二轮已搬出 `(os)` 路由组**（原本沿用 Dock 导航，现改为左上角纯图标返回按钮 + `router.back()`，与 `compose`/报告页同一先例），物理路径变为 `dashboard/mind-cards/profile/page.tsx`，网址不变。圆弧菜单栏左侧收藏入口按钮跳转到这里
 - `FolderBrowseView`：夹内浏览。册子型（`album`）分页，每页 4 张，第一页固定为封面（夹名+介绍），翻页用简单的左右箭头（未做手势滑动，范围克制）；集子型（`stack`）用 `framer-motion` 的 `useScroll`+`useTransform` 按滚动进度驱动每张卡片的位移/透明度/缩放，完全由 `scrollYProgress` 派生，天然可逆（"向下滚动逐张飞开，回滚逐张飞回"）
-- 收藏夹管理（个人页"卡片夹"栏）：编辑（改名/介绍/可见度，`is_default` 夹隐藏改名框）、删除（非默认夹，有内容时二次确认）。**创建入口只在多选窗口里，个人页本身不重复提供一套创建表单**——保持"收藏时顺手建夹"这一条路径，避免同一个功能维护两份 UI 逻辑
+- 卡片集管理（个人页"卡片集"栏，第二轮重构为网格，见 28.8）：编辑（改名/介绍/可见度，`is_default` 夹隐藏改名/介绍框）、删除（非默认夹，有内容时二次确认）、拖拽排序（含默认收藏夹）。**创建入口有两处，共用同一份表单组件 `MindCardFolderCreateForm`**：多选窗口内的"新建卡片集"、个人页"卡片集"栏网格末尾的虚线 `+` 方框
 
 ### 28.6 与 MVP 阶段收藏机制的关系（迁移决策）
 
@@ -525,3 +528,32 @@ MVP 阶段的 `mind_card_favorites`（不分组收藏）**从未正式上线使�
 ### 28.7 施工时顺带修复的历史遗留 bug
 
 个人页"我的卡片"栏是第一个会渲染"当前用户自己发布的卡片"的入口——由于关注/推荐两个 tab 天然不会展示用户自己的卡片给自己看（不会关注自己），这类卡片此前从未被任何界面渲染过。冒烟测试时暴露出至少一行历史遗留数据的 `mind_cards.style` 列非 NULL、却缺 `card`/`runs` 字段（推测是该列刚建出、尚未补齐默认值时创建的卡片），导致 `MindCardBody` 崩溃。根因是原有兜底逻辑 `style ?? DEFAULT_MIND_CARD_STYLE` 只处理"整个 `style` 为 null/undefined"这一种情况，对"`style` 是非空但残缺的对象"无效。修复为按字段各自兜底（`style?.card ?? DEFAULT_MIND_CARD_CARD_STYLE`、`style?.runs ?? []`），未对历史数据做回填，这类残缺行现在会正常渲染成默认样式。
+
+### 28.8 第二轮细化（外观/术语/权限调整，不改核心数据模型）
+
+**图标改动**（lucide）：圆弧菜单栏左侧入口 `Bookmark`→`Book`；卡片上打开多选窗口的收藏按钮 `Bookmark`→`Album`；默认收藏夹在列表/网格里的身份徽标改用 `BookHeart`（贴在 3:4 展示框左上角，是"这是默认收藏夹"的身份标记，不是"类型"信息，因此不受下面"展示框不显示类型图标"的规则约束）；收藏册（`album`）用 `BookText`，明信片（`stack`）用 `BookImage`，随笔册（`journal`，仍是禁用占位）用 `Notebook`——这三个类型图标只出现在新建/编辑表单里，不出现在展示框上。
+
+**术语改名**（仅界面文案，数据库字段名、TS 类型名、i18n key 顶层前缀均保持不变，`MindCardFolder`/`mindcards.folders.*` 都没有改成 `Collection`/`collections.*`）：卡片夹→卡片集、订阅卡片夹→订阅卡片集、册子→收藏册、集子→明信片、记录型→随笔册。
+
+**点赞功能整体退场**：`mind_card_likes` 表在正式上线前确认无真实数据后直接 `drop table`（同 28.6 对 `mind_card_favorites` 的处理原则）。`MindCardCarousel`/`MindCardDetailModal`/`FolderBrowseView`/各 feed 路由（`following`/`recommend`/`profile/mine`/`folders/:id/cards`）里的 `liked`/`onToggleLike` 字段和逻辑全部移除，不是换皮保留。`/api/mind-cards/:id/like` 路由已删除。
+
+**"我的卡片"新增操作**：卡片网格新增删除（`DELETE /api/mind-cards/:id`，前端二次确认）和改可见度（`PATCH /api/mind-cards/:id`，仅接受 `visibility`，选中即生效不需二次确认）两个入口，均以小图标叠加在卡片右上角。内容重新编辑明确不做。
+
+**卡片集展示重构为 3:4 网格**：卡片集/订阅卡片集两栏从原来的列表行改为统一的 3:4 展示框网格（`MindCardFolderCard` 组件），框内只有名称 + 封面，**明确不显示**数量、类型图标、可见度标识。封面取该夹内**最新一张卡片的内容**，复用 `MindCardBody` 的 `clipped` 裁切渲染，纯文字/HTML 渲染，不涉及图片存储（`mind_card_attachments` 依然不建）。后端 `profile/folders`、`profile/subscriptions` 两个接口不再返回 `item_count`，改为返回 `latest_card`（`{id, content, style}` 或 `null`），由共享函数 `fetchLatestCardByFolder`（`lib/mindCards/folderCover.ts`）一次查询算出每个夹的最新卡片，不做 N+1：先按 `added_at` 倒序拉全部相关 `folder_items`，JS 里按 `folder_id` 去重取第一条，再一次性查这些 `card_id` 对应的卡片内容。
+
+**卡片集拖拽排序**：参照档案管理页（`profiles/page.tsx`）的 `@dnd-kit/core`+`@dnd-kit/sortable` 实现，网格布局用 `rectSortingStrategy`（不是档案页用的 `verticalListSortingStrategy`）。**与档案页的关键差异**：档案页"本人档案锁顶、不参与排序"这条规则**不适用**这里——默认收藏夹和自建卡片集一视同仁，可以被拖到任意位置，没有"排除默认夹"的特殊分支。拖拽结束后静默 `PATCH order_index`。
+
+**默认收藏夹权限矩阵**：改名❌、改介绍❌（均后端接口层拒绝，不只是前端隐藏）、删除❌（沿用第一轮）、拖动排序✅、改封面✅（自动取最新卡片，没有独立的"改封面"操作）、改可见度✅。
+
+**默认收藏夹名称改走 i18n**：见 28.3 的哨兵值说明。个人页/多选窗口/夹内浏览页顶栏等任何渲染卡片集名称的地方，统一逻辑是"`is_default=true` 时不读 `name` 字段，改渲染 `mindcards.folders.default.name` 的当前语言翻译；否则渲染 `name` 字段本身（用户自由文本，不走 i18n）"。
+
+**个人页搬出 `(os)` 路由组**：见 28.5。这是继报告页之后第二次利用"路由组对不需要 Dock 导航的独立页面"这个既有机制，佐证了 CLAUDE.md 里"这个设计此前长期没被真正用到"的记录已经过时——现在有两个真实用例了。
+
+**去掉圆弧菜单栏的悬浮提示**：`title`/`aria-label` 从收藏/发布/通知三个按钮上一并移除，把"图标视为通用符号、不加文字提示"这条此前只覆盖编辑工具栏九宫格图标的规则（见 23.5），扩大到圆弧菜单栏。
+
+**共用组件抽取**：`MindCardFolderCreateForm`（新建卡片集表单，多选窗口和个人页"卡片集"栏的 `+` 入口共用同一份，不重复实现）、`MindCardFolderCard`（3:4 展示框，卡片集/订阅卡片集两栏共用）。
+
+**已知未闭环（本轮新增）**：
+- 订阅/取消订阅功能本轮冒烟测试未覆盖
+- 个人页范围仍是"仅查看自己"，没有任何"查看他人卡片集/发起订阅"的入口，`subscription.subscribeButton` 这个翻译键目前没有对应的可点击 UI
+- `mindcards.folderActions.edit`/`deleteDefaultBlocked`/`myCards.changeVisibility` 几个翻译键按需求文档要求已建好，但本轮未接到可见文字上（图标即符号不加文字提示；默认夹的删除入口是直接不渲染，不是禁用态+提示文案）

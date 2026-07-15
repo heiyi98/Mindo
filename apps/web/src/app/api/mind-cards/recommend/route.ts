@@ -104,20 +104,10 @@ export async function GET() {
     const topCards = scored.slice(0, RESULT_SIZE).map((s) => s.card);
 
     const cardIds = topCards.map((c) => c.id);
-    let myLikes = new Set<string>();
-    if (cardIds.length > 0) {
-      const { data: likes } = await admin
-        .from('mind_card_likes')
-        .select('card_id')
-        .eq('user_id', user.id)
-        .in('card_id', cardIds);
-      myLikes = new Set((likes ?? []).map((l) => l.card_id));
-    }
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);
 
     const cards = topCards.map((c) => ({
       ...c,
-      liked: myLikes.has(c.id),
       favorited: myFavorites.has(c.id),
     }));
 

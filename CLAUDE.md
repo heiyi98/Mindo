@@ -647,7 +647,7 @@ Water: #1976D2
 - [x] 报告页搬出(os)路由组（消灭报告页多余的Dock导航栏，返回按钮改用router.back()）
 - [x] 资产管理页面完善（出生地完整显示不截断，新增真太阳时展示，服务端解析不传整份大JSON）
 - [x] 账户注销真删除（补上adminClient.auth.admin.deleteUser调用）
-- [x] 片语模块（原思绪卡片）：后端全套（隐私分级/五行+大五相似度算法/排序公式/召回机制/已读清理定时任务）+ 前端（横向轮播浏览页/圆弧菜单栏/独立编辑页/Tiptap富文本编辑器/九宫格工具栏/自托管Source字体系统含Fontsource包+PDF字体换血）+ 卡片集功能（收藏夹/自建卡片夹/订阅/个人页三栏，新增`mind_card_folders`/`mind_card_folder_items`/`mind_card_folder_subscriptions`/`mind_card_favorite_notifications`四张表，MVP阶段的`mind_card_favorites`因从未有真实数据已直接退役）。详见 `Mindo-片语.md`，未闭环事项见该文档第二十四节，卡片集详情见第二十八节
+- [x] 片语模块（原思绪卡片）：后端全套（隐私分级/五行+大五相似度算法/排序公式/召回机制/已读清理定时任务）+ 前端（横向轮播浏览页/圆弧菜单栏/独立编辑页/Tiptap富文本编辑器/九宫格工具栏/自托管Source字体系统含Fontsource包+PDF字体换血）+ 卡片集功能第一轮（收藏夹/自建卡片夹/订阅/个人页三栏，新增`mind_card_folders`/`mind_card_folder_items`/`mind_card_folder_subscriptions`/`mind_card_favorite_notifications`四张表，MVP阶段的`mind_card_favorites`因从未有真实数据已直接退役）+ 卡片集第二轮细化（图标/术语改名"卡片夹→卡片集"、点赞功能`mind_card_likes`整体退场、"我的卡片"新增删除+改可见度操作、卡片集列表重构为3:4展示框网格+封面取夹内最新卡片+新建入口、卡片集拖拽排序含默认收藏夹、默认收藏夹改名/改介绍在接口层拒绝、个人页搬出`(os)`路由组改用返回按钮）。详见 `Mindo-片语.md`，未闭环事项见该文档第二十四节，卡片集详情见第二十八节
 
 ## 待完成
 
@@ -677,3 +677,7 @@ Water: #1976D2
 - [ ] 片语：候选语言（越南语/马来语/印尼语/泰语）暂不安装，手写体字体候选暂缓，均待用户后续决定
 - [ ] 片语·卡片集：订阅/取消订阅功能本轮冒烟测试未覆盖，需要后续单独验证
 - [ ] 片语·卡片集：`folder_kind='journal'`（记录型）完全未实现，仅数据库字段值预留
+- [ ] 片语·卡片集：目前没有任何"查看他人卡片集/订阅入口"的界面（个人页范围定为仅查看自己），`subscription.subscribeButton`翻译键已备好但无处调用；`GET /api/mind-cards/profile/*`系列接口已支持`?userId=`参数，未来做他人主页时无需改接口
+- [ ] 片语·卡片集：`mindcards.folderActions.edit`/`deleteDefaultBlocked`/`myCards.changeVisibility`几个翻译键已按需求文档要求建好，但本轮UI未实际用到文字（图标即符号，不加tooltip；默认夹的删除按钮直接不渲染而不是禁用态提示），属于预留字符串
+- [ ] `mind_card_likes` 表需要用户在Supabase执行`drop table`（先核实`select count(*)`为0/很小），SQL已提供
+- [ ] 片语·卡片集：默认收藏夹`name`字段的老数据（第一轮建的字面量'收藏夹'）需要用户执行一次性迁移SQL改成空字符串哨兵值，触发器已同步更新为新注册用户直接建空字符串

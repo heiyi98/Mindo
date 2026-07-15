@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { X, Heart, Bookmark } from 'lucide-react';
+import { X, Album } from 'lucide-react';
 import MindCardBody from './MindCardBody';
 import FolderMultiSelectPopover from './FolderMultiSelectPopover';
 import type { MindCard } from './MindCardCarousel';
@@ -9,7 +9,6 @@ interface MindCardDetailModalProps {
   open: boolean;
   card: MindCard;
   onClose: () => void;
-  onToggleLike: (id: string, liked: boolean) => void;
   onFavoritedChange: (id: string, favorited: boolean) => void;
 }
 
@@ -19,7 +18,7 @@ interface MindCardDetailModalProps {
 // 不会随内容增长而变化（浏览器只在设置时计算一次），弹窗框体本身永远是这个固定大小，
 // 多出来的内容在框内滚动，不会把弹窗撑大。
 export default function MindCardDetailModal({
-  open, card, onClose, onToggleLike, onFavoritedChange,
+  open, card, onClose, onFavoritedChange,
 }: MindCardDetailModalProps) {
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   if (!open) return null;
@@ -68,17 +67,10 @@ export default function MindCardDetailModal({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onToggleLike(card.id, card.liked); }}
-              style={{ color: 'hsl(var(--foreground))' }}
-            >
-              <Heart size={14} fill={card.liked ? 'currentColor' : 'none'} />
-            </button>
-            <button
-              type="button"
               onClick={(e) => { e.stopPropagation(); setFolderPickerOpen(true); }}
               style={{ color: 'hsl(var(--foreground))' }}
             >
-              <Bookmark size={14} fill={card.favorited ? 'currentColor' : 'none'} />
+              <Album size={14} fill={card.favorited ? 'currentColor' : 'none'} />
             </button>
           </div>
         </div>

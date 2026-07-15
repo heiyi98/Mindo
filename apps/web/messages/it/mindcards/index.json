@@ -40,32 +40,73 @@
   },
   "empty": "Ancora nessuna carta",
   "loadMore": "Carica altro",
-  "arcMenu": {
-    "favorites": "Preferiti",
-    "publish": "Nuova carta",
-    "notifications": "Notifiche"
-  },
   "folders": {
-    "multiSelectTitle": "Salva nella raccolta",
     "loading": "Caricamento…",
-    "newFolder": "Nuova raccolta",
-    "namePlaceholder": "Nome della raccolta",
-    "displayModeAlbum": "Album",
-    "displayModeStack": "Pila",
-    "displayModeJournalComingSoon": "Diario (in arrivo)",
     "cancel": "Annulla",
     "create": "Crea",
     "save": "Salva",
-    "delete": "Elimina",
-    "deleteConfirmBody": "L'eliminazione di questa raccolta non elimina le carte al suo interno: smetteranno semplicemente di appartenere a questa raccolta.",
-    "unsubscribe": "Annulla iscrizione",
-    "descriptionPlaceholder": "Aggiungi una descrizione (facoltativo)"
+    "default": {
+      "name": "Preferiti"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "Le mie carte",
+      "myCards": "Le mie carte",
       "folders": "Raccolte",
       "subscriptions": "Iscrizioni"
     }
+  },
+  "collectPopover": {
+    "title": "Aggiungi a una raccolta",
+    "createNew": "Nuova raccolta",
+    "emptyState": "Ancora nessuna raccolta"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "Album"
+      },
+      "stack": {
+        "label": "Cartoline"
+      }
+    },
+    "journal": {
+      "label": "Diario",
+      "comingSoon": "In arrivo"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "Nome",
+    "namePlaceholder": "Dai un nome a questa raccolta",
+    "visibilityLabel": "Visibilità",
+    "descriptionLabel": "Descrizione",
+    "descriptionPlaceholder": "Scrivi qualcosa su questa raccolta"
+  },
+  "folderVisibility": {
+    "private": "Solo io",
+    "friends": "Solo amici",
+    "followers": "Solo follower",
+    "public": "Tutti"
+  },
+  "folderActions": {
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "deleteConfirmTitle": "Elimina raccolta",
+    "deleteConfirmBody": "L'eliminazione di questa raccolta non elimina le carte al suo interno: smetteranno semplicemente di appartenere a questa raccolta.",
+    "deleteDefaultBlocked": "I preferiti non possono essere eliminati",
+    "renameDefaultBlocked": "I preferiti non possono essere rinominati"
+  },
+  "myCards": {
+    "delete": "Elimina",
+    "deleteConfirmTitle": "Elimina carta",
+    "deleteConfirmBody": "Questa azione non può essere annullata",
+    "changeVisibility": "Cambia visibilità"
+  },
+  "subscription": {
+    "subscribeButton": "Iscriviti",
+    "unsubscribeButton": "Annulla iscrizione"
+  },
+  "emptyState": {
+    "noCards": "Ancora nessuna carta"
   }
 }

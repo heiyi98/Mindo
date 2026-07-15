@@ -40,32 +40,73 @@
   },
   "empty": "Noch keine Karten",
   "loadMore": "Mehr laden",
-  "arcMenu": {
-    "favorites": "Favoriten",
-    "publish": "Neue Karte",
-    "notifications": "Benachrichtigungen"
-  },
   "folders": {
-    "multiSelectTitle": "Zur Sammlung hinzufügen",
     "loading": "Wird geladen …",
-    "newFolder": "Neue Sammlung",
-    "namePlaceholder": "Name der Sammlung",
-    "displayModeAlbum": "Album",
-    "displayModeStack": "Stapel",
-    "displayModeJournalComingSoon": "Journal (demnächst)",
     "cancel": "Abbrechen",
     "create": "Erstellen",
     "save": "Speichern",
-    "delete": "Löschen",
-    "deleteConfirmBody": "Beim Löschen dieser Sammlung werden die enthaltenen Karten nicht gelöscht — sie gehören danach nur nicht mehr zu dieser Sammlung.",
-    "unsubscribe": "Abo beenden",
-    "descriptionPlaceholder": "Beschreibung hinzufügen (optional)"
+    "default": {
+      "name": "Favoriten"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "Meine Karten",
+      "myCards": "Meine Karten",
       "folders": "Sammlungen",
       "subscriptions": "Abonniert"
     }
+  },
+  "collectPopover": {
+    "title": "Zu einer Sammlung hinzufügen",
+    "createNew": "Neue Sammlung",
+    "emptyState": "Noch keine Sammlungen"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "Album"
+      },
+      "stack": {
+        "label": "Postkarten"
+      }
+    },
+    "journal": {
+      "label": "Journal",
+      "comingSoon": "Demnächst"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "Name",
+    "namePlaceholder": "Gib dieser Sammlung einen Namen",
+    "visibilityLabel": "Sichtbarkeit",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Schreib etwas über diese Sammlung"
+  },
+  "folderVisibility": {
+    "private": "Nur ich",
+    "friends": "Nur Freunde",
+    "followers": "Nur Follower",
+    "public": "Alle"
+  },
+  "folderActions": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirmTitle": "Sammlung löschen",
+    "deleteConfirmBody": "Beim Löschen dieser Sammlung werden die enthaltenen Karten nicht gelöscht — sie gehören danach nur nicht mehr zu dieser Sammlung.",
+    "deleteDefaultBlocked": "Favoriten können nicht gelöscht werden",
+    "renameDefaultBlocked": "Favoriten können nicht umbenannt werden"
+  },
+  "myCards": {
+    "delete": "Löschen",
+    "deleteConfirmTitle": "Karte löschen",
+    "deleteConfirmBody": "Das kann nicht rückgängig gemacht werden",
+    "changeVisibility": "Sichtbarkeit ändern"
+  },
+  "subscription": {
+    "subscribeButton": "Abonnieren",
+    "unsubscribeButton": "Abo beenden"
+  },
+  "emptyState": {
+    "noCards": "Noch keine Karten"
   }
 }

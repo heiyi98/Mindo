@@ -40,32 +40,73 @@
   },
   "empty": "暂无卡片",
   "loadMore": "加载更多",
-  "arcMenu": {
-    "favorites": "收藏",
-    "publish": "发布片语",
-    "notifications": "通知"
-  },
   "folders": {
-    "multiSelectTitle": "收藏到卡片夹",
     "loading": "加载中……",
-    "newFolder": "新建卡片夹",
-    "namePlaceholder": "卡片夹名称",
-    "displayModeAlbum": "册子",
-    "displayModeStack": "集子",
-    "displayModeJournalComingSoon": "记录型（即将推出）",
     "cancel": "取消",
     "create": "创建",
     "save": "保存",
-    "delete": "删除",
-    "deleteConfirmBody": "删除后，这些卡片将不再属于该卡片夹，卡片本身不会被删除",
-    "unsubscribe": "取消订阅",
-    "descriptionPlaceholder": "添加介绍（选填）"
+    "default": {
+      "name": "收藏夹"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "我的卡片",
-      "folders": "卡片夹",
-      "subscriptions": "订阅卡片夹"
+      "myCards": "我的卡片",
+      "folders": "卡片集",
+      "subscriptions": "订阅卡片集"
     }
+  },
+  "collectPopover": {
+    "title": "加入卡片集",
+    "createNew": "新建卡片集",
+    "emptyState": "还没有卡片集"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "收藏册"
+      },
+      "stack": {
+        "label": "明信片"
+      }
+    },
+    "journal": {
+      "label": "随笔册",
+      "comingSoon": "即将推出"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "名称",
+    "namePlaceholder": "给卡片集起个名字",
+    "visibilityLabel": "可见范围",
+    "descriptionLabel": "介绍",
+    "descriptionPlaceholder": "写点什么介绍这个卡片集"
+  },
+  "folderVisibility": {
+    "private": "仅自己可见",
+    "friends": "仅好友可见",
+    "followers": "仅粉丝可见",
+    "public": "所有人可见"
+  },
+  "folderActions": {
+    "edit": "编辑",
+    "delete": "删除",
+    "deleteConfirmTitle": "删除卡片集",
+    "deleteConfirmBody": "删除后，卡片将不再属于这个卡片集，卡片本身不会被删除",
+    "deleteDefaultBlocked": "收藏夹不能被删除",
+    "renameDefaultBlocked": "收藏夹不能改名"
+  },
+  "myCards": {
+    "delete": "删除",
+    "deleteConfirmTitle": "删除卡片",
+    "deleteConfirmBody": "删除后无法恢复",
+    "changeVisibility": "修改可见度"
+  },
+  "subscription": {
+    "subscribeButton": "订阅",
+    "unsubscribeButton": "取消订阅"
+  },
+  "emptyState": {
+    "noCards": "暂无卡片"
   }
 }

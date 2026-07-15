@@ -9,7 +9,8 @@ const VALID_VISIBILITY: CardVisibility[] = ['private', 'followers', 'friends', '
 // folder_kind/display_mode 一律忽略（创建后锁死，前端本来就不会传）。
 // description 表结构里没有在需求文档的PATCH清单里明确列出，但它是本次新增的字段，
 // 除了这个入口没有其他地方能编辑它，所以一并放行。
-// is_default=true 的夹：name 变更同样静默忽略（不可改名，可见度仍可改）。
+// is_default=true 的夹：name/description 变更均静默忽略（第二轮权限矩阵：默认夹不可改名、
+// 不可改介绍，但可见度和排序仍可改），后端接口层面拒绝，不只是前端隐藏入口。
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -53,7 +54,9 @@ export async function PATCH(
     }
 
     if (body.order_index !== undefined) updates.order_index = body.order_index;
-    if (body.description !== undefined) updates.description = body.description.trim() || null;
+    if (body.description !== undefined && !folder.is_default) {
+      updates.description = body.description.trim() || null;
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: true });

@@ -34,10 +34,6 @@ export default function FolderBrowseView({
       .finally(() => setLoading(false));
   }, [folderId]);
 
-  const handleToggleLike = (id: string, liked: boolean) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, liked: !liked } : c)));
-    fetch(`/api/mind-cards/${id}/like`, { method: liked ? 'DELETE' : 'POST' });
-  };
   const handleFavoritedChange = (id: string, favorited: boolean) => {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, favorited } : c)));
   };
@@ -116,7 +112,6 @@ export default function FolderBrowseView({
           open
           card={detailCard}
           onClose={() => setDetailCard(null)}
-          onToggleLike={handleToggleLike}
           onFavoritedChange={handleFavoritedChange}
         />
       )}

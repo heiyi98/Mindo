@@ -40,32 +40,73 @@
   },
   "empty": "아직 카드가 없습니다",
   "loadMore": "더 보기",
-  "arcMenu": {
-    "favorites": "즐겨찾기",
-    "publish": "편어 작성",
-    "notifications": "알림"
-  },
   "folders": {
-    "multiSelectTitle": "컬렉션에 저장",
     "loading": "불러오는 중…",
-    "newFolder": "새 컬렉션",
-    "namePlaceholder": "컬렉션 이름",
-    "displayModeAlbum": "앨범",
-    "displayModeStack": "스택",
-    "displayModeJournalComingSoon": "기록형 (출시 예정)",
     "cancel": "취소",
     "create": "만들기",
     "save": "저장",
-    "delete": "삭제",
-    "deleteConfirmBody": "이 컬렉션을 삭제해도 안의 카드는 삭제되지 않습니다. 카드는 더 이상 이 컬렉션에 속하지 않을 뿐입니다",
-    "unsubscribe": "구독 취소",
-    "descriptionPlaceholder": "설명 추가 (선택 사항)"
+    "default": {
+      "name": "즐겨찾기"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "내 카드",
+      "myCards": "내 카드",
       "folders": "컬렉션",
       "subscriptions": "구독 중"
     }
+  },
+  "collectPopover": {
+    "title": "컬렉션에 담기",
+    "createNew": "새 컬렉션",
+    "emptyState": "아직 컬렉션이 없습니다"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "앨범"
+      },
+      "stack": {
+        "label": "엽서"
+      }
+    },
+    "journal": {
+      "label": "다이어리",
+      "comingSoon": "출시 예정"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "이름",
+    "namePlaceholder": "컬렉션 이름을 지어주세요",
+    "visibilityLabel": "공개 범위",
+    "descriptionLabel": "소개",
+    "descriptionPlaceholder": "이 컬렉션을 소개해보세요"
+  },
+  "folderVisibility": {
+    "private": "나만 보기",
+    "friends": "친구만",
+    "followers": "팔로워만",
+    "public": "전체 공개"
+  },
+  "folderActions": {
+    "edit": "편집",
+    "delete": "삭제",
+    "deleteConfirmTitle": "컬렉션 삭제",
+    "deleteConfirmBody": "이 컬렉션을 삭제해도 안의 카드는 삭제되지 않습니다. 카드는 더 이상 이 컬렉션에 속하지 않을 뿐입니다",
+    "deleteDefaultBlocked": "즐겨찾기는 삭제할 수 없습니다",
+    "renameDefaultBlocked": "즐겨찾기는 이름을 바꿀 수 없습니다"
+  },
+  "myCards": {
+    "delete": "삭제",
+    "deleteConfirmTitle": "카드 삭제",
+    "deleteConfirmBody": "삭제하면 되돌릴 수 없습니다",
+    "changeVisibility": "공개 범위 수정"
+  },
+  "subscription": {
+    "subscribeButton": "구독",
+    "unsubscribeButton": "구독 취소"
+  },
+  "emptyState": {
+    "noCards": "아직 카드가 없습니다"
   }
 }

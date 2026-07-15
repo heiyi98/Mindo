@@ -40,32 +40,73 @@
   },
   "empty": "Aucune carte pour le moment",
   "loadMore": "Charger plus",
-  "arcMenu": {
-    "favorites": "Favoris",
-    "publish": "Nouvelle carte",
-    "notifications": "Notifications"
-  },
   "folders": {
-    "multiSelectTitle": "Ajouter à une collection",
     "loading": "Chargement…",
-    "newFolder": "Nouvelle collection",
-    "namePlaceholder": "Nom de la collection",
-    "displayModeAlbum": "Album",
-    "displayModeStack": "Pile",
-    "displayModeJournalComingSoon": "Journal (bientôt disponible)",
     "cancel": "Annuler",
     "create": "Créer",
     "save": "Enregistrer",
-    "delete": "Supprimer",
-    "deleteConfirmBody": "La suppression de cette collection ne supprime pas les cartes qu'elle contient — elles n'appartiendront simplement plus à cette collection.",
-    "unsubscribe": "Se désabonner",
-    "descriptionPlaceholder": "Ajouter une description (facultatif)"
+    "default": {
+      "name": "Favoris"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "Mes cartes",
+      "myCards": "Mes cartes",
       "folders": "Collections",
       "subscriptions": "Abonnements"
     }
+  },
+  "collectPopover": {
+    "title": "Ajouter à une collection",
+    "createNew": "Nouvelle collection",
+    "emptyState": "Aucune collection pour le moment"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "Album"
+      },
+      "stack": {
+        "label": "Cartes postales"
+      }
+    },
+    "journal": {
+      "label": "Journal",
+      "comingSoon": "Bientôt disponible"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "Nom",
+    "namePlaceholder": "Donnez un nom à cette collection",
+    "visibilityLabel": "Visibilité",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Dites-en un peu plus sur cette collection"
+  },
+  "folderVisibility": {
+    "private": "Moi uniquement",
+    "friends": "Amis uniquement",
+    "followers": "Abonnés uniquement",
+    "public": "Tout le monde"
+  },
+  "folderActions": {
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteConfirmTitle": "Supprimer la collection",
+    "deleteConfirmBody": "La suppression de cette collection ne supprime pas les cartes qu'elle contient — elles n'appartiendront simplement plus à cette collection.",
+    "deleteDefaultBlocked": "Les favoris ne peuvent pas être supprimés",
+    "renameDefaultBlocked": "Les favoris ne peuvent pas être renommés"
+  },
+  "myCards": {
+    "delete": "Supprimer",
+    "deleteConfirmTitle": "Supprimer la carte",
+    "deleteConfirmBody": "Cette action est irréversible",
+    "changeVisibility": "Modifier la visibilité"
+  },
+  "subscription": {
+    "subscribeButton": "S'abonner",
+    "unsubscribeButton": "Se désabonner"
+  },
+  "emptyState": {
+    "noCards": "Aucune carte pour le moment"
   }
 }

@@ -12,7 +12,6 @@ export interface MindCard {
   style: MindCardStyleV2 | null;
   visibility: string;
   created_at: string;
-  liked: boolean;
   favorited: boolean;
 }
 
@@ -20,7 +19,6 @@ interface MindCardCarouselProps {
   cards: MindCard[];
   currentIndex: number;
   onIndexChange: (index: number) => void;
-  onToggleLike: (id: string, liked: boolean) => void;
   onFavoritedChange: (id: string, favorited: boolean) => void;
 }
 
@@ -49,7 +47,7 @@ function Slide({ card, onOpen }: { card: MindCard; onOpen?: () => void }) {
 }
 
 export default function MindCardCarousel({
-  cards, currentIndex, onIndexChange, onToggleLike, onFavoritedChange,
+  cards, currentIndex, onIndexChange, onFavoritedChange,
 }: MindCardCarouselProps) {
   const x = useMotionValue(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -145,7 +143,6 @@ export default function MindCardCarousel({
         open={detailOpen}
         card={current}
         onClose={() => setDetailOpen(false)}
-        onToggleLike={onToggleLike}
         onFavoritedChange={onFavoritedChange}
       />
     </>

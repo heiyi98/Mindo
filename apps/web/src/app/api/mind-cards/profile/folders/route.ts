@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
 import { isCardVisible, fetchRelationFlags, type RelationFlags } from '@/lib/mindCards/visibility';
+import { fetchLatestCardByFolder } from '@/lib/mindCards/folderCover';
 
 const EMPTY_RELATION: RelationFlags = { viewerFollowsAuthor: false, authorFollowsViewer: false };
 
@@ -34,18 +35,9 @@ export async function GET(request: Request) {
     }
 
     const folderIds = visibleFolders.map((f) => f.id);
-    const itemCounts = new Map<string, number>();
-    if (folderIds.length > 0) {
-      const { data: items } = await admin
-        .from('mind_card_folder_items')
-        .select('folder_id')
-        .in('folder_id', folderIds);
-      for (const row of items ?? []) {
-        itemCounts.set(row.folder_id, (itemCounts.get(row.folder_id) ?? 0) + 1);
-      }
-    }
+    const coverByFolder = await fetchLatestCardByFolder(admin, folderIds);
 
-    const folders = visibleFolders.map((f) => ({ ...f, item_count: itemCounts.get(f.id) ?? 0 }));
+    const folders = visibleFolders.map((f) => ({ ...f, latest_card: coverByFolder.get(f.id) ?? null }));
 
     return NextResponse.json({ folders });
   } catch (error) {

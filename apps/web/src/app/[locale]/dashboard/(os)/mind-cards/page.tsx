@@ -77,11 +77,6 @@ export default function MindCardsPage() {
     }
   }, [tab, currentIndex, cards, nextCursor]);
 
-  const handleToggleLike = (id: string, liked: boolean) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, liked: !liked } : c)));
-    fetch(`/api/mind-cards/${id}/like`, { method: liked ? 'DELETE' : 'POST' });
-  };
-
   // 具体的入夹/移出请求由FolderMultiSelectPopover自己发起（每次勾选即生效），
   // 这里只负责把最终"是否已收藏"的结果同步回卡片列表，驱动书签图标的点亮态
   const handleFavoritedChange = (id: string, favorited: boolean) => {
@@ -121,7 +116,6 @@ export default function MindCardsPage() {
             cards={cards}
             currentIndex={currentIndex}
             onIndexChange={setCurrentIndex}
-            onToggleLike={handleToggleLike}
             onFavoritedChange={handleFavoritedChange}
           />
         )}

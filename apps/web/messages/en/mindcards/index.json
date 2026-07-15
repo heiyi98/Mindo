@@ -40,32 +40,73 @@
   },
   "empty": "No cards yet",
   "loadMore": "Load more",
-  "arcMenu": {
-    "favorites": "Favorites",
-    "publish": "New card",
-    "notifications": "Notifications"
-  },
   "folders": {
-    "multiSelectTitle": "Save to Collection",
     "loading": "Loading...",
-    "newFolder": "New Collection",
-    "namePlaceholder": "Collection name",
-    "displayModeAlbum": "Album",
-    "displayModeStack": "Stack",
-    "displayModeJournalComingSoon": "Journal (coming soon)",
     "cancel": "Cancel",
     "create": "Create",
     "save": "Save",
-    "delete": "Delete",
-    "deleteConfirmBody": "Deleting this collection won't delete the cards inside it — they'll just no longer belong to this collection.",
-    "unsubscribe": "Unsubscribe",
-    "descriptionPlaceholder": "Add a description (optional)"
+    "default": {
+      "name": "Favorites"
+    }
   },
   "profile": {
     "tabs": {
-      "mine": "My Cards",
+      "myCards": "My Cards",
       "folders": "Collections",
       "subscriptions": "Subscribed"
     }
+  },
+  "collectPopover": {
+    "title": "Add to Collection",
+    "createNew": "New Collection",
+    "emptyState": "No collections yet"
+  },
+  "folderKind": {
+    "collection": {
+      "album": {
+        "label": "Album"
+      },
+      "stack": {
+        "label": "Postcards"
+      }
+    },
+    "journal": {
+      "label": "Journal",
+      "comingSoon": "Coming soon"
+    }
+  },
+  "folderForm": {
+    "nameLabel": "Name",
+    "namePlaceholder": "Give this collection a name",
+    "visibilityLabel": "Visibility",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Say something about this collection"
+  },
+  "folderVisibility": {
+    "private": "Only me",
+    "friends": "Friends only",
+    "followers": "Followers only",
+    "public": "Everyone"
+  },
+  "folderActions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete collection",
+    "deleteConfirmBody": "Deleting this collection won't delete the cards inside it — they'll just no longer belong to this collection.",
+    "deleteDefaultBlocked": "Favorites can't be deleted",
+    "renameDefaultBlocked": "Favorites can't be renamed"
+  },
+  "myCards": {
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete card",
+    "deleteConfirmBody": "This can't be undone",
+    "changeVisibility": "Change visibility"
+  },
+  "subscription": {
+    "subscribeButton": "Subscribe",
+    "unsubscribeButton": "Unsubscribe"
+  },
+  "emptyState": {
+    "noCards": "No cards yet"
   }
 }
