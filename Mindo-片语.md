@@ -558,4 +558,10 @@ MVP 阶段的 `mind_card_favorites`（不分组收藏）**从未正式上线使�
 **已知未闭环（本轮新增）**：
 - 订阅/取消订阅功能本轮冒烟测试未覆盖
 - 个人页范围仍是"仅查看自己"，没有任何"查看他人卡片集/发起订阅"的入口，`subscription.subscribeButton` 这个翻译键目前没有对应的可点击 UI
-- `mindcards.folderActions.edit`/`deleteDefaultBlocked`/`myCards.changeVisibility` 几个翻译键按需求文档要求已建好，但本轮未接到可见文字上（图标即符号不加文字提示；默认夹的删除入口是直接不渲染，不是禁用态+提示文案）
+- `mindcards.folderActions.edit`/`deleteDefaultBlocked`/`renameDefaultBlocked`/`myCards.changeVisibility` 几个翻译键按需求文档要求已建好，但没有任何地方触发展示这些文字（图标即符号不加文字提示；默认夹的改名/介绍输入框和删除入口都是直接不渲染，不是禁用态+提示文案）。`renameDefaultBlocked` 原本会在编辑表单里点击改名后弹出提示，体验反馈"点了才告诉你不行"，已改为默认夹的编辑表单直接不渲染改名/介绍两个输入框（见 28.9）
+
+### 28.9 用户反馈修复（可见度切换即时反馈 + 默认夹改名限制体验）
+
+**改可见度点击后没有立即反馈**：`MindCardsProfileView` 原来把"当前正在改可见度的卡片"存成一份独立的 state 快照（`visibilityTarget: MindCard | null`），点击选项后虽然 `mineCards` 数组本身更新了，但这份快照没有跟着变，导致弹窗里的高亮选中态停留在旧值，用户以为"点了没反应"（实际数据库已经写入成功）。**修法**：改成只存 `id`（`visibilityTargetId: string | null`），弹窗要渲染的对象每次都从 `mineCards` 里现查（`mineCards.find(c => c.id === visibilityTargetId)`），保证只有一份真相来源——`mineCards` 一更新，派生出来的弹窗内容立刻跟着变，不需要在两个地方分别维护同一份数据。
+
+**默认收藏夹改名限制的体验调整**：原来的做法是编辑表单里展示一段说明文字（"收藏夹不能改名"），点开编辑表单才看得到。用户反馈这不符合"限制应该体现在操作压根不可用，而不是点了才告诉你不行"——跟圆弧菜单"图标是通用符号不加tooltip"是同一个原则。修法：`is_default=true` 的编辑表单里，改名输入框和介绍输入框直接不渲染（保留一行纯文字展示当前显示名，非输入框样式，不可点击），彻底去掉那句解释性文案，`mindcards.folderActions.renameDefaultBlocked` 这个 i18n key 保留在翻译文件里作为预留字符串，代码里不再有任何触发点。

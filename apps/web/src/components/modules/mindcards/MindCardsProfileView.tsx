@@ -55,7 +55,10 @@ export default function MindCardsProfileView() {
   const [subscriptions, setSubscriptions] = useState<FolderRow[]>([]);
 
   const [detailCard, setDetailCard] = useState<MindCard | null>(null);
-  const [visibilityTarget, setVisibilityTarget] = useState<MindCard | null>(null);
+  // 存id而不是整张卡片快照：每次渲染都从mineCards里现查，保证改可见度后
+  // 弹窗里的高亮选中态跟着状态更新立刻刷新，不用等下次重新拉取数据
+  const [visibilityTargetId, setVisibilityTargetId] = useState<string | null>(null);
+  const visibilityTarget = mineCards.find((c) => c.id === visibilityTargetId) ?? null;
   const [cardDeleteTarget, setCardDeleteTarget] = useState<MindCard | null>(null);
 
   const [browsingFolder, setBrowsingFolder] = useState<FolderRow | null>(null);
@@ -198,7 +201,7 @@ export default function MindCardsProfileView() {
                   <div className="absolute top-2 right-2 flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setVisibilityTarget(c)}
+                      onClick={() => setVisibilityTargetId(c.id)}
                       className="flex items-center justify-center rounded-full"
                       style={{ width: 24, height: 24, background: 'hsl(var(--background) / 0.7)', color: 'hsl(var(--foreground))' }}
                     >
@@ -287,7 +290,7 @@ export default function MindCardsProfileView() {
       )}
 
       {visibilityTarget && (
-        <BottomSheetPopover open onClose={() => setVisibilityTarget(null)}>
+        <BottomSheetPopover open onClose={() => setVisibilityTargetId(null)}>
           <div className="space-y-1">
             {(['public', 'followers', 'friends', 'private'] as const).map((v) => (
               <button
@@ -466,10 +469,8 @@ function FolderEditSheet({ folder, onClose, onSaved }: {
     <BottomSheetPopover open={!!folder} onClose={onClose}>
       <div className="space-y-3">
         {folder.is_default ? (
-          <div>
-            <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>{t('folders.default.name')}</p>
-            <p className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('folderActions.renameDefaultBlocked')}</p>
-          </div>
+          // 默认收藏夹不可改名/改介绍：直接不渲染这两个输入框，不靠点击后弹提示文案说明限制
+          <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>{t('folders.default.name')}</p>
         ) : (
           <>
             <input

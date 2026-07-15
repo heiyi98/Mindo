@@ -678,4 +678,4 @@ Water: #1976D2
 - [ ] 片语·卡片集：订阅/取消订阅功能本轮冒烟测试未覆盖，需要后续单独验证
 - [ ] 片语·卡片集：`folder_kind='journal'`（记录型）完全未实现，仅数据库字段值预留
 - [ ] 片语·卡片集：目前没有任何"查看他人卡片集/订阅入口"的界面（个人页范围定为仅查看自己），`subscription.subscribeButton`翻译键已备好但无处调用；`GET /api/mind-cards/profile/*`系列接口已支持`?userId=`参数，未来做他人主页时无需改接口
-- [ ] 片语·卡片集：`mindcards.folderActions.edit`/`deleteDefaultBlocked`/`myCards.changeVisibility`几个翻译键已按需求文档要求建好，但本轮UI未实际用到文字（图标即符号，不加tooltip；默认夹的删除按钮直接不渲染而不是禁用态提示），属于预留字符串
+- [ ] 片语·卡片集：`mindcards.folderActions.edit`/`deleteDefaultBlocked`/`renameDefaultBlocked`/`myCards.changeVisibility`几个翻译键已按需求文档要求建好，但目前UI没有任何地方触发展示这些文字（图标即符号，不加tooltip；默认夹的改名/介绍输入框和删除按钮都是直接不渲染，不是禁用态+提示文案），属于预留字符串。`renameDefaultBlocked`原本在编辑表单里点击后弹出提示，已改为压根不渲染改名/介绍输入框，不再触发
