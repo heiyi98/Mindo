@@ -679,5 +679,3 @@ Water: #1976D2
 - [ ] 片语·卡片集：`folder_kind='journal'`（记录型）完全未实现，仅数据库字段值预留
 - [ ] 片语·卡片集：目前没有任何"查看他人卡片集/订阅入口"的界面（个人页范围定为仅查看自己），`subscription.subscribeButton`翻译键已备好但无处调用；`GET /api/mind-cards/profile/*`系列接口已支持`?userId=`参数，未来做他人主页时无需改接口
 - [ ] 片语·卡片集：`mindcards.folderActions.edit`/`deleteDefaultBlocked`/`myCards.changeVisibility`几个翻译键已按需求文档要求建好，但本轮UI未实际用到文字（图标即符号，不加tooltip；默认夹的删除按钮直接不渲染而不是禁用态提示），属于预留字符串
-- [ ] `mind_card_likes` 表需要用户在Supabase执行`drop table`（先核实`select count(*)`为0/很小），SQL已提供
-- [ ] 片语·卡片集：默认收藏夹`name`字段的老数据（第一轮建的字面量'收藏夹'）需要用户执行一次性迁移SQL改成空字符串哨兵值，触发器已同步更新为新注册用户直接建空字符串
