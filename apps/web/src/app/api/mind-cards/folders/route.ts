@@ -5,9 +5,11 @@ import type { CardVisibility } from '@/lib/mindCards/visibility';
 
 const VALID_VISIBILITY: CardVisibility[] = ['private', 'followers', 'friends', 'public'];
 const VALID_DISPLAY_MODES = ['album', 'stack'] as const;
+const VALID_FOLDER_KINDS = ['collection', 'notebook'] as const;
 
-// POST /api/mind-cards/folders — 新建卡片夹。本次只接受 folder_kind='collection'
-// （journal 记录型未实现任何后端逻辑，前端也不会传，这里直接拒绝其他值）。
+// POST /api/mind-cards/folders — 新建卡片夹。接受 folder_kind='collection'（卡册/卡夹，
+// 需要 display_mode）或 'notebook'（本，不看 display_mode——"本"固定使用左卡片右批语
+// 的布局，不需要在album/stack之间选）。
 // is_default 永远由后端强制为 false——用户不能自建第二个默认夹。
 export async function POST(request: Request) {
   try {
@@ -26,12 +28,15 @@ export async function POST(request: Request) {
     const name = body.name?.trim();
     if (!name) return NextResponse.json({ error: 'Missing name' }, { status: 400 });
 
-    if (body.folder_kind !== 'collection') {
+    if (!body.folder_kind || !VALID_FOLDER_KINDS.includes(body.folder_kind as typeof VALID_FOLDER_KINDS[number])) {
       return NextResponse.json({ error: 'Invalid folder_kind' }, { status: 400 });
     }
+    const folderKind = body.folder_kind as typeof VALID_FOLDER_KINDS[number];
 
-    if (!body.display_mode || !VALID_DISPLAY_MODES.includes(body.display_mode as typeof VALID_DISPLAY_MODES[number])) {
-      return NextResponse.json({ error: 'Invalid display_mode' }, { status: 400 });
+    if (folderKind === 'collection') {
+      if (!body.display_mode || !VALID_DISPLAY_MODES.includes(body.display_mode as typeof VALID_DISPLAY_MODES[number])) {
+        return NextResponse.json({ error: 'Invalid display_mode' }, { status: 400 });
+      }
     }
 
     if (!body.visibility || !VALID_VISIBILITY.includes(body.visibility as CardVisibility)) {
@@ -49,8 +54,8 @@ export async function POST(request: Request) {
         user_id: user.id,
         name,
         description: body.description?.trim() || null,
-        folder_kind: 'collection',
-        display_mode: body.display_mode,
+        folder_kind: folderKind,
+        display_mode: folderKind === 'collection' ? body.display_mode : null,
         visibility: body.visibility,
         is_default: false,
         order_index: count ?? 0,

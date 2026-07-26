@@ -70,9 +70,8 @@
         "label": "엽서"
       }
     },
-    "journal": {
-      "label": "다이어리",
-      "comingSoon": "출시 예정"
+    "notebook": {
+      "label": "노트"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "아직 카드가 없습니다"
+  },
+  "notifications": {
+    "empty": "아직 알림이 없어요",
+    "sweepButton": "모두 읽음으로 표시",
+    "commented": "님이 내 카드에 댓글을 남겼어요",
+    "replied": "님이 답글을 남겼어요",
+    "favorited": "님이 내 카드를 즐겨찾기에 추가했어요",
+    "intoFolder": "「{folder}」에 저장됨"
+  },
+  "notebook": {
+    "annotationPlaceholder": "이 카드에 대한 메모를 남겨보세요..."
   }
 }

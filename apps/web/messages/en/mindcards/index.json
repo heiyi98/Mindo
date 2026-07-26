@@ -70,9 +70,8 @@
         "label": "Postcards"
       }
     },
-    "journal": {
-      "label": "Journal",
-      "comingSoon": "Coming soon"
+    "notebook": {
+      "label": "Notebook"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "No cards yet"
+  },
+  "notifications": {
+    "empty": "No notifications yet",
+    "sweepButton": "Clear all",
+    "commented": "commented on your card",
+    "replied": "replied to you",
+    "favorited": "favorited your card",
+    "intoFolder": "Saved to “{folder}”"
+  },
+  "notebook": {
+    "annotationPlaceholder": "Write a note about this card..."
   }
 }

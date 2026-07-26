@@ -11,6 +11,7 @@ interface FolderRow {
   user_id: string;
   name: string;
   description: string | null;
+  folder_kind: string;
   display_mode: string | null;
   visibility: string;
   is_default: boolean;
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
     const { data: rows, error } = await admin
       .from('mind_card_folder_subscriptions')
-      .select('created_at, mind_card_folders(id, user_id, name, description, display_mode, visibility, is_default)')
+      .select('created_at, mind_card_folders(id, user_id, name, description, folder_kind, display_mode, visibility, is_default)')
       .eq('subscriber_id', targetUserId)
       .order('created_at', { ascending: false });
 

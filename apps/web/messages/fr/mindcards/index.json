@@ -70,9 +70,8 @@
         "label": "Cartes postales"
       }
     },
-    "journal": {
-      "label": "Journal",
-      "comingSoon": "Bientôt disponible"
+    "notebook": {
+      "label": "Carnet"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "Aucune carte pour le moment"
+  },
+  "notifications": {
+    "empty": "Pas encore de notifications",
+    "sweepButton": "Tout effacer",
+    "commented": "a commenté votre carte",
+    "replied": "vous a répondu",
+    "favorited": "a mis votre carte en favori",
+    "intoFolder": "Enregistré dans « {folder} »"
+  },
+  "notebook": {
+    "annotationPlaceholder": "Écrivez une note à propos de cette carte..."
   }
 }

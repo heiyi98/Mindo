@@ -647,7 +647,15 @@ Water: #1976D2
 - [x] 报告页搬出(os)路由组（消灭报告页多余的Dock导航栏，返回按钮改用router.back()）
 - [x] 资产管理页面完善（出生地完整显示不截断，新增真太阳时展示，服务端解析不传整份大JSON）
 - [x] 账户注销真删除（补上adminClient.auth.admin.deleteUser调用）
-- [x] 片语模块（原思绪卡片）：后端全套（隐私分级/五行+大五相似度算法/排序公式/召回机制/已读清理定时任务）+ 前端（横向轮播浏览页/圆弧菜单栏/独立编辑页/Tiptap富文本编辑器/九宫格工具栏/自托管Source字体系统含Fontsource包+PDF字体换血）+ 卡片集功能第一轮（收藏夹/自建卡片夹/订阅/个人页三栏，新增`mind_card_folders`/`mind_card_folder_items`/`mind_card_folder_subscriptions`/`mind_card_favorite_notifications`四张表，MVP阶段的`mind_card_favorites`因从未有真实数据已直接退役）+ 卡片集第二轮细化（图标/术语改名"卡片夹→卡片集"、点赞功能`mind_card_likes`整体退场、"我的卡片"新增删除+改可见度操作、卡片集列表重构为3:4展示框网格+封面取夹内最新卡片+新建入口、卡片集拖拽排序含默认收藏夹、默认收藏夹改名/改介绍在接口层拒绝、个人页搬出`(os)`路由组改用返回按钮）。详见 `Mindo-片语.md`，未闭环事项见该文档第二十四节，卡片集详情见第二十八节
+- [x] 片语模块（原思绪卡片）：后端全套（隐私分级/五行+大五相似度算法/排序公式/召回机制/已读清理定时任务）+ 前端（横向轮播浏览页/圆弧菜单栏/独立编辑页/Tiptap富文本编辑器/九宫格工具栏/自托管Source字体系统含Fontsource包+PDF字体换血）+ 卡片集功能第一轮（收藏夹/自建卡片夹/订阅/个人页三栏，新增`mind_card_folders`/`mind_card_folder_items`/`mind_card_folder_subscriptions`/`mind_card_favorite_notifications`四张表，MVP阶段的`mind_card_favorites`因从未有真实数据已直接退役）+ 卡片集第二轮细化（图标/术语改名"卡片夹→卡片集"、点赞功能`mind_card_likes`整体退场、"我的卡片"新增删除+改可见度操作、卡片集列表重构为3:4展示框网格+封面取夹内最新卡片+新建入口、卡片集拖拽排序含默认收藏夹、默认收藏夹改名/改介绍在接口层拒绝、个人页搬出`(os)`路由组改用返回按钮）+ 提醒系统/推荐算法重构/"本"类型（第四轮，本次施工，详见下方新增说明）。详见 `Mindo-片语.md`，未闭环事项见该文档第二十四节，卡片集详情见第二十八节，本轮设计见第二十八～三十六节
+
+### 片语第四轮：提醒系统 + 推荐算法重构 + 感想（notebook/本）
+
+- **提醒系统**：`mind_card_notifications` 表新增 `type='reply'`、新增 `target_comment_id`（reply专用，指向被回复的那条留言）/`folder_id`（favorite专用）两列（这两列在本轮施工开始前已经执行过，施工时用 PostgREST 的 OpenAPI introspection 核实过，不是猜的）。收藏通知从旧的 `mind_card_favorite_notifications` 表切到统一的 `mind_card_notifications`（`type='favorite'`），旧表不再写入（保留读取兼容性，未做数据迁移，因为原本就没有配套UI读它）。留言接口（`[id]/comments/route.ts`）区分一级留言（通知卡片作者，`type='comment'`）和二级留言（只通知"这次回复直接对准的那个人"——有`@`具体某条二级留言就通知那条的作者，否则通知一级留言作者；卡片作者不会收到二级留言的通知，也不会顺着讨论串往上传）。新增 `GET /api/mind-cards/[id]`（按id单独取一张卡片，供点开一条留言/回复类通知用）、`GET /api/mind-cards/notifications`（最近50条+未读数，favorite类型的卡片集名字只有对当前用户可见时才附带）、`POST /api/mind-cards/notifications/read-all`（清扫）。前端新增 `MindCardNotificationPanel.tsx`，`MindCardsArcMenu.tsx` 的Bell图标从禁用占位改成可点击+未读红点；`MindCardCommentModal.tsx` 新增 `autoExpandParentId` prop（点开reply通知时自动展开对应一级留言的回复列表，不需要用户手动点）；`MindCardDetailModal.tsx` 新增 `autoOpenComments`/`autoExpandParentId` 透传。
+- **推荐算法重构**：`recommend/route.ts` 从"60%相似度+40%新鲜度"混合评分，改成四条完全独立的线各自选卡拼成一组卡组（一次10张，不再是20张）——八字相似度/大五相似度/行为共现/随机，各线选卡数视用户是否同时具备八字+大五数据而定（详见 `Mindo-片语.md` 第三十四节）。新建 `mind_card_recommendation_sources` 表记录每张卡是哪条线选出来的（`source`字段是普通字符串，不设枚举约束）。新增 `lib/mindCards/behaviorCandidates.ts`（"行为共现"统计：查"跟我收藏过同一批内容的其他人，还收藏了什么别的内容"，现查现算不积累状态）+ 独立的 `GET /api/mind-cards/recommend/behavior-candidates?userId=` 研究接口（内部用，不接入任何用户界面）。
+- **感想（notebook/本）**：`folder_kind` 新增 `'notebook'` 值（原 `'journal'` 占位值已废弃，本轮全项目内数据库/代码/翻译文件均未发现历史 `'journal'` 遗留数据，无需迁移）；`mind_card_folder_items` 新增 `annotation` 列。`profile/folders`、`profile/subscriptions`、`folders/[id]/cards` 三个接口的 select 语句都补上了 `folder_kind` 字段（此前完全没有把这个信息传给前端）。新建卡片集表单打开"本"选项（原"随笔册（即将推出）"禁用占位）。`FolderBrowseView.tsx` 新增 `folderKind` prop 和 notebook 专属渲染分支（左卡片缩略图+右批语文字，纵向滚动列表，跟 `displayMode` 的 album/stack 分支并列、不混判断）。`FolderMultiSelectPopover.tsx` 勾选"本"类型的夹会先弹批语输入框，写完才提交；`[id]/folders/[folderId]/route.ts` POST 接受可选的 `annotation` 字段。**已知缺口**：批语目前是只读展示，编辑已写好的批语这个交互本次未实现。
+- **本轮施工顺带清理**：`comments/replies/route.ts`（不带`[id]`动态段）是历史遗留的孤儿重复文件，跟真正在用的 `comments/[id]/replies/route.ts` 内容几乎一样，但路由签名不匹配导致 `next build` 直接报类型错——前端从未调用过这个错误路径，确认零引用后已删除。
+- **本轮发现但未处理的既有缺口（非本次任务范围，供下次施工参考）**：`comments.*` 这一整组翻译键目前只有 `zh` 语言文件里有，`en`/`de`/`es`/`fr`/`it`/`ja`/`ko`/`zh-Hant` 全部缺失（这些语言下留言功能的界面文字会失效/fallback），违反了本文件"多语言规则"第5条，需要后续单独补齐。
 
 ## 待完成
 
@@ -673,9 +681,13 @@ Water: #1976D2
 - [ ] 时间选择"只填小时不填分钟导致小时也丢失"的bug——用户提到过但会话中没有实际排查修复
 - [ ] 片语：`MindCardBackgroundColor` 类型定义（`style.ts`）与选择器组件的可选项是否已同步收紧（选择器已去掉"默认跟随主题"选项，只留黑白，但类型层面可能仍保留空字符串这个值）
 - [ ] 片语：桌面端编辑卡片的 `maxWidth: 400px` 是估算值，需要真机/浏览器实测确认是否合适
-- [ ] 片语：留言（评论）、通知系统、草稿箱——均仍是规划阶段，未开工。收藏夹分组管理已完成（卡片集功能）。通知系统仍依赖留言等具体事件先存在（收藏产生的通知除外，已最小化实现，只写入`mind_card_favorite_notifications`表，无通知中心UI）
+- [x] ~~片语：留言（评论）、通知系统、草稿箱——均仍是规划阶段，未开工~~——留言、通知系统均已完整实装（见上方"片语第四轮"说明）；草稿箱仍未开工，单独保留一条：
+- [ ] 片语：草稿箱仍未开工（规划阶段）
+- [ ] 片语：`comments.*` 翻译键只有zh语言文件有，其余8种语言全部缺失，需要补齐（本轮施工中发现，未处理，见上方"片语第四轮"最后一条）
+- [ ] 片语：`mind_card_recommendation_sources`表 + `mind_card_folder_items.annotation`列 + `folder_kind`的`'journal'`→`'notebook'`改名SQL，本轮施工时确认还没有在Supabase执行过（跟通知系统那两列不一样，那两列施工前已经跑过了）——上线前必须先执行，SQL已写在本次施工说明的3.1/4.1节，不再重复贴一遍
+- [ ] 片语：批语（notebook批语）编辑功能未实现，目前只能新增时写一次、之后只读展示
 - [ ] 片语：候选语言（越南语/马来语/印尼语/泰语）暂不安装，手写体字体候选暂缓，均待用户后续决定
 - [ ] 片语·卡片集：订阅/取消订阅功能本轮冒烟测试未覆盖，需要后续单独验证
-- [ ] 片语·卡片集：`folder_kind='journal'`（记录型）完全未实现，仅数据库字段值预留
+- [x] ~~片语·卡片集：`folder_kind='journal'`（记录型）完全未实现，仅数据库字段值预留~~——本轮已实现（改名为`notebook`/"本"），见上方"片语第四轮"说明
 - [ ] 片语·卡片集：目前没有任何"查看他人卡片集/订阅入口"的界面（个人页范围定为仅查看自己），`subscription.subscribeButton`翻译键已备好但无处调用；`GET /api/mind-cards/profile/*`系列接口已支持`?userId=`参数，未来做他人主页时无需改接口
 - [ ] 片语·卡片集：`mindcards.folderActions.edit`/`deleteDefaultBlocked`/`renameDefaultBlocked`/`myCards.changeVisibility`几个翻译键已按需求文档要求建好，但目前UI没有任何地方触发展示这些文字（图标即符号，不加tooltip；默认夹的改名/介绍输入框和删除按钮都是直接不渲染，不是禁用态+提示文案），属于预留字符串。`renameDefaultBlocked`原本在编辑表单里点击后弹出提示，已改为压根不渲染改名/介绍输入框，不再触发

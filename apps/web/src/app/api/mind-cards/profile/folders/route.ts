@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { data: rawFolders, error } = await admin
       .from('mind_card_folders')
-      .select('id, name, description, display_mode, visibility, is_default, order_index, created_at')
+      .select('id, name, description, folder_kind, display_mode, visibility, is_default, order_index, created_at')
       .eq('user_id', targetUserId)
       .order('order_index', { ascending: true });
 

@@ -47,9 +47,12 @@ export async function GET(request: Request) {
     const cardIds = visibleCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);
 
+    // is_own：理论上关注tab不会出现自己的卡片（不会关注自己），这里依然如实
+    // 计算，不做特殊排除，保持所有返回卡片列表接口的字段行为一致
     const cards = visibleCards.map((c) => ({
       ...c,
       favorited: myFavorites.has(c.id),
+      is_own: c.user_id === user.id,
     }));
 
     const nextCursor = rawCards && rawCards.length === PAGE_SIZE

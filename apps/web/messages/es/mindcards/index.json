@@ -70,9 +70,8 @@
         "label": "Postales"
       }
     },
-    "journal": {
-      "label": "Diario",
-      "comingSoon": "Próximamente"
+    "notebook": {
+      "label": "Cuaderno"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "Aún no hay tarjetas"
+  },
+  "notifications": {
+    "empty": "Aún no hay notificaciones",
+    "sweepButton": "Borrar todo",
+    "commented": "comentó tu tarjeta",
+    "replied": "te respondió",
+    "favorited": "guardó tu tarjeta en favoritos",
+    "intoFolder": "Guardado en «{folder}»"
+  },
+  "notebook": {
+    "annotationPlaceholder": "Escribe una nota sobre esta tarjeta..."
   }
 }

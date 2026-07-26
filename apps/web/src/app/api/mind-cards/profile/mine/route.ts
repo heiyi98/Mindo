@@ -33,9 +33,12 @@ export async function GET(request: Request) {
     const cardIds = visibleCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);
 
+    // is_own：当前登录用户是否就是这张卡片的作者，在后端算好直接嵌进返回数据，
+    // 前端（详情弹窗）只读这个字段决定按钮数量，不在前端自行比对id，避免被绕过
     const cards = visibleCards.map((c) => ({
       ...c,
       favorited: myFavorites.has(c.id),
+      is_own: c.user_id === user.id,
     }));
 
     return NextResponse.json({ cards });

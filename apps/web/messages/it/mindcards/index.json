@@ -70,9 +70,8 @@
         "label": "Cartoline"
       }
     },
-    "journal": {
-      "label": "Diario",
-      "comingSoon": "In arrivo"
+    "notebook": {
+      "label": "Taccuino"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "Ancora nessuna carta"
+  },
+  "notifications": {
+    "empty": "Nessuna notifica",
+    "sweepButton": "Cancella tutto",
+    "commented": "ha commentato la tua carta",
+    "replied": "ti ha risposto",
+    "favorited": "ha aggiunto la tua carta ai preferiti",
+    "intoFolder": "Salvato in «{folder}»"
+  },
+  "notebook": {
+    "annotationPlaceholder": "Scrivi una nota su questa carta..."
   }
 }

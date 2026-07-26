@@ -1,59 +1,36 @@
 'use client';
 import type { ReactNode } from 'react';
-import { BookHeart } from 'lucide-react';
-import MindCardBody from './MindCardBody';
-import type { MindCardStyleV2 } from '@/lib/mindCards/style';
+import { resolveCardFontFamilyCss } from '@/lib/mindCards/fontCatalog';
 
 interface MindCardFolderCardProps {
   displayName: string;
-  isDefault: boolean;
-  coverStyle: MindCardStyleV2 | null;
-  emptyLabel: string;
   onClick?: () => void;
-  // owner态的编辑/删除按钮，或订阅态的取消订阅按钮，由调用方决定放什么
+  // 目前仅"订阅"栏的取消订阅按钮在用；卡片集管理（编辑/删除）已经统一挪到点进
+  // 卡片集之后的详情页里做，网格缩略图本身不再直接暴露任何管理操作。
   actions?: ReactNode;
 }
 
-// 统一的3:4展示框：只有名称+封面(取夹内最新一张卡片的内容渲染)，明确不显示数量/类型图标/
-// 可见度标识——is_default的BookHeart徽标是唯一例外，用于标识"这是默认收藏夹"这件身份，
-// 不是"类型"信息。
-export default function MindCardFolderCard({
-  displayName, isDefault, coverStyle, emptyLabel, onClick, actions,
-}: MindCardFolderCardProps) {
+// 统一的3:4展示框：封面永远只显示卡片集名字（居中，默认衬线字体），不预览夹内
+//卡片内容——不管夹里有没有卡片、内容是什么，封面观感保持一致。未来会支持
+// 自定义封面图，这次先不做。
+export default function MindCardFolderCard({ displayName, onClick, actions }: MindCardFolderCardProps) {
   return (
     <div
-      className="relative rounded-xl overflow-hidden"
-      style={{ aspectRatio: '3 / 4', border: '1px solid hsl(var(--border))' }}
+      className="relative rounded-xl overflow-hidden flex items-center justify-center"
+      style={{ aspectRatio: '3 / 4', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
     >
-      <div className="absolute inset-0 cursor-pointer" onClick={onClick}>
-        {coverStyle ? (
-          <MindCardBody style={coverStyle} className="w-full h-full" clipped />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center px-3">
-            <span className="text-xs text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {emptyLabel}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {isDefault && (
-        <div
-          className="absolute top-2 left-2 flex items-center justify-center rounded-full pointer-events-none"
-          style={{ width: 22, height: 22, background: 'hsl(var(--background) / 0.7)', color: 'hsl(var(--foreground))' }}
-        >
-          <BookHeart size={12} />
-        </div>
-      )}
-
-      <div
-        className="absolute bottom-0 left-0 right-0 px-2 py-1.5 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, hsl(var(--background) / 0.85), transparent)' }}
+      <button
+        type="button"
+        onClick={onClick}
+        className="absolute inset-0 flex items-center justify-center px-3"
       >
-        <span className="text-xs font-medium truncate block" style={{ color: 'hsl(var(--foreground))' }}>
+        <span
+          className="text-sm text-center"
+          style={{ color: 'hsl(var(--foreground))', fontFamily: resolveCardFontFamilyCss({}) }}
+        >
           {displayName}
         </span>
-      </div>
+      </button>
 
       {actions && (
         <div className="absolute top-2 right-2 flex items-center gap-1">

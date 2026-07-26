@@ -70,9 +70,8 @@
         "label": "ポストカード"
       }
     },
-    "journal": {
-      "label": "日記帳",
-      "comingSoon": "近日公開"
+    "notebook": {
+      "label": "ノート"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "まだカードがありません"
+  },
+  "notifications": {
+    "empty": "まだ通知はありません",
+    "sweepButton": "すべて既読にする",
+    "commented": "があなたのカードにコメントしました",
+    "replied": "があなたに返信しました",
+    "favorited": "があなたのカードをお気に入りに追加しました",
+    "intoFolder": "「{folder}」に保存されました"
+  },
+  "notebook": {
+    "annotationPlaceholder": "このカードについてメモを書く…"
   }
 }

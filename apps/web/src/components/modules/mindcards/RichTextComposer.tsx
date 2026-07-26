@@ -79,24 +79,33 @@ const V_ALIGN_ICON: Record<VerticalAlign, typeof AlignStartHorizontal> = {
 
 function docToRuns(doc: PMNode): MindCardRun[] {
   const runs: MindCardRun[] = [];
-  const paragraph = doc.firstChild;
-  if (!paragraph) return runs;
-  paragraph.forEach((node) => {
-    if (node.isText) {
-      const run: MindCardRun = { text: node.text ?? '' };
-      node.marks.forEach((mark) => {
-        if (mark.type.name === 'bold') run.bold = true;
-        if (mark.type.name === 'italic') run.italic = true;
-        if (mark.type.name === 'underline') run.underline = true;
-        if (mark.type.name === 'textStyle' && mark.attrs.color) run.color = mark.attrs.color as string;
-        if (mark.type.name === 'textStyle' && mark.attrs.backgroundColor) {
-          run.backgroundColor = mark.attrs.backgroundColor as string;
-        }
-      });
-      runs.push(run);
-    } else if (node.type.name === 'hardBreak') {
+  let isFirstParagraph = true;
+  doc.forEach((paragraph) => {
+    // 段落之间用跟硬换行完全相同的换行标记衔接——不区分"这是按Enter新起的段落"
+    // 还是"按Shift+Enter的硬换行"，两者存进数据、渲染出来的效果完全一致，
+    // 不需要额外记录是哪种按键产生的。
+    if (!isFirstParagraph) {
       runs.push({ text: '\n' });
     }
+    isFirstParagraph = false;
+
+    paragraph.forEach((node) => {
+      if (node.isText) {
+        const run: MindCardRun = { text: node.text ?? '' };
+        node.marks.forEach((mark) => {
+          if (mark.type.name === 'bold') run.bold = true;
+          if (mark.type.name === 'italic') run.italic = true;
+          if (mark.type.name === 'underline') run.underline = true;
+          if (mark.type.name === 'textStyle' && mark.attrs.color) run.color = mark.attrs.color as string;
+          if (mark.type.name === 'textStyle' && mark.attrs.backgroundColor) {
+            run.backgroundColor = mark.attrs.backgroundColor as string;
+          }
+        });
+        runs.push(run);
+      } else if (node.type.name === 'hardBreak') {
+        runs.push({ text: '\n' });
+      }
+    });
   });
   return runs;
 }
@@ -381,7 +390,7 @@ const RichTextComposer = forwardRef<RichTextComposerHandle>(function RichTextCom
             不再依赖百分比高度这个在特定条件下会静默失效的机制。
             position:relative是假光标(FakeCaret)绝对定位的基准。 */}
         <div
-          className="relative [&_.ProseMirror]:outline-none [&_.ProseMirror]:border-none"
+          className="relative [&_.ProseMirror]:outline-none [&_.ProseMirror]:border-none [&_.ProseMirror_p]:m-0"
           style={{ ...getCardPaddedFlexStyle(card), flex: 1 }}
           onClick={handleComposerClick}
         >

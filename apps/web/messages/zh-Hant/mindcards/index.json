@@ -70,9 +70,8 @@
         "label": "明信片"
       }
     },
-    "journal": {
-      "label": "隨筆冊",
-      "comingSoon": "即將推出"
+    "notebook": {
+      "label": "本"
     }
   },
   "folderForm": {
@@ -108,5 +107,16 @@
   },
   "emptyState": {
     "noCards": "暫無卡片"
+  },
+  "notifications": {
+    "empty": "暫無提醒",
+    "sweepButton": "清掃",
+    "commented": "評論了你的卡片",
+    "replied": "回覆了你",
+    "favorited": "收藏了你的卡片",
+    "intoFolder": "收藏進了「{folder}」"
+  },
+  "notebook": {
+    "annotationPlaceholder": "寫點什麼批語……"
   }
 }

@@ -56,6 +56,13 @@
       "subscriptions": "订阅卡片集"
     }
   },
+  "userProfile": {
+    "tabs": {
+      "cards": "卡片",
+      "folders": "卡片集",
+      "subscriptions": "订阅"
+    }
+  },
   "collectPopover": {
     "title": "加入卡片集",
     "createNew": "新建卡片集",
@@ -70,9 +77,8 @@
         "label": "明信片"
       }
     },
-    "journal": {
-      "label": "随笔册",
-      "comingSoon": "即将推出"
+    "notebook": {
+      "label": "本"
     }
   },
   "folderForm": {
@@ -104,9 +110,35 @@
   },
   "subscription": {
     "subscribeButton": "订阅",
+    "subscribedLabel": "已订阅",
     "unsubscribeButton": "取消订阅"
   },
   "emptyState": {
     "noCards": "暂无卡片"
+  },
+  "comments": {
+    "empty": "暂无留言",
+    "reply": "回复",
+    "hideReplies": "收起",
+    "viewReplies": "展开 {count} 条回复",
+    "replyTargetDeleted": "该评论已消失",
+    "replyingTo": "回复 {name}",
+    "inputPlaceholder": "说点什么……",
+    "send": "发送",
+    "maxLengthReached": "字数上限{max}",
+    "delete": "删除",
+    "deleteConfirmTitle": "删除留言",
+    "deleteConfirmBody": "删除后无法恢复"
+  },
+  "notifications": {
+    "empty": "暂无提醒",
+    "sweepButton": "清扫",
+    "commented": "评论了你的卡片",
+    "replied": "回复了你",
+    "favorited": "收藏了你的卡片",
+    "intoFolder": "收藏进了「{folder}」"
+  },
+  "notebook": {
+    "annotationPlaceholder": "写点什么批语……"
   }
 }
