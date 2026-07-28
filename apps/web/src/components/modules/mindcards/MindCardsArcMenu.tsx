@@ -46,21 +46,26 @@ export default function MindCardsArcMenu({ onPublish, onOpenProfile, onOpenNotif
         <button
           type="button"
           onClick={onOpenNotifications}
-          className="relative flex items-center justify-center"
+          className="flex items-center justify-center"
           style={{ color: 'hsl(var(--foreground))' }}
         >
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <span
-              className="absolute flex items-center justify-center rounded-full px-1"
-              style={{
-                top: 2, right: 6, minWidth: 14, height: 14, fontSize: 9,
-                background: '#FF3B30', color: '#fff', lineHeight: 1,
-              }}
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
+          {/* 红点的定位参照物必须是"只包住图标本身"的小容器，不能是整个按钮——
+              按钮是胶囊三等分里的一整格，比图标宽得多，相对按钮定位会让红点
+              飘得离图标很远，这是之前红点位置很丑的真正原因。 */}
+          <span className="relative inline-flex items-center justify-center">
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span
+                className="absolute flex items-center justify-center rounded-full px-1"
+                style={{
+                  top: -4, right: -6, minWidth: 14, height: 14, fontSize: 9,
+                  background: '#FF3B30', color: '#fff', lineHeight: 1,
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </span>
         </button>
       </div>
     </div>

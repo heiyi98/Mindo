@@ -24,3 +24,10 @@ export function truncateToGraphemes(text: string, maxLength: number): string {
 }
 
 export const MIND_CARD_COMMENT_MAX_LENGTH = 150;
+
+// 卡片集名称/介绍的字数上限——按德语（这几种支持语言里公认最"占地方"的）
+// 推算出来的够用数字，保证信息页这块固定高度的空间无论如何都装得下、不会
+// 被撑破。这是暂定值，等做手机端真机实测后可能还会再调整，改这两个数字
+// 即可，不涉及重新设计。
+export const MIND_CARD_FOLDER_NAME_MAX_LENGTH = 60;
+export const MIND_CARD_FOLDER_DESCRIPTION_MAX_LENGTH = 120;

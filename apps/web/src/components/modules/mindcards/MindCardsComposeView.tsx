@@ -1,33 +1,37 @@
 'use client';
 import '@/styles/mind-fonts.module.css';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { ChevronLeft } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import RichTextComposer, { type RichTextComposerHandle } from './RichTextComposer';
 
 export default function MindCardsComposeView() {
   const t = useTranslations('mindcards');
   const router = useRouter();
   const composerRef = useRef<RichTextComposerHandle>(null);
-  const [publishing, setPublishing] = useState(false);
+
+  const publishMutation = useMutation({
+    mutationFn: async (payload: unknown) => {
+      const res = await fetch('/api/mind-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('request failed');
+      return res.json();
+    },
+    onSuccess: () => {
+      router.replace('/dashboard/mind-cards');
+    },
+  });
 
   const handlePublish = () => {
-    if (publishing) return;
+    if (publishMutation.isPending) return;
     const payload = composerRef.current?.publish();
     if (!payload) return;
-
-    setPublishing(true);
-    fetch('/api/mind-cards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-      .then((r) => r.json())
-      .then(() => {
-        router.replace('/dashboard/mind-cards');
-      })
-      .finally(() => setPublishing(false));
+    publishMutation.mutate(payload);
   };
 
   return (
@@ -45,7 +49,7 @@ export default function MindCardsComposeView() {
         </button>
         <button
           onClick={handlePublish}
-          disabled={publishing}
+          disabled={publishMutation.isPending}
           className="px-4 py-1.5 rounded-xl text-sm font-medium disabled:opacity-40"
           style={{ background: 'hsl(var(--foreground) / 0.08)', color: 'hsl(var(--foreground))' }}
         >

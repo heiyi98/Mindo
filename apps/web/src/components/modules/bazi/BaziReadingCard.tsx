@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { Sparkles } from 'lucide-react';
 
 export const COLS = 1;
@@ -11,7 +11,7 @@ export const CARD_META = { id: 'bazi-reading', cols: COLS, rows: ROWS, module: '
 export default function BaziReadingCard({ profileId }: { profileId: string }) {
   const t = useTranslations('payment');
   const router = useRouter();
-  const pathname = usePathname();
+  const [readingId, setReadingId] = useState<string | null>(null);
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -21,6 +21,7 @@ export default function BaziReadingCard({ profileId }: { profileId: string }) {
       .then(r => r.json())
       .then(d => {
         const baziStatus = (d.status || []).find((s: any) => s.id === 'bazi');
+        setReadingId(baziStatus?.readingId ?? null);
         setSnapshotId(baziStatus?.snapshotId ?? null);
         setLoaded(true);
       })
@@ -37,10 +38,30 @@ export default function BaziReadingCard({ profileId }: { profileId: string }) {
   }
 
   const handleClick = () => {
-    if (!snapshotId) return;
-    const locale = pathname.split('/')[1];
-    router.push(`/${locale}/dashboard/divination/bazi/reading?snapshotId=${snapshotId}`);
+    if (readingId) {
+      // 已有报告，直接查看。不用再手动拼语言前缀——
+      // @/i18n/navigation 的 router 会自动带上当前语言。
+      router.push(`/dashboard/assessments/bazi/reading?readingId=${readingId}`);
+    } else if (snapshotId) {
+      // 有八字盘但没有报告，触发生成
+      fetch('/api/ai/reading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshotId }),
+      }).then(r => r.json()).then(d => {
+        if (d.readingId) {
+          router.push(`/dashboard/assessments/bazi/reading?readingId=${d.readingId}`);
+        }
+      });
+    }
   };
+
+  if (!snapshotId) return (
+    <div
+      className="rounded-2xl"
+      style={{ width: '100%', height: '100%', background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+    />
+  );
 
   return (
     <div

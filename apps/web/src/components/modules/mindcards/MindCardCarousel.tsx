@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion';
 import { Bookmark, MessageSquareMore, SquareArrowOutUpRight } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { useQuery } from '@tanstack/react-query';
 import MindCardBody from './MindCardBody';
 import MindCardDetailModal from './MindCardDetailModal';
 import FolderMultiSelectPopover from './FolderMultiSelectPopover';
-import MindCardCommentModal from './MindCardCommentModal';
+import MindCardCommentModal, { commentsQueryKey, fetchComments } from './MindCardCommentModal';
 import type { MindCardStyleV2 } from '@/lib/mindCards/style';
 
 export interface MindCard {
@@ -18,10 +19,12 @@ export interface MindCard {
   created_at: string;
   favorited: boolean;
   is_own?: boolean;
-  // 只有"本"（folder_kind='notebook'）夹内的卡片列表接口会附带这个字段——
-  // 这段是用户收藏这张卡片进"本"的时候当场写的批语，其他任何场景下这个字段
-  // 都不会出现，读取时按undefined/null兜底即可。
-  annotation?: string | null;
+  // 作者信息——卡片本身只显示名字，不显示handle，但跳转到作者主页/判断
+  // 要不要显示"+关注"胶囊，都需要用到handle，所以数据层面还是要带上。
+  author?: { id: string; handle: string; display_name: string | null } | null;
+  // 当前登录用户是否已经关注这张卡片的作者——决定详情弹窗里"+关注"胶囊
+  // 要不要显示（已关注/是自己的卡片，都不显示）。
+  authorFollowedByViewer?: boolean;
 }
 
 interface MindCardCarouselProps {
@@ -87,7 +90,6 @@ export default function MindCardCarousel({
   const [detailOpen, setDetailOpen] = useState(false);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [commentPopoverOpen, setCommentPopoverOpen] = useState(false);
-  const [commentCount, setCommentCount] = useState(0);
   const [exporting, setExporting] = useState(false);
   const currentCardRef = useRef<HTMLDivElement>(null);
 
@@ -118,13 +120,15 @@ export default function MindCardCarousel({
 
   const current = cards[currentIndex];
 
-  useEffect(() => {
-    if (!current) return;
-    fetch(`/api/mind-cards/${current.id}/comments`)
-      .then((r) => r.json())
-      .then((d) => setCommentCount(d.totalCount ?? 0))
-      .catch(() => {});
-  }, [current?.id]);
+  // 跟MindCardCommentModal共用同一份/api/mind-cards/:id/comments缓存——
+  // 面板打开时的乐观更新（发/删留言）会直接反映在这个数量徽标上，不需要
+  // 额外的回调把数字传回来。
+  const { data: commentsData } = useQuery({
+    queryKey: commentsQueryKey(current?.id ?? ''),
+    queryFn: () => fetchComments(current!.id),
+    enabled: !!current,
+  });
+  const commentCount = commentsData?.totalCount ?? 0;
 
   const goTo = (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= cards.length) return;
@@ -304,7 +308,6 @@ export default function MindCardCarousel({
             vertical={current.style?.card?.vertical ?? false}
             open={commentPopoverOpen}
             onClose={() => setCommentPopoverOpen(false)}
-            onCountChange={setCommentCount}
           />
         </>
       )}

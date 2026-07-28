@@ -1,42 +1,37 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// 获取用户所有档案
 export async function GET() {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  console.log('[profiles GET] user:', user?.id, 'authError:', authError?.message);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, display_name, birth_date, birth_time, birth_place_name, birth_lat, birth_lng, birth_timezone, gender, is_self, created_at')
+    .select('id, display_name, birth_date, birth_time, birth_place_name, birth_lat, birth_lng, birth_timezone, gender, is_self, created_at, order_index, is_minute_unknown')
     .eq('user_id', user.id)
     .order('is_self', { ascending: false })
+    .order('order_index', { ascending: true })
     .order('created_at', { ascending: true });
-
-  console.log('[profiles GET] profiles:', profiles?.length, 'error:', profilesError?.message, 'code:', profilesError?.code);
 
   return NextResponse.json({ profiles: profiles || [] });
 }
 
-// 新增档案
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone } = body;
+  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone, is_minute_unknown } = body;
 
   if (!display_name || !birth_date) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // 检查VIP状态（免费用户只能有1个档案）
   const { data: existingProfiles } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, order_index, is_self')
     .eq('user_id', user.id);
 
   const { data: userData } = await supabase
@@ -48,6 +43,13 @@ export async function POST(request: Request) {
   if (existingProfiles && existingProfiles.length >= 1 && userData?.vip_tier === 'free') {
     return NextResponse.json({ error: 'vip_required' }, { status: 403 });
   }
+
+  // 新档案永远排在"其他档案"最后面：取现有非本人档案里 order_index 的最大值 +1，
+  // 不依赖数据库列默认值——之前默认值大概率是0，导致新档案排到本人档案后面第一个，
+  // 而不是最后一个，这次显式算好再插入，从根上解决排序错位。
+  const maxOrderIndex = (existingProfiles || [])
+    .filter(p => !p.is_self)
+    .reduce((max, p) => Math.max(max, p.order_index ?? 0), 0);
 
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -61,6 +63,8 @@ export async function POST(request: Request) {
       birth_place_name: birth_place_name || null,
       birth_timezone: birth_timezone || null,
       is_self: false,
+      is_minute_unknown: is_minute_unknown ?? false,
+      order_index: maxOrderIndex + 1,
     })
     .select()
     .single();

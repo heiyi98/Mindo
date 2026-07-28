@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +10,8 @@ import DatePicker from '@/components/onboarding/steps/DatePicker';
 import GenderPicker from '@/components/onboarding/steps/GenderPicker';
 import TeaserPage from '@/components/onboarding/teaser/TeaserPage';
 import TimezoneSelector from '@/components/onboarding/steps/TimezoneSelector';
+import { ValveConverge } from '@/components/common/ValveConverge';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { createClient } from '@/lib/supabase/client';
 import { matchTimezoneOption, type TimezoneOption } from '@/lib/timezones';
 import {
@@ -22,6 +24,11 @@ type Step = 'date' | 'timecity' | 'gender' | 'teaser' | 'login';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+
+// 一次性标记：由落地页 LandingContent.tsx 写入，告诉这个页面"你是刚从
+// 落地页跳过来的，进来先播logo展开(旋转+抽线)这段入场动画再显示正文"。
+// 必须跟 LandingContent.tsx 里的字符串完全一致。
+const ONBOARDING_INTRO_FLAG_KEY = 'mindo-onboarding-intro';
 
 interface CityData {
   name: string;
@@ -42,6 +49,25 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [isSavingGender, setIsSavingGender] = useState(false);
   const [teaserData, setTeaserData] = useState<{ dayStem: string; energyScores: Record<string, number> } | null>(null);
+  const [teaserRevealing, setTeaserRevealing] = useState(false);
+  const [teaserLogoGone, setTeaserLogoGone] = useState(false);
+
+  // 入场动画：页面挂载时检测落地页留下的标记，有就先播"logo展开"动画，
+  // 播完(onComplete触发)才显示正文；正文这段时间照常在背后渲染/加载，
+  // 不会有"动画播完还要空等"的空窗期
+  const [introPlaying, setIntroPlaying] = useState(false);
+  const [introRevealing, setIntroRevealing] = useState(false);
+  useLayoutEffect(() => {
+    let flag = false;
+    try {
+      flag = sessionStorage.getItem(ONBOARDING_INTRO_FLAG_KEY) === '1';
+    } catch {}
+    if (!flag) return;
+    try {
+      sessionStorage.removeItem(ONBOARDING_INTRO_FLAG_KEY);
+    } catch {}
+    setIntroPlaying(true);
+  }, []);
 
   const [hour, setHour] = useState<number | null>(null);
   const [minute, setMinute] = useState<number | null>(null);
@@ -79,11 +105,56 @@ export default function OnboardingPage() {
     fetchCities();
   }, [debouncedQuery, locale, selectedCity]);
 
-  useEffect(() => {
+  // resuming: null=还没检查完，true=正在自动补提交(显示加载中，不渲染任何step)，
+  //           false=确认是全新访问，正常显示流程
+  //
+  // 用 useLayoutEffect 而不是 useEffect：要在浏览器画第一帧之前就决定好
+  // 到底显示"续填加载中"还是"正常的生日页"，不能等一帧画完之后再切换，
+  // 不然会有一闪而过的错误画面。
+  const [resuming, setResuming] = useState<boolean | null>(null);
+
+  useLayoutEffect(() => {
+    let restoredState: OnboardingState | null = null;
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
-      if (saved) setState(JSON.parse(saved));
+      if (saved) {
+        restoredState = JSON.parse(saved);
+        setState(restoredState!);
+      }
     } catch {}
+
+    const supabase = createClient();
+
+    if (restoredState?.birthYear) {
+      // 这个标签页里确实有填过的草稿数据——sessionStorage不跨标签页
+      // 共享，能有这份数据，说明这就是同一次尝试的延续（最典型的情况：
+      // 用 Google/Facebook 登录导致整页跳转再跳回来，页面被重新挂载，
+      // 之前 teaser 页里那个"监听登录成功就自动提交"的机制随着旧页面
+      // 一起被销毁了，永远不会被触发）。直接用恢复出来的资料补上这次
+      // 本该发生但没发生的提交。
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setResuming(true);
+          saveToDatabase(restoredState!);
+        } else {
+          setResuming(false);
+        }
+      });
+    } else {
+      // 这个标签页里没有任何草稿数据，但可能已经是登录状态——这不是
+      // "同一次尝试的延续"，因为真正在填的人一定会在这个标签页里留下
+      // sessionStorage痕迹。没有痕迹却已登录，最合理的解释是共用设备场景：
+      // 上一个人的登录凭证存在localStorage里（跨标签页共享），这次是
+      // 完全不同的人开了一个新标签页碰到了它。主动登出，保证接下来
+      // 是真正干净的开始，不会有人在不知情的情况下把资料填进别人账号。
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          supabase.auth.signOut().then(() => setResuming(false));
+        } else {
+          setResuming(false);
+        }
+      });
+    }
   }, []);
 
   const updateState = (updates: Partial<OnboardingState>) => {
@@ -238,7 +309,7 @@ export default function OnboardingPage() {
             className="w-full appearance-none px-6 py-4 pr-12 rounded-2xl text-lg font-medium cursor-pointer focus:outline-none"
             style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', border: '1px solid hsl(var(--border))' }}
           >
-            <option value="" style={{ color: 'hsl(var(--muted-foreground))' }}>{tTime('hourPlaceholder')}</option>
+            <option value="" style={{ color: 'hsl(var(--muted-foreground))' }}>{tTime('unknownHour')}</option>
             {HOURS.map((h) => (
               <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
             ))}
@@ -271,7 +342,7 @@ export default function OnboardingPage() {
                   className="w-full appearance-none px-6 py-4 pr-12 rounded-2xl text-lg font-medium cursor-pointer focus:outline-none"
                   style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', border: '1px solid hsl(var(--border))' }}
                 >
-                  <option value="">{tTime('minutePlaceholder')}</option>
+                  <option value="">{tTime('unknownMinute')}</option>
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
                   ))}
@@ -386,9 +457,46 @@ export default function OnboardingPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: 'hsl(var(--background))' }}
+      style={{ background: 'hsl(var(--background))', userSelect: 'none' }}
     >
+      {introPlaying && (
+        <div
+          aria-hidden="true"
+          onTransitionEnd={(e) => {
+            if (e.propertyName === 'opacity' && introRevealing) {
+              setIntroPlaying(false);
+              setIntroRevealing(false);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'hsl(var(--background))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: introRevealing ? 0 : 1,
+            transition: 'opacity 0.6s ease',
+          }}
+        >
+          <ValveConverge direction="open" onComplete={() => setIntroRevealing(true)} />
+        </div>
+      )}
+
+      <div
+        className="fixed top-4 right-4 z-20"
+        style={{ color: 'hsl(var(--muted-foreground))' }}
+      >
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-lg">
+        {resuming !== false ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(var(--foreground))' }} />
+          </div>
+        ) : (
         <AnimatePresence mode="wait">
           {step === 'date' && (
             <motion.div
@@ -433,13 +541,55 @@ export default function OnboardingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.4 }}
                 className="fixed inset-0 overflow-y-auto"
               >
-                <TeaserPage
-                  baziData={teaserData}
-                  onLogin={() => setStep('login')}
-                />
+                {/* TeaserPage 从一开始就挂载，透明度由 teaserRevealing 驱动，
+                    跟logo的放大+虚化用同一个状态、同时触发，视觉上完全同步 */}
+                <div
+                  style={{
+                    opacity: teaserRevealing ? 1 : 0,
+                    transition: 'opacity 0.6s ease',
+                  }}
+                >
+                  <TeaserPage
+                    baziData={teaserData}
+                    onLogin={() => setStep('login')}
+                  />
+                </div>
+
+                {/* logo层：汇合动画播完之前盖在最上面；汇合一完成就
+                    放大+虚化出界，出界动画结束后彻底移除 */}
+                {!teaserLogoGone && (
+                  <div
+                    className="fixed inset-0 flex items-center justify-center"
+                    style={{
+                      pointerEvents: 'none',
+                      background: 'hsl(var(--background))',
+                      opacity: teaserRevealing ? 0 : 1,
+                      transition: 'opacity 0.6s ease',
+                    }}
+                  >
+                    <div
+                      onTransitionEnd={(e) => {
+                        if (e.propertyName === 'transform' && teaserRevealing) {
+                          setTeaserLogoGone(true);
+                        }
+                      }}
+                      style={{
+                        transform: teaserRevealing ? 'scale(8)' : 'scale(1)',
+                        filter: teaserRevealing ? 'blur(40px)' : 'blur(0px)',
+                        transition: 'transform 0.6s ease, filter 0.6s ease',
+                      }}
+                    >
+                      <ValveConverge
+                        direction="close"
+                        railEnd={2600}
+                        onComplete={() => setTeaserRevealing(true)}
+                      />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -465,6 +615,7 @@ export default function OnboardingPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
 
         {saving && (
           <div className="fixed inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -482,9 +633,11 @@ function LoginStep({ onSuccess }: { onSuccess: () => void }) {
 
 function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
@@ -514,9 +667,25 @@ function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding` }
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding&locale=${locale}`,
+        // 强制每次都弹账号选择框，不静默复用浏览器里已有的Google登录状态。
+        // 清cookie解决不了这个问题——Google的登录态存在accounts.google.com
+        // 自己的域下，跟本站cookie无关。
+        queryParams: { prompt: 'select_account' },
+      }
     });
     setGoogleLoading(false);
+  };
+
+  const handleFacebookLogin = async () => {
+    setFacebookLoading(true);
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding&locale=${locale}` }
+    });
+    setFacebookLoading(false);
   };
 
   if (sent) {
@@ -539,6 +708,19 @@ function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
         </svg>
         {googleLoading ? t('login.sending') : t('login.continueWithGoogle')}
       </button>
+
+      <button
+        onClick={handleFacebookLogin}
+        disabled={facebookLoading}
+        className="w-full py-3 rounded-lg font-medium flex items-center justify-center gap-3 disabled:opacity-50 transition-colors"
+        style={{ border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        {facebookLoading ? t('login.sending') : t('login.continueWithFacebook')}
+      </button>
+
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: 'hsl(var(--border))' }}/>
         <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('login.or')}</span>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <style>
+    /* 默认浅色环境：深黑线条 */
+    path {
+      stroke: #0A0A0B;
+    }
+    /* 深色环境侦测：纯白线条 */
+    @media (prefers-color-scheme: dark) {
+      path { stroke: #FFFFFF; }
+    }
+  </style>
+  <g stroke-width="100" stroke-linecap="butt" stroke-linejoin="round">
+    <path d="M 264.786 826.46 A 400 400 0 0 1 512 112 L 512 317.653 A 152.786 152.786 0 0 1 453.64 437.774 A 94.427 94.427 0 0 0 453.64 586.225" />
+    <path d="M 759.213 197.539 A 400 400 0 0 1 512 912 L 512 706.347 A 152.786 152.786 0 0 1 570.359 586.225 A 94.427 94.427 0 0 0 570.359 437.774" />
+  </g>
+</svg>

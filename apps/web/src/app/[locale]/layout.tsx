@@ -3,6 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import QueryProvider from '@/components/providers/QueryProvider';
 
 export default async function LocaleLayout({
   children,
@@ -19,7 +20,9 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages}>
       <ThemeProvider>
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </ThemeProvider>
     </NextIntlClientProvider>
   );

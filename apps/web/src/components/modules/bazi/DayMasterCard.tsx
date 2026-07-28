@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
 
 const STEM_PINYIN: Record<string, string> = {
   '甲': 'jia', '乙': 'yi', '丙': 'bing', '丁': 'ding', '戊': 'wu',
@@ -24,15 +25,11 @@ export const CARD_META = { id: 'day-master', cols: COLS, rows: ROWS, module: 'ba
 
 export default function DayMasterCard({ profileId }: { profileId: string }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const [bazi, setBazi] = useState<any>(null);
+  const { data } = useDashboardData(profileId);
+  const bazi = data?.bazi ?? null;
 
   useEffect(() => {
-    if (!profileId) return;
     setImgFailed(false);
-    fetch(`/api/dashboard?profile_id=${profileId}`)
-      .then(r => r.json())
-      .then(d => { if (d.bazi) setBazi(d.bazi); })
-      .catch(() => {});
   }, [profileId]);
 
   if (!bazi) {

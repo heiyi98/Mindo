@@ -14,14 +14,19 @@ export const WIDGET_REGISTRY = [
   { id: 'day-master',    defaultColSpan: 2, defaultRowSpan: 3 },
   { id: 'bazi-reading',  defaultColSpan: 1, defaultRowSpan: 2 },
   { id: 'bigfive-radar', defaultColSpan: 2, defaultRowSpan: 2 },
-  { id: 'western-chart', defaultColSpan: 2, defaultRowSpan: 2 },
+  // { id: 'western-chart', defaultColSpan: 2, defaultRowSpan: 2 }, // 暂时隐藏：分钟未知/无经纬度档案会导致
+  // StarChartWheel读取result.houses.cusps时崩溃（日期模式不返回houses），且西洋星盘理论认知本身还没梳理清楚，
+  // 待恢复时把这行取消注释即可，组件代码本身未改动。同步见 assessments.ts / page.tsx 里的对应改动。
+  { id: 'mind-cards',    defaultColSpan: 1, defaultRowSpan: 2 },
 ];
 
 // 默认布局
 export const DEFAULT_LAYOUT: LayoutItem[] = [
   { id: 'profile-card',  col: 1, row: 1, colSpan: 2, rowSpan: 1 },
-  { id: 'bazi-chart',    col: 1, row: 2, colSpan: 4, rowSpan: 2 },
-  { id: 'wuxing-radar',  col: 5, row: 2, colSpan: 2, rowSpan: 2 },
+  { id: 'bazi-chart',    col: 3, row: 1, colSpan: 4, rowSpan: 2 },
+  { id: 'day-master',    col: 1, row: 2, colSpan: 2, rowSpan: 3 },
+  { id: 'bigfive-radar', col: 3, row: 3, colSpan: 2, rowSpan: 2 },
+  { id: 'wuxing-radar',  col: 5, row: 3, colSpan: 2, rowSpan: 2 },
 ];
 
 const COLS = 6;

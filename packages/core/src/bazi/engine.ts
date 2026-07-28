@@ -1,5 +1,5 @@
 import { Solar } from 'lunar-typescript';
-import { find } from 'geo-tz';
+import type { UniversalTimeResult } from '../time';
 
 export const STEM_MAP: Record<string, string> = {
   '甲': 'Jia', '乙': 'Yi', '丙': 'Bing', '丁': 'Ding', '戊': 'Wu',
@@ -18,110 +18,20 @@ const SHISHEN_MAP: Record<string, string> = {
   '日主': 'DayMaster', '': 'None'
 };
 
+export const baziEngine = {
+  // 参数类型直接引用 time 模块的 UniversalTimeResult，不再自己手写一份
+  // 长得很像的类型。这样以后 time/engine.ts 那边改字段名，这里编译期
+  // 就会报错，不用等运行时某个值变成 undefined 才发现两边对不上。
+  calculate: (timeData: UniversalTimeResult) => {
+    const { year: y, month: m, day: d, hour: h, minute: min, solarTimeStr, isTimeUnknown } = timeData;
 
-export const engine = {
-  calculate: (input: { dateStr: string; lat: number; lng: number; timeUnknown?: boolean; timezone?: string }) => {
-    const dateParts = input.dateStr.split('T');
-    const ymd = dateParts[0].split('-');
-    const hm = dateParts[1].split(':');
-
-    let y = parseInt(ymd[0]);
-    let m = parseInt(ymd[1]);
-    let d = parseInt(ymd[2]);
-    let h = parseInt(hm[0]);
-    let min = parseInt(hm[1]);
-
-    const birthY = y, birthM = m, birthD = d;
-    // solarMinutes 通过 setUTCMinutes 已编码为本地时钟读数（lng*4 ≈ utcOffset 相消）
-    let solarDisplayMinutes = h * 60 + min;
-
-    if (!input.timeUnknown && input.lng && input.lat) {
-      // 第一步：查行政时区，获取UTC偏移（优先使用档案存储的时区，避免重复查询）
-      let utcOffsetMinutes = 480; // 默认UTC+8
-
-      const tzName = input.timezone || (() => {
-        try {
-          const tzNames = find(input.lat, input.lng);
-          return tzNames[0] || null;
-        } catch {
-          return null;
-        }
-      })();
-
-      if (tzName) {
-        try {
-          const testDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-          const localParts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: tzName,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          }).formatToParts(testDate);
-          const get = (type: string) =>
-            parseInt(localParts.find(p => p.type === type)?.value || '0');
-          const localH = get('hour');
-          const localMin = get('minute');
-          const localTotalMin = localH * 60 + localMin;
-          let offsetMin = localTotalMin - 720;
-          if (offsetMin > 720) offsetMin -= 1440;
-          if (offsetMin < -720) offsetMin += 1440;
-          utcOffsetMinutes = offsetMin;
-        } catch {
-          utcOffsetMinutes = Math.round(input.lng / 15) * 60;
-        }
-      }
-
-      // 第二步：均时差（Equation of Time）
-      const current = new Date(Date.UTC(y, m - 1, d));
-      const start = new Date(Date.UTC(y, 0, 0));
-      const dayOfYear = Math.floor(
-        (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      const B = (2 * Math.PI / 364) * (dayOfYear - 81);
-      const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-
-      // 第三步：行政时间转UTC
-      const localMinutes = h * 60 + min;
-      const utcMinutes = localMinutes - utcOffsetMinutes;
-
-      // 第四步：真太阳时（基于UTC + 地理经度）
-      const solarMinutes = utcMinutes + (input.lng * 4) + eot;
-
-      solarDisplayMinutes = solarMinutes;
-
-      // 第五步：真太阳时直接用于排盘
-      // solarMinutes 是基于UTC+地理经度的真太阳时（分钟数，从当天0点起算）
-      // 不需要转回行政时间，直接传给 lunar-typescript
-      const baseDate = new Date(Date.UTC(y, m - 1, d, 0, 0));
-      baseDate.setUTCMinutes(Math.round(solarMinutes));
-
-      y = baseDate.getUTCFullYear();
-      m = baseDate.getUTCMonth() + 1;
-      d = baseDate.getUTCDate();
-      h = baseDate.getUTCHours();
-      min = baseDate.getUTCMinutes();
-    }
-
-    // solar_time 显示：solarMinutes 通过 setUTCMinutes 已编码为本地时钟读数，直接格式化
-    const solarDisplayDate = new Date(Date.UTC(birthY, birthM - 1, birthD, 0, 0));
-    solarDisplayDate.setUTCMinutes(Math.round(solarDisplayMinutes));
-    const sdY = solarDisplayDate.getUTCFullYear();
-    const sdM = String(solarDisplayDate.getUTCMonth() + 1).padStart(2, '0');
-    const sdD = String(solarDisplayDate.getUTCDate()).padStart(2, '0');
-    const sdH = String(solarDisplayDate.getUTCHours()).padStart(2, '0');
-    const sdMin = String(solarDisplayDate.getUTCMinutes()).padStart(2, '0');
-    const solarTimeStr = `${sdY}-${sdM}-${sdD} ${sdH}:${sdMin}:00`;
-
-    // 日柱路线：用正午12:00锁定公历日期，避免子时（23:xx）被lunar-typescript推进到次日
+    // 日柱路线
     const solarDay = Solar.fromYmdHms(y, m, d, 12, 0, 0);
     const lunarDay = solarDay.getLunar();
     const baziDay = lunarDay.getEightChar();
     baziDay.setSect(1);
 
-    // 时柱路线：用实际时间，正确识别时辰（23:xx → 子时）
+    // 时柱路线
     const solarHour = Solar.fromYmdHms(y, m, d, h, min, 0);
     const lunarHour = solarHour.getLunar();
     const baziHour = lunarHour.getEightChar();
@@ -141,7 +51,7 @@ export const engine = {
 
     return {
       meta: {
-        solar_time: solarTimeStr,
+        solar_time: solarTimeStr, 
         lunar_time: lunarDay.toString(),
         jie_qi: lunarDay.getJieQi()
       },
@@ -149,7 +59,7 @@ export const engine = {
         year: buildPillar(baziDay.getYearGan(), baziDay.getYearZhi(), baziDay.getYearNaYin(), baziDay.getYearShiShenGan(), baziDay.getYearShiShenZhi(), baziDay.getYearHideGan()),
         month: buildPillar(baziDay.getMonthGan(), baziDay.getMonthZhi(), baziDay.getMonthNaYin(), baziDay.getMonthShiShenGan(), baziDay.getMonthShiShenZhi(), baziDay.getMonthHideGan()),
         day: buildPillar(baziDay.getDayGan(), baziDay.getDayZhi(), baziDay.getDayNaYin(), '日主', baziDay.getDayShiShenZhi(), baziDay.getDayHideGan()),
-        hour: input.timeUnknown
+        hour: isTimeUnknown
           ? { stem: 'Unknown', branch: 'Unknown', nayin: '', shishenStem: '', shishenBranch: [], hiddenStems: [] }
           : buildPillar(baziHour.getTimeGan(), baziHour.getTimeZhi(), baziHour.getTimeNaYin(), baziHour.getTimeShiShenGan(), baziHour.getTimeShiShenZhi(), baziHour.getTimeShiShenZhi())
       },

@@ -31,6 +31,7 @@ async function loadMessages(locale: string): Promise<Record<string, any>> {
     `../../messages/${locale}/bigfive/index.json`,
     `../../messages/${locale}/bigfive/questions.json`,
     `../../messages/${locale}/western/index.json`,
+    `../../messages/${locale}/mindcards/index.json`,
   ];
 
   const moduleKeys = [
@@ -39,6 +40,7 @@ async function loadMessages(locale: string): Promise<Record<string, any>> {
     'bigfive',
     'bigfive.questions',
     'western',
+    'mindcards',
   ];
 
   let messages: Record<string, any> = { ...ui };

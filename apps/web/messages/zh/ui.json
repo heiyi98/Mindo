@@ -6,11 +6,11 @@
   },
   "nav": {
     "home": "主页",
-    "divination": "测算",
+    "assessments": "功能",
     "forum": "论坛",
     "shop": "商城",
-    "messages": "消息",
-    "profile": "我的"
+    "messages": "聊天",
+    "profile": "账户"
   },
   "common": {
     "loading": "加载中",
@@ -70,9 +70,9 @@
       "title": "你的出生时间是？",
       "description": "出生时辰用于推算时柱，使命盘更精准。若不清楚可以跳过。",
       "hourLabel": "时",
-      "hourPlaceholder": "不知道出生时间",
+      "unknownHour": "不知道出生小时",
       "minuteLabel": "分",
-      "minutePlaceholder": "选择分钟",
+      "unknownMinute": "不知道出生分钟",
       "confirm": "下一步",
       "next": "下一步",
       "skip": "跳过"
@@ -298,7 +298,8 @@
       "bigfive-radar": "大五人格",
       "western-chart": "西洋星盘",
       "day-master": "日主小人",
-      "bazi-reading": "AI解读"
+      "bazi-reading": "AI解读",
+      "mind-cards": "片语"
     }
   },
   "divination": {

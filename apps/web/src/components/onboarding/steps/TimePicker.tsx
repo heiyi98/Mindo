@@ -75,7 +75,7 @@ export default function TimePicker({ onSelect, hideConfirm, autoConfirm, initial
             className="w-full appearance-none px-6 py-4 pr-12 rounded-2xl text-lg font-medium cursor-pointer focus:outline-none"
             style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', border: '1px solid hsl(var(--border))' }}
           >
-            <option value="">{t('hourPlaceholder')}</option>
+            <option value="">{t('unknownHour')}</option>
             {HOURS.map((hour) => (
               <option key={hour.value} value={hour.value}>{hour.label}:00</option>
             ))}
@@ -104,7 +104,7 @@ export default function TimePicker({ onSelect, hideConfirm, autoConfirm, initial
                   className="w-full appearance-none px-6 py-4 pr-12 rounded-2xl text-lg font-medium cursor-pointer focus:outline-none"
                   style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', border: '1px solid hsl(var(--border))' }}
                 >
-                  <option value="">{t('minutePlaceholder')}</option>
+                  <option value="">{t('unknownMinute')}</option>
                   {MINUTES.map((minute) => (
                     <option key={minute.value} value={minute.value}>{minute.label}</option>
                   ))}

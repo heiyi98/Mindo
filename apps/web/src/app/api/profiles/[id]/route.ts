@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// 更新档案
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,9 +11,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { display_name, birth_date, birth_time, birth_lat, birth_lng, birth_place_name, birth_timezone, gender } = body;
 
-  // 确认档案属于该用户
   const { data: existing } = await supabase
     .from('profiles')
     .select('id, user_id')
@@ -24,33 +21,36 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  const updates: any = {};
+  if (body.display_name !== undefined) updates.display_name = body.display_name;
+  if (body.birth_date !== undefined) updates.birth_date = body.birth_date;
+  if (body.birth_time !== undefined) updates.birth_time = body.birth_time || null;
+  if (body.birth_lat !== undefined) updates.birth_lat = body.birth_lat || null;
+  if (body.birth_lng !== undefined) updates.birth_lng = body.birth_lng || null;
+  if (body.birth_place_name !== undefined) updates.birth_place_name = body.birth_place_name || null;
+  if (body.birth_timezone !== undefined) updates.birth_timezone = body.birth_timezone || null;
+  if (body.gender !== undefined) updates.gender = body.gender ?? null;
+  if (body.order_index !== undefined) updates.order_index = body.order_index;
+  if (body.is_minute_unknown !== undefined) updates.is_minute_unknown = body.is_minute_unknown;
+
   const { error } = await supabase
     .from('profiles')
-    .update({
-      display_name,
-      birth_date,
-      birth_time: birth_time || null,
-      birth_lat: birth_lat || null,
-      birth_lng: birth_lng || null,
-      birth_place_name: birth_place_name || null,
-      birth_timezone: birth_timezone || null,
-      gender: gender ?? null,
-    })
+    .update(updates)
     .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // 出生信息变更后清空命盘快照（大五与生日无关，保留）
-  await Promise.all([
-    supabase.from('bazi_snapshots').delete().eq('profile_id', id),
-    supabase.from('astrology_snapshots').delete().eq('profile_id', id),
-    supabase.from('life_timeline').delete().eq('profile_id', id),
-  ]);
+  if (body.birth_date !== undefined || body.birth_time !== undefined || body.birth_lat !== undefined) {
+    await Promise.all([
+      supabase.from('bazi_snapshots').delete().eq('profile_id', id),
+      supabase.from('astrology_snapshots').delete().eq('profile_id', id),
+      supabase.from('life_timeline').delete().eq('profile_id', id),
+    ]);
+  }
 
   return NextResponse.json({ success: true });
 }
 
-// 删除档案
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -61,7 +61,6 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // 不允许删除is_self=true的主档案
   const { data: existing } = await supabase
     .from('profiles')
     .select('id, user_id, is_self')

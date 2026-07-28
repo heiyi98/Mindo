@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
-import { Sparkles, ArrowLeft, Sun, Moon, Share2, Download } from 'lucide-react'
+import { useRouter } from '@/i18n/navigation'
+import { Sparkles, ChevronLeft, Share2, Download } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { BaziOverviewChart, BaziShishenChart, BaziInteractionChart } from './BaziReadingChart'
 import { usePdfExport } from '@/hooks/usePdfExport'
@@ -17,11 +18,13 @@ interface ThemeData {
 }
 
 interface Props {
-  snapshotId: string
+  snapshotId: string | null
+  readingId: string
   shishenMetadata: Record<string, string[]>
   calculationResult: any
   initialData: ThemeData
   locale: string
+  birthMismatch: boolean
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -49,15 +52,16 @@ const LongDivider = () => (
 const SectionGap = () => <div className="mb-16" />
 
 export default function BaziReadingView({
-  snapshotId, shishenMetadata, calculationResult, initialData, locale,
+  snapshotId, readingId, shishenMetadata, calculationResult, initialData, locale, birthMismatch,
 }: Props) {
   const t = useTranslations('bazi')
   const router = useRouter()
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const [data, setData] = useState<ThemeData>(initialData)
   const [generating, setGenerating] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [showMismatch, setShowMismatch] = useState(birthMismatch)
 
   // 隐藏截图容器的refs
   const overviewRef = useRef<HTMLDivElement>(null)
@@ -67,7 +71,7 @@ export default function BaziReadingView({
   const { exportPdf } = usePdfExport(locale)
 
   const hasAnyTheme =
-    !!data.ai_reading_theme1 || !!data.ai_reading_theme2 ||s
+    !!data.ai_reading_theme1 || !!data.ai_reading_theme2 ||
     !!data.ai_reading_theme3 || !!data.ai_reading_theme4
 
   // 日主中文
@@ -150,25 +154,31 @@ export default function BaziReadingView({
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel(`reading-${snapshotId}`)
+      .channel(`reading-${readingId}`)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public',
-        table: 'bazi_snapshots', filter: `id=eq.${snapshotId}`,
+        table: 'bazi_readings', filter: `id=eq.${readingId}`,
       }, (payload) => {
         setData(prev => ({ ...prev, ...payload.new }))
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [snapshotId])
+  }, [readingId])
 
   const handleGenerate = async () => {
     setGenerating(true)
+    setShowMismatch(false)
     try {
-      await fetch('/api/ai/reading', {
+      const res = await fetch('/api/ai/reading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ snapshotId }),
       })
+      const d = await res.json()
+      if (d.readingId) {
+        // 跳转到新报告页
+        router.push(`/dashboard/assessments/bazi/reading?readingId=${d.readingId}`)
+      }
     } catch (err) {
       console.error(err)
       setGenerating(false)
@@ -201,21 +211,17 @@ export default function BaziReadingView({
     <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
       style={{ background: 'hsl(var(--background))', borderBottom: '1px solid hsl(var(--border)/0.4)' }}
     >
+      {/* 单纯的"返回上一页"，不写死目标地址——报告可能是从八字主页
+          点进来的，也可能是从资产管理点进来的，router.back() 会精准
+          回到用户实际来的那一页，不需要程序去猜 */}
       <button
-        onClick={() => router.push(`/${locale}/dashboard/divination/bazi`)}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        onClick={() => router.back()}
+        className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ArrowLeft size={16} />
-        <span>返回</span>
+        <ChevronLeft size={20} />
       </button>
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-          className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-          style={{ background: 'hsl(var(--muted))' }}
-        >
-          {resolvedTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
+        <ThemeToggle />
       </div>
     </div>
   )
@@ -247,6 +253,36 @@ export default function BaziReadingView({
   return (
     <>
       <TopBar />
+
+      {/* 出生信息不符提示 */}
+      {showMismatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="rounded-2xl p-6 max-w-sm w-full shadow-xl"
+            style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}>
+            <p className="text-sm font-medium text-foreground mb-2">出生信息已修改</p>
+            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
+              检测到档案的出生信息与报告生成时不一致，是否重新生成报告？
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowMismatch(false)}
+                className="flex-1 py-2 rounded-xl text-sm border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                继续查看
+              </button>
+              <button
+                onClick={handleGenerate}
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+              >
+                重新生成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto px-4 pt-20 pb-16">
 
         {/* 分享按钮：界面右上角，固定在视口 */}
@@ -286,8 +322,8 @@ export default function BaziReadingView({
           </div>
         )}
 
-        {/* 隐藏截图容器：用于pdf导出截图，visibility:hidden保留布局但不可见 */}
-        <div style={{ position: 'absolute', left: -9999, top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+        {/* 隐藏截图容器：fixed定位在视口内但不可见，确保html2canvas能截到 */}
+        <div style={{ position: 'fixed', left: 0, top: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
           {/* 总览命盘 */}
           <div ref={overviewRef} style={{ width: 280, background: 'white' }}>
             <BaziOverviewChart calculationResult={calculationResult} />

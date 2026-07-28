@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Wuxing } from '@mindo/core';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
 
 const ELEMENT_COLORS: Record<string, string> = {
   Wood:  '#388E3C', Fire:  '#D32F2F', Earth: '#F57F17',
@@ -148,15 +149,8 @@ export const CARD_META = { id: 'wuxing-radar', cols: COLS, rows: ROWS, module: '
 
 export default function WuxingRadarCard({ profileId }: { profileId: string }) {
   const [flipped, setFlipped] = useState(false);
-  const [bazi, setBazi] = useState<any>(null);
-
-  useEffect(() => {
-    if (!profileId) return;
-    fetch(`/api/dashboard?profile_id=${profileId}`)
-      .then(r => r.json())
-      .then(d => { if (d.bazi) setBazi(d.bazi); })
-      .catch(() => {});
-  }, [profileId]);
+  const { data } = useDashboardData(profileId);
+  const bazi = data?.bazi ?? null;
 
   if (!bazi) {
     return (

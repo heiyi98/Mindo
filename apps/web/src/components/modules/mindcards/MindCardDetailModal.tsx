@@ -2,13 +2,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { Eye, Bookmark, MessageSquareMore, SquareArrowOutUpRight, Trash2 } from 'lucide-react';
+import { Eye, Bookmark, MessageSquareMore, SquareArrowOutUpRight, Trash2, Plus } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import MindCardBody from './MindCardBody';
 import FolderMultiSelectPopover from './FolderMultiSelectPopover';
 import BottomSheetPopover from './BottomSheetPopover';
-import MindCardCommentModal from './MindCardCommentModal';
+import MindCardCommentModal, { commentsQueryKey, fetchComments } from './MindCardCommentModal';
 import type { MindCard } from './MindCardCarousel';
+import { useRouter } from '@/i18n/navigation';
 
 interface MindCardDetailModalProps {
   open: boolean;
@@ -34,26 +36,81 @@ export default function MindCardDetailModal({
   autoOpenComments, autoExpandParentId,
 }: MindCardDetailModalProps) {
   const t = useTranslations('mindcards');
+  const router = useRouter();
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [commentPopoverOpen, setCommentPopoverOpen] = useState(autoOpenComments === true);
-  const [commentCount, setCommentCount] = useState(0);
   const [visibilityOpen, setVisibilityOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const cardFrameRef = useRef<HTMLDivElement>(null);
+  // 是否已关注这张卡片的作者——不能只用useState的初始值（弹窗组件在轮播场景
+  // 下可能不会真正卸载重建，只是card这个prop换了内容，初始值只在首次挂载时
+  // 生效，不会跟着prop变化自动同步，必须用effect显式同步，否则容易出现
+  // "换了一张卡片，关注状态还残留着上一张卡片作者的状态"这种串台问题。
+  const [followed, setFollowed] = useState(card.authorFollowedByViewer ?? false);
+  useEffect(() => {
+    setFollowed(card.authorFollowedByViewer ?? false);
+  }, [card.id, card.authorFollowedByViewer]);
   // 只在客户端挂载完成后才允许创建portal——document在服务端渲染阶段不存在，
   // 这个守卫避免SSR阶段直接调用createPortal(..., document.body)报错。
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // 留言总数拉取——放在早退return之前，遵守hooks不能在条件判断之后声明的规则
-  useEffect(() => {
-    if (!open) return;
-    fetch(`/api/mind-cards/${card.id}/comments`)
-      .then((r) => r.json())
-      .then((d) => setCommentCount(d.totalCount ?? 0))
-      .catch(() => {});
-  }, [open, card.id]);
+  // 跟MindCardCommentModal/MindCardCarousel共用同一份评论数缓存——面板内
+  // 的乐观更新（发/删留言）会直接反映在这个数量徽标上，不需要额外回调。
+  const { data: commentsData } = useQuery({
+    queryKey: commentsQueryKey(card.id),
+    queryFn: () => fetchComments(card.id),
+    enabled: open,
+  });
+  const commentCount = commentsData?.totalCount ?? 0;
+
+  // 可见度修改：乐观更新——立刻通知父层显示新的可见度，失败了悄悄改回
+  // 修改前的值，不额外弹错误提示。
+  const changeVisibilityMutation = useMutation({
+    mutationFn: async (v: string) => {
+      const res = await fetch(`/api/mind-cards/${card.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visibility: v }),
+      });
+      if (!res.ok) throw new Error('request failed');
+    },
+    onMutate: (v) => {
+      const previousVisibility = card.visibility;
+      onVisibilityChange?.(card.id, v);
+      return { previousVisibility };
+    },
+    onError: (_err, _v, context) => {
+      if (context) onVisibilityChange?.(card.id, context.previousVisibility);
+    },
+  });
+
+  const deleteCardMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/mind-cards/${card.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('request failed');
+    },
+  });
+
+  // 关注作者：乐观更新——立刻点亮"+关注"胶囊，失败悄悄撤销，不弹错误提示，
+  // 遵循收藏/关注类操作统一的体验规则。
+  const followMutation = useMutation({
+    mutationFn: async (targetId: string) => {
+      const res = await fetch('/api/follows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId }),
+      });
+      if (!res.ok) throw new Error('request failed');
+    },
+    onMutate: () => {
+      setFollowed(true);
+    },
+    onError: () => {
+      setFollowed(false);
+    },
+  });
 
   if (!open || !mounted) return null;
 
@@ -62,20 +119,24 @@ export default function MindCardDetailModal({
   const anyPopoverOpen = folderPickerOpen || visibilityOpen || deleteConfirmOpen;
 
   const changeVisibility = (v: string) => {
-    onVisibilityChange?.(card.id, v);
     setVisibilityOpen(false);
-    fetch(`/api/mind-cards/${card.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visibility: v }),
-    }).catch(console.error);
+    changeVisibilityMutation.mutate(v);
   };
 
   const confirmDelete = () => {
     setDeleteConfirmOpen(false);
     onDeleted?.(card.id);
     onClose();
-    fetch(`/api/mind-cards/${card.id}`, { method: 'DELETE' }).catch(console.error);
+    deleteCardMutation.mutate();
+  };
+
+  const handleFollow = () => {
+    followMutation.mutate(card.user_id);
+  };
+
+  const openAuthorProfile = () => {
+    if (!card.author?.handle) return;
+    router.push(`/dashboard/mind-cards/profile/${card.author.handle}`);
   };
 
   const exportAsImage = async () => {
@@ -119,6 +180,40 @@ export default function MindCardDetailModal({
         borderRadius: 16,
         overflow: 'hidden' as const,
       };
+
+  // 作者信息行：头像位置先留空（设计需求，等真做头像了直接往这个位置填，
+  // 不用重新排版）+ 名字（不显示handle，跳转和关注判断内部仍然用得到）+
+  // 关注胶囊（已关注/是自己的卡片都不显示）。位置叠在actionBar正上方，
+  // 两条各自独立，不挤在同一行里。
+  const authorBar = card.author && (
+    <div
+      className="absolute left-0 right-0 flex items-center gap-2 px-3"
+      style={{ bottom: 46 }}
+      onClick={(e) => e.stopPropagation()}
+      data-html2canvas-ignore="true"
+    >
+      {/* 头像预留空间——目前不放任何占位图形，纯粹占位置 */}
+      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
+      <button
+        type="button"
+        onClick={openAuthorProfile}
+        className="text-sm"
+        style={{ color: 'hsl(var(--foreground))' }}
+      >
+        {card.author.display_name || card.author.handle}
+      </button>
+      {!isOwn && !followed && (
+        <button
+          type="button"
+          onClick={handleFollow}
+          className="flex items-center justify-center rounded-full"
+          style={{ width: 18, height: 18, background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+        >
+          <Plus size={12} />
+        </button>
+      )}
+    </div>
+  );
 
   // 按钮栏叠加在卡片内部（通过MindCardBody的overlay插槽），不再是卡片下方
   // 独立一条。data-html2canvas-ignore让导出图片时自动跳过这一层，不会把
@@ -174,7 +269,12 @@ export default function MindCardDetailModal({
             grow
             frameStyle={frameStyle}
             onClick={(e) => e.stopPropagation()}
-            overlay={actionBar}
+            overlay={(
+              <>
+                {authorBar}
+                {actionBar}
+              </>
+            )}
           />
         </div>
       </div>
@@ -191,7 +291,6 @@ export default function MindCardDetailModal({
         vertical={vertical}
         open={commentPopoverOpen}
         onClose={() => setCommentPopoverOpen(false)}
-        onCountChange={setCommentCount}
         autoExpandParentId={autoExpandParentId}
       />
 

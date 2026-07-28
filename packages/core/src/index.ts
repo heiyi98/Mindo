@@ -1,3 +1,6 @@
+// 通用时间引擎
+export * from './time/index';
+
 // 八字命理
 export { analyzeBazi, toBaziSnapshot } from './bazi/analysis';
 export { preparePhase1Input } from './bazi/preparePhase1Input';
@@ -26,6 +29,9 @@ export type {
   FacetResult as BigFiveFacetResult,
 } from './psychology/bigfive/types';
 export { ipipNeo120Dictionary } from './psychology/bigfive/dictionary';
+
+// 社交匹配（片语相似度引擎）
+export * from './social/index';
 
 // 西洋星盘
 export { calculateStarChart, calculateDateMode, calculateFullMode } from './astrology/western';

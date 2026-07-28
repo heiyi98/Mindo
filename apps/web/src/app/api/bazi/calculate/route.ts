@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { engine, analyzeBazi } from '@mindo/core';
+import { baziEngine as engine, calculateUniversalTime, analyzeBazi } from '@mindo/core';
 import type { TianGan, DiZhi, Wuxing } from '@mindo/core';
 
 export async function POST(request: Request) {
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     const dateStr = `${birthYear}-${String(birthMonth).padStart(2,'0')}-${String(birthDay).padStart(2,'0')}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00`;
     console.log('[bazi/calculate] dateStr:', dateStr, '| timeUnknown:', timeUnknown, '| lat:', lat, '| lng:', lng);
 
-    const baziResult = engine.calculate({ dateStr, lat, lng, timeUnknown });
+    const timeResult = calculateUniversalTime({ dateStr, lat, lng, timeUnknown });
+    const baziResult = engine.calculate(timeResult);
 
     const analysis = analyzeBazi({
       year:  { stem: baziResult.pillars.year.stem as TianGan,  branch: baziResult.pillars.year.branch as DiZhi  },

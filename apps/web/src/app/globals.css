@@ -24,6 +24,16 @@
     --ring: 240 3% 12%;
     --radius: 1rem;
     --glow: 240 5% 90%;
+
+    /* 毛玻璃系统（浅色模式） */
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-blur: 24px;
+
+    /* 强调色（浅色模式）——具体色值是我按深色模式的同一色相退算的占位值，
+       不是设计稿定的，你可以按品牌调性直接改这两行 */
+    --color-accent: #3b5bdb;
+    --color-accent-dim: rgba(59, 91, 219, 0.12);
   }
 
   .dark {
@@ -88,5 +98,25 @@
   }
   .glow-medium {
     box-shadow: var(--glow-medium);
+  }
+}
+
+/* ValveLogo 待机态呼吸感——这一层透明度会跟 LandingContent 里外层的 0.4
+   基准透明度相乘，所以区间必须贴近 1（小幅波动），不能再用大跨度，
+   否则相乘后比没加呼吸感之前还淡。 */
+@keyframes valveBreathe {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *[style*="valveBreathe"] {
+    animation: none !important;
   }
 }

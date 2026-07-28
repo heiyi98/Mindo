@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 
 interface CityData {
   name: string;
@@ -25,9 +26,6 @@ export default function CityPicker({ onSelect, hideTitle, hideConfirm, initialCi
 
   const [query, setQuery] = useState(initialCity?.name ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [results, setResults] = useState<CityData[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState(false);
   const [selectedCity, setSelectedCity] = useState<CityData | null>(initialCity ?? null);
 
   useEffect(() => {
@@ -35,31 +33,20 @@ export default function CityPicker({ onSelect, hideTitle, hideConfirm, initialCi
     return () => clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    if (!debouncedQuery.trim() || selectedCity) {
-      setResults([]); setIsSearching(false); setError(false);
-      return;
-    }
-    const fetchCities = async () => {
-      setIsSearching(true); setError(false);
-      try {
-        const res = await fetch(`/api/city-search?q=${encodeURIComponent(debouncedQuery)}&lang=${locale}`);
-        if (!res.ok) throw new Error("API Error");
-        const data = await res.json();
-        setResults(data.results || []);
-      } catch {
-        setError(true); setResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-    fetchCities();
-  }, [debouncedQuery, locale, selectedCity]);
+  const { data, isFetching: isSearching, isError: error } = useQuery({
+    queryKey: ["city-search-onboarding", debouncedQuery, locale],
+    queryFn: async () => {
+      const res = await fetch(`/api/city-search?q=${encodeURIComponent(debouncedQuery)}&lang=${locale}`);
+      if (!res.ok) throw new Error("API Error");
+      return res.json();
+    },
+    enabled: !!debouncedQuery.trim() && !selectedCity,
+  });
+  const results: CityData[] = (!selectedCity && data?.results) || [];
 
   const handleSelectCity = (city: CityData) => {
     setSelectedCity(city);
     setQuery(city.name);
-    setResults([]);
     if (hideConfirm) {
       onSelect(city);
     }

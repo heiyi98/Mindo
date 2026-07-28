@@ -25,11 +25,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const [baziRes, westernRes, bigfiveRes] = await Promise.all([
+  const [baziSnapshotRes, baziReadingRes, westernRes, bigfiveRes] = await Promise.all([
     supabase
       .from('bazi_snapshots')
-      .select('id, ai_reading, ai_reading_theme1')
+      .select('id')
       .eq('profile_id', profileId)
+      .maybeSingle(),
+    // 取最新的bazi_readings记录（报告可能有多个，取最新）
+    supabase
+      .from('bazi_readings')
+      .select('id, ai_reading_theme1, ai_reading_status')
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle(),
     supabase
       .from('astrology_snapshots')
@@ -43,26 +51,39 @@ export async function GET(request: Request) {
       .maybeSingle(),
   ]);
 
-  const completionMap: Record<string, { isCompleted: boolean; hasAiReading: boolean; snapshotId: string | null }> = {
+  const completionMap: Record<string, {
+    isCompleted: boolean
+    hasAiReading: boolean
+    snapshotId: string | null
+    readingId: string | null
+  }> = {
     bazi: {
-      isCompleted: !!baziRes.data,
-      hasAiReading: !!baziRes.data?.ai_reading_theme1,
-      snapshotId: baziRes.data?.id ?? null,
+      isCompleted: !!baziSnapshotRes.data,
+      hasAiReading: !!baziReadingRes.data?.ai_reading_theme1,
+      snapshotId: baziSnapshotRes.data?.id ?? null,
+      readingId: baziReadingRes.data?.id ?? null,
     },
     western: {
       isCompleted: !!westernRes.data,
       hasAiReading: !!westernRes.data?.ai_reading,
       snapshotId: westernRes.data?.id ?? null,
+      readingId: null,
     },
     bigfive: {
       isCompleted: !!bigfiveRes.data,
       hasAiReading: false,
       snapshotId: bigfiveRes.data?.id ?? null,
+      readingId: null,
     },
   };
 
   const status = ASSESSMENTS.map(assessment => {
-    const completion = completionMap[assessment.id] ?? { isCompleted: false, hasAiReading: false, snapshotId: null };
+    const completion = completionMap[assessment.id] ?? {
+      isCompleted: false,
+      hasAiReading: false,
+      snapshotId: null,
+      readingId: null,
+    };
     return {
       id: assessment.id,
       category: assessment.category,
@@ -70,6 +91,7 @@ export async function GET(request: Request) {
       isCompleted: completion.isCompleted,
       hasAiReading: completion.hasAiReading,
       snapshotId: completion.snapshotId,
+      readingId: completion.readingId,
     };
   });
 

@@ -1,8 +1,8 @@
 /**
- * Mindo 测算模块注册表
+ * Mindo 测评模块注册表
  *
  * 这是整个系统的单一数据源（Single Source of Truth）。
- * 新增测算模块只需在此添加一条记录，系统其他部分自动感知。
+ * 新增测评模块只需在此添加一条记录，系统其他部分自动感知。
  *
  * SOLID原则：
  * - 开闭原则：对扩展开放，对修改关闭
@@ -16,7 +16,7 @@ export type InputRequirement = 'birthDate' | 'birthTime' | 'birthCity' | 'gender
 export interface Assessment {
   id: string;                          // 对应 snapshots.snapshot_type
   category: AssessmentCategory;        // 分类
-  route: string;                       // 前端路由（相对于/dashboard/divination/）
+  route: string;                       // 前端路由（相对于/dashboard/assessments/）
   nameKey: string;                     // i18n key
   descriptionKey: string;              // i18n key
   requires: InputRequirement[];        // 需要哪些输入
@@ -28,7 +28,7 @@ export interface Assessment {
 
 export const ASSESSMENTS: ReadonlyArray<Assessment> = [
   // ═══════════════════════════════
-  // 命理测算
+  // 命理测评
   // ═══════════════════════════════
   {
     id: 'bazi',
@@ -61,10 +61,11 @@ export const ASSESSMENTS: ReadonlyArray<Assessment> = [
     requires: ['birthDate', 'birthTime', 'birthCity'],
     isFree: true,
     hasAiReading: true,
-    isAvailable: true,
+    isAvailable: false, // 暂时隐藏（同步隐藏仪表盘星盘卡片，见dashboard-widgets.ts），
+                         // 待用户重新梳理西洋星盘理论认知后恢复，不是bug
   },
   // ═══════════════════════════════
-  // 心理测算
+  // 心理测量
   // ═══════════════════════════════
   {
     id: 'bigfive',

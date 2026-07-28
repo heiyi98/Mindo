@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdministrativeTimezone } from '@/lib/administrative-timezones';
+import { getAdministrativeTimezone } from '@mindo/core';
 
 const OSM_HEADERS = { 'User-Agent': 'Mindo-Quantum-Engine/1.0' };
 

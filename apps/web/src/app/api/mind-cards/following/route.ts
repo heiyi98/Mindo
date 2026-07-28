@@ -3,10 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
 import { filterVisibleCards } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
+import { fetchAuthorMap } from '@/lib/mindCards/authors';
 
 const PAGE_SIZE = 20;
 
-// GET /api/mind-cards/following?cursor=ISO时间戳 — 关注tab，按发布时间倒序，无相似度计算
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
@@ -16,7 +16,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get('cursor');
 
-    // follows 表对读取全局公开（现有 follows/list 路由已用同样的用户态client查询任意用户的关注列表）
     const { data: followingRows } = await supabase
       .from('follows')
       .select('following_id')
@@ -47,12 +46,16 @@ export async function GET(request: Request) {
     const cardIds = visibleCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);
 
-    // is_own：理论上关注tab不会出现自己的卡片（不会关注自己），这里依然如实
-    // 计算，不做特殊排除，保持所有返回卡片列表接口的字段行为一致
+    // 关注tab里的卡片，作者本来就是"我关注的人"，authorFollowedByViewer
+    // 恒为true，不需要额外查一次关注关系
+    const authorMap = await fetchAuthorMap(admin, visibleCards.map((c) => c.user_id));
+
     const cards = visibleCards.map((c) => ({
       ...c,
       favorited: myFavorites.has(c.id),
       is_own: c.user_id === user.id,
+      author: authorMap.get(c.user_id) ?? null,
+      authorFollowedByViewer: true,
     }));
 
     const nextCursor = rawCards && rawCards.length === PAGE_SIZE

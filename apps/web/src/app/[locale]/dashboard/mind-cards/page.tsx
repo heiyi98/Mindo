@@ -1,18 +1,28 @@
 'use client';
 import '@/styles/mind-fonts.module.css';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { ChevronLeft } from 'lucide-react';
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import MindCardCarousel, { type MindCard } from '@/components/modules/mindcards/MindCardCarousel';
 import MindCardsArcMenu from '@/components/modules/mindcards/MindCardsArcMenu';
 import MindCardNotificationPanel from '@/components/modules/mindcards/MindCardNotificationPanel';
+import { notificationsQueryKey, fetchNotifications } from '@/components/modules/mindcards/MindCardNotificationPanel';
+import { useMindCardsMe } from '@/hooks/queries/useMindCardsMe';
 
 const PREFETCH_LOOKAHEAD = 3;
 // 圆弧菜单栏自身的固定高度——这是UI chrome本身的既定尺寸，不属于"要跨设备动态适配"的
 // 那部分（卡片区域才是），继续保留这个常量只是用来给底部预留出对应的占位空间，避免
 // 内容被固定定位的菜单栏遮住。
 const ARC_MENU_RESERVED_PX = 96;
+
+type FeedTab = 'following' | 'recommend';
+
+interface FeedPage {
+  cards: MindCard[];
+  nextCursor: string | null;
+}
 
 // 按id去重，只保留每个id第一次出现的那份，后出现的丢弃。不管是候选卡片数量太少
 // 触发了连续两次预取、还是别的什么时序原因导致同一张卡片被读到了两次，最终真正
@@ -26,49 +36,78 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
   });
 }
 
+function feedQueryKey(tab: FeedTab) {
+  return ['mind-cards-feed', tab] as const;
+}
+
+async function fetchFeedPage(tab: FeedTab, cursor: string | null): Promise<FeedPage> {
+  if (tab === 'following') {
+    const url = cursor ? `/api/mind-cards/following?cursor=${encodeURIComponent(cursor)}` : '/api/mind-cards/following';
+    const res = await fetch(url);
+    return res.json();
+  }
+  // 推荐tab没有游标概念——每次调用都是四条线各自现选一批，拼成新的一组，
+  // 靠去重保证不会跟已经拉过的卡片重复展示。
+  const res = await fetch('/api/mind-cards/recommend');
+  const d = await res.json();
+  return { cards: d.cards ?? [], nextCursor: null };
+}
+
 export default function MindCardsPage() {
   const t = useTranslations('mindcards');
   const router = useRouter();
-  const [tab, setTab] = useState<'following' | 'recommend'>('recommend');
-  const [cards, setCards] = useState<MindCard[]>([]);
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<FeedTab>('recommend');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchingMoreRef = useRef(false);
   const viewedRef = useRef<Set<string>>(new Set());
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  // 未读数在页面挂载时拉一次即可——不做轮询，打开提醒面板时会再刷新一次
-  // 真实数据，这里只负责给Bell图标提供一个"大概有没有新东西"的初始信号。
+  const { data: me } = useMindCardsMe();
+
+  // 未读数——跟MindCardNotificationPanel共用同一份/api/mind-cards/notifications
+  // 缓存，面板打开时标记已读会直接把这份缓存的unreadCount清零，Bell上的红点
+  // 自动跟着消失，不需要额外的回调。
+  const { data: notificationsData } = useQuery({
+    queryKey: notificationsQueryKey(),
+    queryFn: fetchNotifications,
+  });
+  const unreadCount = notificationsData?.unreadCount ?? 0;
+
+  const feedQuery = useInfiniteQuery({
+    queryKey: feedQueryKey(tab),
+    queryFn: ({ pageParam }) => fetchFeedPage(tab, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage, allPages) => {
+      if (tab === 'following') return lastPage.nextCursor ?? undefined;
+      // 推荐tab没有游标，"还有没有更多"不能只看"这次接口有没有返回东西"——
+      // 推荐算法每次独立选卡，不知道之前已经拉过什么，很容易连续几次返回的
+      // 全是已经见过的重复卡片，如果只看"返回数量>0"就判定"还有更多"，会陷入
+      // "接口一直有返回、但过滤重复后实际新增几乎为0"的死循环，请求会不停
+      // 发出去。改成：这次返回的卡片里，只要有哪怕一张是之前所有页里都没
+      // 出现过的全新卡片，才认为"还有更多"；如果这次全是重复的，就此打住。
+      const earlierPages = allPages.slice(0, -1);
+      const seenIds = new Set(earlierPages.flatMap((p) => p.cards.map((c) => c.id)));
+      const hasNewCard = (lastPage.cards ?? []).some((c) => !seenIds.has(c.id));
+      return hasNewCard ? 'more' : undefined;
+    },
+  });
+
+  const cards = dedupeById((feedQuery.data?.pages ?? []).flatMap((p) => p.cards ?? []));
+
+  // 切换tab：回到第一张，已读记录清空重来
   useEffect(() => {
-    fetch('/api/mind-cards/notifications')
-      .then((r) => r.json())
-      .then((d) => setUnreadCount(d.unreadCount ?? 0))
-      .catch(() => {});
-  }, []);
-
-  const loadFeed = useCallback((activeTab: 'following' | 'recommend') => {
-    setLoading(true);
-    setCards([]);
     setCurrentIndex(0);
-    setNextCursor(null);
     viewedRef.current = new Set();
-    const url = activeTab === 'following' ? '/api/mind-cards/following' : '/api/mind-cards/recommend';
-    fetch(url)
-      .then((r) => r.json())
-      .then((d) => {
-        setCards(dedupeById(d.cards ?? []));
-        setNextCursor(d.nextCursor ?? null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  }, [tab]);
 
-  useEffect(() => {
-    loadFeed(tab);
-  }, [tab, loadFeed]);
+  // 进个人页——现在自己和别人共用同一套handle网址，不再有一个"没有handle"
+  // 的特殊路径，所以这里要先查一下自己的handle，再跳转，不是直接跳一个
+  // 写死的地址。
+  const goToOwnProfile = () => {
+    if (me?.handle) router.push(`/dashboard/mind-cards/profile/${me.handle}`);
+  };
 
   // 已读标记：来到即已读，包括首张卡片在mount时就触发
   useEffect(() => {
@@ -77,39 +116,30 @@ export default function MindCardsPage() {
     if (!card || viewedRef.current.has(card.id)) return;
     viewedRef.current.add(card.id);
     fetch(`/api/mind-cards/${card.id}/view`, { method: 'POST' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, cards, currentIndex]);
 
   // 候选池快耗尽前无缝预取下一批
   useEffect(() => {
-    if (fetchingMoreRef.current) return;
+    if (feedQuery.isFetchingNextPage || !feedQuery.hasNextPage) return;
     if (currentIndex < cards.length - PREFETCH_LOOKAHEAD) return;
-
-    if (tab === 'recommend') {
-      fetchingMoreRef.current = true;
-      fetch('/api/mind-cards/recommend')
-        .then((r) => r.json())
-        .then((d) => {
-          const existingIds = new Set(cards.map((c) => c.id));
-          const fresh: MindCard[] = (d.cards ?? []).filter((c: MindCard) => !existingIds.has(c.id));
-          if (fresh.length > 0) setCards((prev) => dedupeById([...prev, ...fresh]));
-        })
-        .finally(() => { fetchingMoreRef.current = false; });
-    } else if (nextCursor) {
-      fetchingMoreRef.current = true;
-      fetch(`/api/mind-cards/following?cursor=${encodeURIComponent(nextCursor)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          setCards((prev) => dedupeById([...prev, ...(d.cards ?? [])]));
-          setNextCursor(d.nextCursor ?? null);
-        })
-        .finally(() => { fetchingMoreRef.current = false; });
-    }
-  }, [tab, currentIndex, cards, nextCursor]);
+    feedQuery.fetchNextPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, cards.length, feedQuery.hasNextPage, feedQuery.isFetchingNextPage]);
 
   // 具体的入夹/移出请求由FolderMultiSelectPopover自己发起（每次勾选即生效），
   // 这里只负责把最终"是否已收藏"的结果同步回卡片列表，驱动书签图标的点亮态
   const handleFavoritedChange = (id: string, favorited: boolean) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, favorited } : c)));
+    queryClient.setQueryData(feedQueryKey(tab), (old: InfiniteData<FeedPage> | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          cards: page.cards.map((c) => (c.id === id ? { ...c, favorited } : c)),
+        })),
+      };
+    });
   };
 
   return (
@@ -153,7 +183,7 @@ export default function MindCardsPage() {
           卡片本身的实际尺寸计算交给MindCardCarousel内部处理（height:100%+aspect-ratio），
           这里只负责把"剩下多少可用高度"这个信息通过flex布局传递下去。 */}
       <div className="flex-1 min-h-0 w-full max-w-xl mx-auto px-4 flex items-center justify-center">
-        {!loading && cards.length === 0 && (
+        {!feedQuery.isLoading && cards.length === 0 && (
           <p className="text-sm text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {t('empty')}
           </p>
@@ -178,7 +208,7 @@ export default function MindCardsPage() {
 
       <MindCardsArcMenu
         onPublish={() => router.push('/dashboard/mind-cards/compose')}
-        onOpenProfile={() => router.push('/dashboard/mind-cards/profile')}
+        onOpenProfile={goToOwnProfile}
         onOpenNotifications={() => setNotificationsOpen(true)}
         unreadCount={unreadCount}
       />
@@ -186,7 +216,6 @@ export default function MindCardsPage() {
       <MindCardNotificationPanel
         open={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
-        onReadAll={() => setUnreadCount(0)}
       />
     </div>
   );

@@ -3,94 +3,88 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-
-interface TargetUser {
-  id: string;
-  handle: string;
-  display_name: string | null;
-}
-
-interface FollowStatus {
-  isSelf: boolean;
-  iFollow: boolean;
-  theyFollow: boolean;
-}
+import { useUserByHandle } from '@/hooks/queries/useUserByHandle';
+import { useFollowStatus, followStatusQueryKey, type FollowStatus } from '@/hooks/queries/useFollowStatus';
 
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const handle = params.handle as string;
   const locale = params.locale as string;
   const t = useTranslations('social');
 
-  const [target, setTarget] = useState<TargetUser | null>(null);
-  const [status, setStatus] = useState<FollowStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(false);
-  const [messaging, setMessaging] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-
+  // 未登录直接跳去登录页——这是一道认证门禁，不是"数据"，保持简单的
+  // 挂载时检查，不需要用查询机制包一层。
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
-    const init = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+    createClient().auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.replace(`/${locale}/auth/login`);
         return;
       }
-
-      const res = await fetch(`/api/users/${handle}`);
-      if (!res.ok) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-      const { user: targetUser } = await res.json();
-      setTarget(targetUser);
-
-      const statusRes = await fetch(`/api/follows/status?targetId=${targetUser.id}`);
-      if (statusRes.ok) {
-        const data = await statusRes.json();
-        setStatus(data);
-      }
-      setLoading(false);
-    };
-    init();
-  }, [handle, locale, router]);
-
-  const handleToggleFollow = async () => {
-    if (!target || !status || toggling) return;
-    setToggling(true);
-
-    const method = status.iFollow ? 'DELETE' : 'POST';
-    const res = await fetch('/api/follows', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetId: target.id }),
+      setAuthChecked(true);
     });
+  }, [locale, router]);
 
-    if (res.ok) {
-      setStatus(prev => prev ? { ...prev, iFollow: !prev.iFollow } : prev);
-    }
-    setToggling(false);
+  // 跟片语个人页共用同一份/api/users/:handle缓存。
+  const { data: targetData, isLoading: targetLoading } = useUserByHandle(handle);
+  const target = targetData?.user ?? null;
+  const notFound = authChecked && !targetLoading && !target;
+
+  // 跟片语个人页共用同一份/api/follows/status缓存。
+  const { data: status } = useFollowStatus(target?.id, authChecked);
+
+  const loading = !authChecked || targetLoading;
+
+  const toggleFollowMutation = useMutation({
+    mutationFn: async (vars: { targetId: string; wasFollowing: boolean }) => {
+      const res = await fetch('/api/follows', {
+        method: vars.wasFollowing ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId: vars.targetId }),
+      });
+      if (!res.ok) throw new Error('request failed');
+    },
+    onMutate: async (vars) => {
+      const key = followStatusQueryKey(vars.targetId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<FollowStatus>(key);
+      queryClient.setQueryData(key, (old: FollowStatus | undefined) =>
+        old ? { ...old, iFollow: !vars.wasFollowing } : old
+      );
+      return { previous };
+    },
+    onError: (_err, vars, context) => {
+      if (context?.previous) queryClient.setQueryData(followStatusQueryKey(vars.targetId), context.previous);
+    },
+  });
+
+  const handleToggleFollow = () => {
+    if (!target || !status || toggleFollowMutation.isPending) return;
+    toggleFollowMutation.mutate({ targetId: target.id, wasFollowing: status.iFollow });
   };
 
-  const handleMessage = async () => {
-    if (!target || messaging) return;
-    setMessaging(true);
+  const messageMutation = useMutation({
+    mutationFn: async (targetId: string) => {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: targetId }),
+      });
+      if (!res.ok) throw new Error('request failed');
+      return res.json() as Promise<{ conversationId: string }>;
+    },
+    onSuccess: (data) => {
+      router.push(`/${locale}/dashboard/messages?conv=${data.conversationId}`);
+    },
+  });
 
-    const res = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUserId: target.id }),
-    });
-
-    if (res.ok) {
-      const { conversationId } = await res.json();
-      router.push(`/${locale}/dashboard/messages?conv=${conversationId}`);
-    }
-    setMessaging(false);
+  const handleMessage = () => {
+    if (!target || messageMutation.isPending) return;
+    messageMutation.mutate(target.id);
   };
 
   if (loading) {
@@ -154,7 +148,7 @@ export default function UserProfilePage() {
             {/* 关注按钮 */}
             <button
               onClick={handleToggleFollow}
-              disabled={toggling}
+              disabled={toggleFollowMutation.isPending}
               className="px-6 py-2.5 rounded-xl text-sm font-light transition-all disabled:opacity-50"
               style={status.iFollow
                 ? {
@@ -168,7 +162,7 @@ export default function UserProfilePage() {
                   }
               }
             >
-              {toggling
+              {toggleFollowMutation.isPending
                 ? '...'
                 : status.iFollow
                   ? t('following')
@@ -181,7 +175,7 @@ export default function UserProfilePage() {
             {/* 发消息按钮 */}
             <button
               onClick={handleMessage}
-              disabled={messaging}
+              disabled={messageMutation.isPending}
               className="px-6 py-2.5 rounded-xl text-sm font-light transition-all disabled:opacity-50"
               style={{
                 background: 'hsl(var(--muted))',
@@ -189,7 +183,7 @@ export default function UserProfilePage() {
                 border: '1px solid hsl(var(--border))',
               }}
             >
-              {messaging ? '...' : t('sendMessage')}
+              {messageMutation.isPending ? '...' : t('sendMessage')}
             </button>
           </div>
         )}

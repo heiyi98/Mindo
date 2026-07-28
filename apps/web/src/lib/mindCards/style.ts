@@ -2,7 +2,7 @@ export type MindCardFontSizeTier = 1 | 2 | 3 | 4 | 5;
 export type LangGroupKey = 'latin' | 'sc' | 'tc' | 'jp' | 'kr';
 export type HorizontalAlign = 'left' | 'center' | 'right';
 export type VerticalAlign = 'top' | 'center' | 'bottom';
-export type MindCardBackgroundColor = '' | '#000000' | '#FFFFFF';
+export type MindCardBackgroundColor = '#000000' | '#FFFFFF';
 
 export const MIND_CARD_TEXT_COLORS = [
   '#000000', '#FF3B30', '#FF9500', '#34C759',
@@ -52,7 +52,10 @@ export const DEFAULT_MIND_CARD_CARD_STYLE: MindCardCardStyle = {
   vertical: false,
   align: 'center',
   valign: 'center',
-  backgroundColor: '',
+  // 空字符串这个已经废弃的默认值不能再用了（类型已经不允许），改成白色。
+  // 这只影响"卡片还没被用户自己选过颜色之前，摆出来长什么样"这一种边缘
+  // 情况，不影响任何已经存在、用户自己选过黑或白的卡片。
+  backgroundColor: '#FFFFFF',
 };
 
 export const DEFAULT_MIND_CARD_STYLE: MindCardStyleV2 = {

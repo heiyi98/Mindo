@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
 
 export const COLS = 2;
 export const ROWS = 1;
@@ -25,23 +26,14 @@ function parseDayOffset(birthTime: string, solarTime: string): number {
 
 export default function ProfileCard({ profileId }: { profileId: string }) {
   const t = useTranslations('dashboard.profileCard');
-  const [profile, setProfile] = useState<Record<string, string | null> | null>(null);
-  const [solarTime, setSolarTime] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!profileId) return;
-    fetch(`/api/dashboard?profile_id=${profileId}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.profile) setProfile(d.profile);
-        if (d.bazi?.meta?.solarTime) {
-          const raw: string = d.bazi.meta.solarTime;
-          const match = raw.match(/(\d{2}:\d{2})/);
-          setSolarTime(match ? match[1] : null);
-        }
-      })
-      .catch(() => {});
-  }, [profileId]);
+  const { data } = useDashboardData(profileId);
+  const profile: Record<string, any> | null = data?.profile ?? null;
+  const solarTime = useMemo(() => {
+    const raw: string | undefined = data?.bazi?.meta?.solarTime;
+    if (!raw) return null;
+    const match = raw.match(/(\d{2}:\d{2})/);
+    return match ? match[1] : null;
+  }, [data]);
 
   if (!profile) {
     return (
@@ -56,21 +48,30 @@ export default function ProfileCard({ profileId }: { profileId: string }) {
   const displayName = profile.display_name ?? '';
   const age = birthDate ? calcAge(birthDate) : 0;
   const showSolarTime = !!birthTime && !!birthPlaceName && !!solarTime;
+
   const dayOffset = showSolarTime && birthTime && solarTime
     ? parseDayOffset(birthTime, solarTime) : 0;
 
-  // 副标题：日期+时间+城市
+  // 副标题：日期+时间+城市。
+  // 分钟是否已知不再影响前端显示——数据库里分钟未知时本来就存的是
+  // HH:00，直接按标准格式截取显示即可，不需要特殊分支或额外标注。
+  // 要不要按真太阳时/行政时区偏移这两套算法计算，是后端 time/engine.ts
+  // 的事，前端统一只呈现"真太阳时"这一个结果，不再向用户暴露精度差异。
+  const displayTime = birthTime ? birthTime.substring(0, 5) : null;
+
   const subtitle = [
     birthDate,
-    birthTime,
+    displayTime,
     birthPlaceName ? birthPlaceName.split(',')[0] : null,
   ].filter(Boolean).join(' · ');
 
   // 右侧：年龄 + 真太阳时
   const ageText = `${age} ${t('yearsOld')}`;
-  const solarText = showSolarTime
-    ? `${t('solarTime')}：${solarTime}${dayOffset === 1 ? ' +1' : dayOffset === -1 ? ' -1' : ''}`
-    : null;
+
+  let solarText = null;
+  if (showSolarTime && solarTime) {
+    solarText = `${t('solarTime')}：${solarTime}${dayOffset === 1 ? ' +1' : dayOffset === -1 ? ' -1' : ''}`;
+  }
 
   // SVG viewBox 固定 200×60（宽:高 = 10:3，2:1卡片内填满）
   const VW = 200;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
-  engine, analyzeBazi, toBaziSnapshot, computeWuxingAssessment,
+  calculateUniversalTime, baziEngine, analyzeBazi, toBaziSnapshot, computeWuxingAssessment,
   generateDestinyTimeline, generateLifeChart,
 } from '@mindo/core';
 import type { TianGan, DiZhi, BaziSnapshot } from '@mindo/core';
@@ -52,12 +52,6 @@ export async function GET(request: Request) {
     console.log('[dashboard API] existingSnapshot:', !!existingSnapshot);
 
     if (existingSnapshot) {
-      console.log('[dashboard API] format check:', {
-        pillars_yuelingWuxing: existingSnapshot.calculation_result?.pillars?.yuelingWuxing,
-        has_relations: existingSnapshot.calculation_result?.relations !== undefined,
-        has_influence: existingSnapshot.calculation_result?.influence !== undefined,
-        has_pattern: existingSnapshot.calculation_result?.pattern !== undefined,
-      });
       const isNewFormat =
         existingSnapshot.calculation_result?.pillars?.yuelingWuxing !== undefined &&
         existingSnapshot.calculation_result?.relations !== undefined &&
@@ -127,7 +121,8 @@ export async function GET(request: Request) {
         years: existingTimeline.years as unknown[],
       };
     } else {
-      const dateStr = `${profile.birth_date}T${profile.birth_time || '12:00'}:00`;
+      const tStr = profile.birth_time || '12:00:00';
+      const dateStr = `${profile.birth_date}T${tStr}`;
       const gender: 'M' | 'F' = profile.gender === 'F' ? 'F' : 'M';
       const birthYear = parseInt((profile.birth_date as string).split('-')[0], 10);
       const currentYear = new Date().getFullYear();
@@ -169,18 +164,27 @@ async function computeAndSave(
   userId: string,
 ): Promise<BaziSnapshot> {
   const birthDate: string = profile.birth_date;
-  const birthTime: string = profile.birth_time || '12:00';
+  const rawBirthTime: string = profile.birth_time || '12:00:00';
   const timeUnknown = !profile.birth_time;
-  const dateStr = `${birthDate}T${birthTime}:00`;
+  const isMinuteUnknown = profile.is_minute_unknown === true; 
+  const dateStr = `${birthDate}T${rawBirthTime}`; 
   const lat: number = profile.birth_lat || 39.9042;
   const lng: number = profile.birth_lng || 116.4074;
 
-  let baziResult: ReturnType<typeof engine.calculate>;
+  // 1. 调用通用的时间引擎处理宇宙坐标
+  const timeResult = calculateUniversalTime({
+    dateStr,
+    lat,
+    lng,
+    timeUnknown,
+    minuteUnknown: isMinuteUnknown,
+    timezone: profile.birth_timezone || undefined,
+  });
+
+  // 2. 将计算好的时间标准对象交给纯净的八字引擎
+  let baziResult: ReturnType<typeof baziEngine.calculate>;
   try {
-    baziResult = engine.calculate({
-      dateStr, lat, lng, timeUnknown,
-      timezone: profile.birth_timezone || undefined,
-    });
+    baziResult = baziEngine.calculate(timeResult);
   } catch (e: any) {
     console.log('[dashboard API] engine error:', e.message);
     throw e;

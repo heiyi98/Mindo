@@ -1,10 +1,12 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft } from 'lucide-react';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import ConfirmDialog from './ConfirmDialog';
 import { MIND_CARD_COMMENT_MAX_LENGTH, countGraphemes, truncateToGraphemes } from '@/lib/mindCards/textLength';
+import { useMindCardsMe } from '@/hooks/queries/useMindCardsMe';
 
 interface AuthorInfo { id: string; handle: string; display_name: string | null; }
 interface TopComment {
@@ -22,7 +24,6 @@ interface MindCardCommentModalProps {
   vertical: boolean;
   open: boolean;
   onClose: () => void;
-  onCountChange?: (count: number) => void;
   // 提醒中心点开一条"有人回复你"的通知时用：这条通知的target_comment_id
   // 永远是一级留言（回复某条二级留言时，通知记录的也是它所属的一级留言，
   // 不是那条二级留言本身——见通知写入那段规则）。传入后，留言列表加载完成
@@ -45,27 +46,70 @@ function formatTimestamp(iso: string) {
   }).format(d);
 }
 
-export default function MindCardCommentModal({ cardId, vertical, open, onClose, onCountChange, autoExpandParentId }: MindCardCommentModalProps) {
+export function commentsQueryKey(cardId: string) {
+  return ['mind-card-comments', cardId] as const;
+}
+
+function repliesQueryKey(parentId: string) {
+  return ['mind-card-replies', parentId] as const;
+}
+
+export async function fetchComments(cardId: string): Promise<{ totalCount: number; comments: TopComment[] }> {
+  const res = await fetch(`/api/mind-cards/${cardId}/comments`);
+  if (!res.ok) throw new Error('Failed to fetch comments');
+  return res.json();
+}
+
+async function fetchReplies(parentId: string): Promise<{ replies: ReplyComment[] }> {
+  const res = await fetch(`/api/mind-cards/comments/${parentId}/replies`);
+  if (!res.ok) throw new Error('Failed to fetch replies');
+  return res.json();
+}
+
+export default function MindCardCommentModal({ cardId, vertical, open, onClose, autoExpandParentId }: MindCardCommentModalProps) {
   const t = useTranslations('mindcards');
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const autoExpandedRef = useRef<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<TopComment[]>([]);
+  const queryClient = useQueryClient();
+  const { data: me } = useMindCardsMe();
+
+  const { data, isLoading: loading } = useQuery({
+    queryKey: commentsQueryKey(cardId),
+    queryFn: () => fetchComments(cardId),
+    enabled: open,
+  });
+  const comments = data?.comments ?? [];
+
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [repliesMap, setRepliesMap] = useState<Record<string, ReplyComment[]>>({});
-  const [repliesLoading, setRepliesLoading] = useState<Set<string>>(new Set());
+  const expandedIdsArray = useMemo(() => [...expandedIds], [expandedIds]);
+
+  const repliesResults = useQueries({
+    queries: expandedIdsArray.map((parentId) => ({
+      queryKey: repliesQueryKey(parentId),
+      queryFn: () => fetchReplies(parentId),
+      enabled: open,
+    })),
+  });
+
+  // 这两处不能用useMemo：依赖数组里展开了repliesResults.map(...)，它的
+  // 长度会随"展开了几条留言的回复"变化，而React要求依赖列表的项数每次
+  // 渲染必须固定不变（只能变值，不能变个数），用户一展开/收起留言就会
+  // 触发"The final argument passed to useMemo changed size"这个报错。
+  // 这里运算本身很轻，直接每次渲染都重新算一遍，不需要用useMemo优化。
+  const repliesMap: Record<string, ReplyComment[]> = {};
+  expandedIdsArray.forEach((id, i) => { repliesMap[id] = repliesResults[i]?.data?.replies ?? []; });
+
+  const repliesLoading = new Set<string>();
+  expandedIdsArray.forEach((id, i) => { if (repliesResults[i]?.isLoading) repliesLoading.add(id); });
+
   const [inputValue, setInputValue] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [replyContext, setReplyContext] = useState<{
     parentCommentId: string;
     replyToCommentId?: string;
     quoteAuthor: string;
     quoteContent: string;
   } | null>(null);
-  // 删除前需要一次确认，不能点了就直接删——存的是"待删除的这条留言"，
-  // parentId只有二级留言才有（用来知道删完之后该刷新哪个一级留言的回复列表）
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; parentId?: string } | null>(null);
 
   // 输入法组字处理：组字过程中（比如拼音还没选字确认）不做字数拦截，
@@ -73,61 +117,19 @@ export default function MindCardCommentModal({ cardId, vertical, open, onClose, 
   // 最终文字的那一刻，才检查是否超限。
   const [isComposing, setIsComposing] = useState(false);
 
-  const loadComments = () => {
-    setLoading(true);
-    fetch(`/api/mind-cards/${cardId}/comments`)
-      .then((r) => r.json())
-      .then((d) => {
-        setComments(d.comments ?? []);
-        onCountChange?.(d.totalCount ?? 0);
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    loadComments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, cardId]);
-
-  // refreshReplies/toggleReplies挪到早退return之前（虽然它们本身不是hook，
-  // 不受"hooks不能在条件return之后"这条规则约束），是因为下面这个自动展开
-  // 的useEffect需要调用toggleReplies——effect是真正的hook，必须无条件排在
-  // 早退return之前，为了引用到它，顺带把这两个函数也提到前面。
-  const refreshReplies = (parentId: string) => {
-    fetch(`/api/mind-cards/comments/${parentId}/replies`)
-      .then((r) => r.json())
-      .then((d) => setRepliesMap((prev) => ({ ...prev, [parentId]: d.replies ?? [] })));
-  };
-
   const toggleReplies = (commentId: string) => {
-    if (expandedIds.has(commentId)) {
-      setExpandedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(commentId);
-        return next;
-      });
-      return;
-    }
-    setExpandedIds((prev) => new Set(prev).add(commentId));
-    if (!repliesMap[commentId]) {
-      setRepliesLoading((prev) => new Set(prev).add(commentId));
-      fetch(`/api/mind-cards/comments/${commentId}/replies`)
-        .then((r) => r.json())
-        .then((d) => setRepliesMap((prev) => ({ ...prev, [commentId]: d.replies ?? [] })))
-        .finally(() => {
-          setRepliesLoading((prev) => {
-            const next = new Set(prev);
-            next.delete(commentId);
-            return next;
-          });
-        });
-    }
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(commentId)) next.delete(commentId);
+      else next.add(commentId);
+      return next;
+    });
   };
 
   // 提醒中心点开一条"有人回复你"的通知：自动展开对应一级留言的二级回复列表，
   // 不需要用户手动点"展开N条回复"。用ref记一次open周期只自动触发一次，避免
   // 其他状态变化（比如切换其他留言的展开态）反复重新触发这段逻辑。
+  const autoExpandedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) {
       autoExpandedRef.current = null;
@@ -139,6 +141,127 @@ export default function MindCardCommentModal({ cardId, vertical, open, onClose, 
     if (!expandedIds.has(autoExpandParentId)) toggleReplies(autoExpandParentId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, autoExpandParentId, loading]);
+
+  // 发留言/回复：乐观更新——立刻在界面上插入一条临时条目（用me的身份信息
+  // 顶上作者名），后台异步真正提交；成功了让onSettled重新拉取权威数据，
+  // 悄悄把临时条目换成真实的（用户无感知）；失败了onError把缓存恢复回
+  // 乐观更新之前的快照，不额外弹错误提示打扰用户。
+  const postCommentMutation = useMutation({
+    mutationFn: async (vars: { content: string; parentCommentId?: string; replyToCommentId?: string }) => {
+      const res = await fetch(`/api/mind-cards/${cardId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vars),
+      });
+      if (!res.ok) throw new Error('request failed');
+      return res.json();
+    },
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: commentsQueryKey(cardId) });
+      const prevComments = queryClient.getQueryData<{ totalCount: number; comments: TopComment[] }>(commentsQueryKey(cardId));
+
+      const tempId = `temp-${Date.now()}`;
+      const meAuthor: AuthorInfo = { id: me?.id ?? '', handle: me?.handle ?? '', display_name: me?.display_name ?? null };
+
+      if (!vars.parentCommentId) {
+        queryClient.setQueryData(commentsQueryKey(cardId), (old: { totalCount: number; comments: TopComment[] } | undefined) => ({
+          totalCount: (old?.totalCount ?? 0) + 1,
+          comments: [
+            { id: tempId, content: vars.content, created_at: new Date().toISOString(), author: meAuthor, is_own: true, reply_count: 0 },
+            ...(old?.comments ?? []),
+          ],
+        }));
+        return { prevComments, prevReplies: undefined, parentCommentId: undefined as string | undefined };
+      }
+
+      const parentId = vars.parentCommentId;
+      await queryClient.cancelQueries({ queryKey: repliesQueryKey(parentId) });
+      const prevReplies = queryClient.getQueryData<{ replies: ReplyComment[] }>(repliesQueryKey(parentId));
+
+      const replyTo = vars.replyToCommentId
+        ? (prevReplies?.replies ?? []).find((r) => r.id === vars.replyToCommentId)
+        : undefined;
+
+      queryClient.setQueryData(commentsQueryKey(cardId), (old: { totalCount: number; comments: TopComment[] } | undefined) => ({
+        totalCount: (old?.totalCount ?? 0) + 1,
+        comments: (old?.comments ?? []).map((c) => (c.id === parentId ? { ...c, reply_count: c.reply_count + 1 } : c)),
+      }));
+
+      queryClient.setQueryData(repliesQueryKey(parentId), (old: { replies: ReplyComment[] } | undefined) => ({
+        replies: [
+          ...(old?.replies ?? []),
+          {
+            id: tempId,
+            content: vars.content,
+            created_at: new Date().toISOString(),
+            author: meAuthor,
+            is_own: true,
+            reply_to: replyTo ? { id: replyTo.id, content: replyTo.content, author: replyTo.author, deleted: false } : null,
+          },
+        ],
+      }));
+
+      return { prevComments, prevReplies, parentCommentId: parentId };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prevComments !== undefined) queryClient.setQueryData(commentsQueryKey(cardId), context.prevComments);
+      if (context?.parentCommentId && context.prevReplies !== undefined) {
+        queryClient.setQueryData(repliesQueryKey(context.parentCommentId), context.prevReplies);
+      }
+    },
+    onSettled: (_data, _error, _vars, context) => {
+      queryClient.invalidateQueries({ queryKey: commentsQueryKey(cardId) });
+      if (context?.parentCommentId) queryClient.invalidateQueries({ queryKey: repliesQueryKey(context.parentCommentId) });
+    },
+  });
+
+  // 删除留言：乐观更新——发请求之前就先从界面上移除，不等确认成功才移除
+  // （早期版本是后者，会导致"看着像没生效"、用户忍不住点第二次、第二次
+  // 目标已经不存在报404）。失败了onError把缓存恢复回删除前的快照。
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (vars: { id: string; parentId?: string }) => {
+      const res = await fetch(`/api/mind-cards/comments/${vars.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('request failed');
+    },
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: commentsQueryKey(cardId) });
+      const prevComments = queryClient.getQueryData<{ totalCount: number; comments: TopComment[] }>(commentsQueryKey(cardId));
+
+      if (vars.parentId) {
+        await queryClient.cancelQueries({ queryKey: repliesQueryKey(vars.parentId) });
+        const prevReplies = queryClient.getQueryData<{ replies: ReplyComment[] }>(repliesQueryKey(vars.parentId));
+
+        queryClient.setQueryData(repliesQueryKey(vars.parentId), (old: { replies: ReplyComment[] } | undefined) => ({
+          replies: (old?.replies ?? []).filter((r) => r.id !== vars.id),
+        }));
+        queryClient.setQueryData(commentsQueryKey(cardId), (old: { totalCount: number; comments: TopComment[] } | undefined) => ({
+          totalCount: Math.max(0, (old?.totalCount ?? 0) - 1),
+          comments: (old?.comments ?? []).map((c) => (c.id === vars.parentId ? { ...c, reply_count: Math.max(0, c.reply_count - 1) } : c)),
+        }));
+
+        return { prevComments, prevReplies, parentId: vars.parentId };
+      }
+
+      // 删的是一级留言：连同它底下所有回复一起从总数里扣掉
+      const target = prevComments?.comments.find((c) => c.id === vars.id);
+      const removedTotal = 1 + (target?.reply_count ?? 0);
+      queryClient.setQueryData(commentsQueryKey(cardId), (old: { totalCount: number; comments: TopComment[] } | undefined) => ({
+        totalCount: Math.max(0, (old?.totalCount ?? 0) - removedTotal),
+        comments: (old?.comments ?? []).filter((c) => c.id !== vars.id),
+      }));
+      queryClient.removeQueries({ queryKey: repliesQueryKey(vars.id) });
+
+      return { prevComments, prevReplies: undefined, parentId: undefined as string | undefined };
+    },
+    onError: (_err, vars, context) => {
+      if (context?.prevComments !== undefined) queryClient.setQueryData(commentsQueryKey(cardId), context.prevComments);
+      if (vars.parentId && context?.prevReplies !== undefined) queryClient.setQueryData(repliesQueryKey(vars.parentId), context.prevReplies);
+    },
+    onSettled: (_data, _error, vars) => {
+      queryClient.invalidateQueries({ queryKey: commentsQueryKey(cardId) });
+      if (vars.parentId) queryClient.invalidateQueries({ queryKey: repliesQueryKey(vars.parentId) });
+    },
+  });
 
   if (!open || !mounted) return null;
 
@@ -168,45 +291,22 @@ export default function MindCardCommentModal({ cardId, vertical, open, onClose, 
 
   const atLimit = countGraphemes(inputValue) >= MIND_CARD_COMMENT_MAX_LENGTH;
 
-  const submitComment = async () => {
+  const submitComment = () => {
     const content = inputValue.trim();
-    if (!content || submitting) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/mind-cards/${cardId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          parentCommentId: replyContext?.parentCommentId,
-          replyToCommentId: replyContext?.replyToCommentId,
-        }),
-      });
-      if (!res.ok) throw new Error('request failed');
-      const repliedParentId = replyContext?.parentCommentId;
-      setInputValue('');
-      setReplyContext(null);
-      loadComments();
-      if (repliedParentId && expandedIds.has(repliedParentId)) refreshReplies(repliedParentId);
-    } catch (err) {
-      console.error('[MindCardCommentModal] submit failed:', err);
-    } finally {
-      setSubmitting(false);
-    }
+    if (!content || postCommentMutation.isPending) return;
+    postCommentMutation.mutate({
+      content,
+      parentCommentId: replyContext?.parentCommentId,
+      replyToCommentId: replyContext?.replyToCommentId,
+    });
+    setInputValue('');
+    setReplyContext(null);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (!deleteTarget) return;
-    const { id: commentId, parentId } = deleteTarget;
+    deleteCommentMutation.mutate(deleteTarget);
     setDeleteTarget(null);
-    try {
-      const res = await fetch(`/api/mind-cards/comments/${commentId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('request failed');
-      loadComments();
-      if (parentId) refreshReplies(parentId);
-    } catch (err) {
-      console.error('[MindCardCommentModal] delete failed:', err);
-    }
   };
 
   // 留言面板的尺寸必须绝对固定，不能被内容撑大——内容多了交给内部滚动
@@ -347,12 +447,12 @@ export default function MindCardCommentModal({ cardId, vertical, open, onClose, 
             <button
               type="button"
               onClick={submitComment}
-              disabled={!inputValue.trim() || submitting}
+              disabled={!inputValue.trim() || postCommentMutation.isPending}
               className="text-sm px-3 py-2 rounded-lg flex-shrink-0"
               style={{
                 background: 'hsl(var(--foreground))',
                 color: 'hsl(var(--background))',
-                opacity: (!inputValue.trim() || submitting) ? 0.4 : 1,
+                opacity: (!inputValue.trim() || postCommentMutation.isPending) ? 0.4 : 1,
               }}
             >
               {t('comments.send')}

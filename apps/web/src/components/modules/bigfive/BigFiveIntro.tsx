@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Search, MapPin, Loader2, X, CheckCircle2, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 export interface RegionData {
   country: string | null;
@@ -34,14 +35,11 @@ export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: Bi
   const locale = useLocale();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [results, setResults] = useState<CityResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedCity, setSelectedCity] = useState<CityResult | null>(null);
   const [regionData, setRegionData] = useState<RegionData | null>(null);
 
   // 导入状态
   const [importId, setImportId] = useState('');
-  const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,32 +47,39 @@ export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: Bi
     return () => clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    if (!debouncedQuery.trim() || selectedCity) {
-      setResults([]);
-      setIsSearching(false);
-      return;
-    }
-    const fetchCities = async () => {
-      setIsSearching(true);
-      try {
-        const res = await fetch(`/api/city-search?q=${encodeURIComponent(debouncedQuery)}&lang=${locale}&needRegion=true`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        setResults(data.results || []);
-      } catch {
-        setResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-    fetchCities();
-  }, [debouncedQuery, locale, selectedCity]);
+  const { data: cityData, isFetching: isSearching } = useQuery({
+    queryKey: ['city-search', debouncedQuery, locale],
+    queryFn: async () => {
+      const res = await fetch(`/api/city-search?q=${encodeURIComponent(debouncedQuery)}&lang=${locale}&needRegion=true`);
+      if (!res.ok) throw new Error('Failed to search cities');
+      return res.json();
+    },
+    enabled: !!debouncedQuery.trim() && !selectedCity,
+  });
+  const results: CityResult[] = (!selectedCity && cityData?.results) || [];
+
+  const importMutation = useMutation({
+    mutationFn: async (vars: { assessmentId: string; profileId: string }) => {
+      const res = await fetch('/api/psychology/bigfive/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assessment_id: vars.assessmentId, profile_id: vars.profileId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error === 'not_found' ? 'not_found' : 'failed');
+      return data;
+    },
+    onSuccess: () => onImportSuccess(),
+    onError: (err) => {
+      setImportError(err instanceof Error && err.message === 'not_found'
+        ? t('intro.importNotFound')
+        : t('intro.importFailed'));
+    },
+  });
 
   const handleSelectCity = (city: CityResult) => {
     setSelectedCity(city);
     setQuery(city.name.split(',')[0]);
-    setResults([]);
     setRegionData({
       country: city.region_country,
       level1: city.region_level1,
@@ -84,30 +89,10 @@ export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: Bi
     });
   };
 
-  const handleImport = async () => {
-    if (!importId.trim() || !profileId || importing) return;
-    setImporting(true);
+  const handleImport = () => {
+    if (!importId.trim() || !profileId || importMutation.isPending) return;
     setImportError(null);
-
-    const res = await fetch('/api/psychology/bigfive/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assessment_id: importId.trim(), profile_id: profileId }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setImportError(data.error === 'not_found'
-        ? t('intro.importNotFound')
-        : t('intro.importFailed')
-      );
-      setImporting(false);
-      return;
-    }
-
-    setImporting(false);
-    onImportSuccess();
+    importMutation.mutate({ assessmentId: importId.trim(), profileId });
   };
 
   return (
@@ -266,7 +251,7 @@ export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: Bi
           />
           <button
             onClick={handleImport}
-            disabled={!importId.trim() || importing || !profileId}
+            disabled={!importId.trim() || importMutation.isPending || !profileId}
             className="flex items-center gap-1.5 px-4 rounded-xl text-sm font-light transition-opacity disabled:opacity-30"
             style={{
               background: 'hsl(var(--muted))',
@@ -274,7 +259,7 @@ export default function BigFiveIntro({ onStart, onImportSuccess, profileId }: Bi
               border: '1px solid hsl(var(--border))',
             }}
           >
-            {importing
+            {importMutation.isPending
               ? <Loader2 size={14} className="animate-spin" />
               : <Download size={14} />
             }

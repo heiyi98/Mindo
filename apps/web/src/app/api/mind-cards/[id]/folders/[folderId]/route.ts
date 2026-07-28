@@ -5,8 +5,7 @@ import { fetchVisibleCard } from '@/lib/mindCards/visibility';
 
 // POST /api/mind-cards/:id/folders/:folderId — 把卡片加入指定夹（只能加进自己的夹）。
 // annotation：可选，只有目标夹是'本'（folder_kind='notebook'）时前端才会传，
-// 后端不强制校验folder_kind一致性——传了就存，卡册/卡夹传annotation本身无害
-// （前端UI本来就不会给这两种夹弹批语输入框，不会误传）。
+// 后端不强制校验folder_kind一致性——传了就存，卡册/卡夹传annotation本身无害。
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; folderId: string }> }
@@ -37,18 +36,17 @@ export async function POST(
       // 请求体为空（卡册/卡夹场景，收藏动作不带批语）——沿用原有的"点了即收藏"行为
     }
 
-    // 首次入夹判定：插入前，该用户名下所有夹里，这张卡片的关联行数是否为0
-    const { data: ownFolders } = await admin
-      .from('mind_card_folders')
-      .select('id')
-      .eq('user_id', user.id);
-    const ownFolderIds = (ownFolders ?? []).map((f) => f.id);
-
+    // 首次入夹判定：修正为"这张卡片是不是第一次进这一个具体的夹子"，不是
+    // "是不是第一次进我名下任意一个夹子"——之前的判断范围是后者，导致同一张
+    // 卡片收藏进第一个夹子会通知，之后再收藏进第二个、第三个夹子都不会再
+    // 触发通知（因为"曾经收藏过一次"这个全局判断一旦成立就再也不会是"第一次"
+    // 了）。每收藏进一个新的、之前没收藏过的具体夹子，都应该算一次独立的
+    // 收藏事件，都要通知。
     const { count: existingCount } = await admin
       .from('mind_card_folder_items')
       .select('folder_id', { count: 'exact', head: true })
       .eq('card_id', cardId)
-      .in('folder_id', ownFolderIds);
+      .eq('folder_id', folderId);
 
     const isFirstFavorite = (existingCount ?? 0) === 0;
 
@@ -64,10 +62,6 @@ export async function POST(
     }
 
     if (isFirstFavorite && card.user_id !== user.id) {
-      // 统一走 mind_card_notifications（跟留言/回复通知共用一张表，供通知中心
-      // 一个列表统一读取）。旧的 mind_card_favorite_notifications 表停止写入
-      // ——这次之前那张表没有配套的通知中心UI，现在有了真正的通知中心，
-      // 直接切过来，不再维护两套并行的收藏通知记录。
       const { error: notifError } = await admin.from('mind_card_notifications').insert({
         recipient_id: card.user_id,
         actor_id: user.id,
@@ -84,6 +78,50 @@ export async function POST(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('[mind-cards folders POST] error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH /api/mind-cards/:id/folders/:folderId — 只更新批语，不影响收藏关系本身。
+// 收藏这个动作和"要不要写/改批语"彻底解耦——点击收藏立刻生效（走POST，不带
+// annotation），批语框弹出后用户自己按保存，走这个PATCH单独更新，就算不点
+// 保存也不影响卡片已经收藏成功这件事。
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string; folderId: string }> }
+) {
+  try {
+    const { id: cardId, folderId } = await params;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { data: folder } = await admin
+      .from('mind_card_folders')
+      .select('id, user_id')
+      .eq('id', folderId)
+      .maybeSingle();
+    if (!folder || folder.user_id !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const body = await request.json() as { annotation?: string };
+    const annotation = body?.annotation?.trim() || null;
+
+    const { error } = await admin
+      .from('mind_card_folder_items')
+      .update({ annotation })
+      .eq('folder_id', folderId)
+      .eq('card_id', cardId);
+
+    if (error) {
+      console.error('[mind-cards folders PATCH] error:', error);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('[mind-cards folders PATCH] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

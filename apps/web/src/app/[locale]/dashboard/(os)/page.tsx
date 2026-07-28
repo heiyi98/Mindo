@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   DndContext, DragEndEvent, DragMoveEvent, DragOverEvent, DragOverlay,
   PointerSensor, useSensor, useSensors, closestCenter,
@@ -18,6 +19,7 @@ import BaziReadingCard from '@/components/modules/bazi/BaziReadingCard';
 import ProfileCard from '@/components/common/ProfileCard';
 import BigFiveChart from '@/components/modules/bigfive/BigFiveChart';
 import StarChartWheel from '@/components/modules/western/StarChartWheel';
+import MindCardEntryCard from '@/components/modules/mindcards/MindCardEntryCard';
 
 import { WIDGET_REGISTRY, DEFAULT_LAYOUT, repackLayout } from '@/config/dashboard-widgets';
 import type { LayoutItem } from '@/config/dashboard-widgets';
@@ -32,6 +34,7 @@ function renderCard(id: string, profileId: string) {
     case 'bazi-reading':  return <BaziReadingCard profileId={profileId} />;
     case 'bigfive-radar': return <BigFiveChart profileId={profileId} />;
     case 'western-chart': return <StarChartWheel profileId={profileId} />;
+    case 'mind-cards':    return <MindCardEntryCard profileId={profileId} />;
     default: return null;
   }
 }
@@ -143,10 +146,26 @@ function DashboardGrid() {
   const [hoverCell, setHoverCell]   = useState<{ col: number; row: number } | null>(null);
   const [isMobile, setIsMobile]     = useState(false);
   const [cellSize, setCellSize]     = useState(120);
-  const containerRef  = useRef<HTMLDivElement>(null);
+  const containerRef  = useRef<HTMLDivElement | null>(null);
   const dragItemRef   = useRef<LayoutItem | null>(null);
   const hoverCellRef  = useRef<{ col: number; row: number } | null>(null);
   const dragOffsetRef = useRef<{ colOffset: number; rowOffset: number }>({ colOffset: 0, rowOffset: 0 });
+
+  // gridMounted 只是个触发器：容器的真实 DOM 节点存进 containerRef.current，
+  // 这个 state 只用来告诉下面的 ResizeObserver effect "该重新检查一次容器了"。
+  //
+  // 为什么不能直接用 useRef + useEffect(fn, [])：
+  // currentProfile 异步加载完成前，本组件末尾的 `if (!currentProfile) return null`
+  // 会让真正的网格 <div ref={containerRef}> 根本不被渲染。
+  // 空依赖数组的 effect 只在"组件第一次挂载"时跑一次，那一刻 containerRef.current
+  // 还是 null，ResizeObserver 从未被创建，之后 currentProfile 加载完、组件重新渲染
+  // 出真正的网格时，这个 effect 也不会再跑第二次——cellSize 从此卡死在硬编码默认值。
+  // 用回调 ref，节点在哪一次渲染里真正出现，就在哪一刻触发，不依赖"挂载时机"的假设。
+  const [gridMounted, setGridMounted] = useState(false);
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    setGridMounted(!!node);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -165,26 +184,54 @@ function DashboardGrid() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [gridMounted]);
+
+  // 布局现在按档案（profile）存取，不再是账号（user）全局共用一份。
+  // 切换档案时必须重新拉取，并在拉取完成前显示loading占位，避免闪现上一个档案的布局。
+  const layoutQuery = useQuery({
+    queryKey: ['dashboard-layout', currentProfile?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/dashboard/layout?profile_id=${currentProfile!.id}`);
+      if (!res.ok) throw new Error('Failed to fetch dashboard layout');
+      return res.json() as Promise<{ layout: LayoutItem[] | null }>;
+    },
+    enabled: !!currentProfile?.id,
+  });
+  const isLayoutLoading = layoutQuery.isLoading;
+
+  // 查询结果作为"这个档案的当前布局"落地成本地可编辑草稿——拖拽/增删卡片
+  // 都是重度的本地就地修改，不适合直接对着查询缓存做增量patch，落地成本地
+  // state才能自然支撑这些交互，保存时再整份写回后端。
+  useEffect(() => {
+    if (!layoutQuery.data) return;
+    const saved = layoutQuery.data.layout;
+    if (Array.isArray(saved) && saved.length > 0) {
+      // daymaster/western-chart：历史遗留id，数据库这次已整体重置，
+      // 理论上不会再出现，保留这层过滤仅作防御性兜底
+      setLayout(saved.filter((i: LayoutItem) => i.id !== 'daymaster' && i.id !== 'western-chart'));
+    } else {
+      setLayout(DEFAULT_LAYOUT);
+    }
+  }, [layoutQuery.data]);
 
   useEffect(() => {
-    fetch('/api/dashboard/layout')
-      .then(r => r.json())
-      .then(({ layout: saved }) => {
-        if (Array.isArray(saved) && saved.length > 0) {
-          setLayout(saved.filter(i => i.id !== 'daymaster'));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (layoutQuery.isError) setLayout(DEFAULT_LAYOUT);
+  }, [layoutQuery.isError]);
 
+  const saveLayoutMutation = useMutation({
+    mutationFn: async (l: LayoutItem[]) => {
+      if (!currentProfile?.id) return;
+      await fetch('/api/dashboard/layout', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: currentProfile.id, layout: l }),
+      });
+    },
+  });
   const saveLayout = useCallback((l: LayoutItem[]) => {
-    fetch('/api/dashboard/layout', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ layout: l }),
-    }).catch(() => {});
-  }, []);
+    saveLayoutMutation.mutate(l);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProfile?.id]);
 
   const exitEditMode = useCallback(() => {
     setIsEditMode(false);
@@ -358,6 +405,18 @@ function DashboardGrid() {
 
   if (!currentProfile) return null;
 
+  // 布局还没拉回来这段时间，显示一个简单占位，不渲染网格，避免闪现上一个档案的内容
+  if (isLayoutLoading) {
+    return (
+      <div className="relative w-full max-w-5xl mx-auto px-6 py-6">
+        <div
+          className="w-full rounded-2xl"
+          style={{ minHeight: 400, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+        />
+      </div>
+    );
+  }
+
   // Display layout: expansions applied for rendering; base layout kept pure for drag logic
   const displayLayout = applyExpansions(layout, expandedCards);
 
@@ -379,7 +438,7 @@ function DashboardGrid() {
           onDragCancel={handleDragCancel}
         >
           <div
-            ref={containerRef}
+            ref={setContainerRef}
             style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(6, 1fr)',

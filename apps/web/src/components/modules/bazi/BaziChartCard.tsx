@@ -1,13 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { useGridContext } from '@/contexts/GridContext';
-
-const ELEMENT_COLORS: Record<string, string> = {
-  Wood: '#388E3C', Fire: '#D32F2F', Earth: '#F57F17',
-  Metal: '#757575', Water: '#1976D2', gray: '#6b7280',
-};
+import { getWuxingColor } from '@/lib/wuxing-colors';
+import { useDashboardData } from '@/hooks/queries/useDashboardData';
 
 const QI_ORDER = ['BenQi', 'ZhongQi', 'YuQi'];
 const POSITIONS = ['Year', 'Month', 'Day', 'Hour'] as const;
@@ -23,19 +20,11 @@ export const CARD_META = { id: 'bazi-chart', cols: COLS, rows: ROWS, module: 'ba
 
 export default function BaziChartCard({ profileId }: { profileId: string }) {
   const t = useTranslations('bazi');
-  const [bazi, setBazi] = useState<any>(null);
   const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState<'bazi' | 'shishen'>('bazi');
   const grid = useGridContext();
-
-  useEffect(() => {
-    setBazi(null);
-    if (!profileId) return;
-    fetch(`/api/dashboard?profile_id=${profileId}`)
-      .then(r => r.json())
-      .then(d => { if (d.bazi) setBazi(d.bazi); })
-      .catch(() => {});
-  }, [profileId]);
+  const { data } = useDashboardData(profileId);
+  const bazi = data?.bazi ?? null;
 
   const handleCardClick = () => {
     if (expanded) {
@@ -113,7 +102,7 @@ export default function BaziChartCard({ profileId }: { profileId: string }) {
   });
 
   const dayStemNode = tianGanNodes.find((n: any) => n.pos === 'DayStem');
-  const dayStemColor = ELEMENT_COLORS[dayStemNode?.wuxing ?? 'gray'] ?? ELEMENT_COLORS['gray'];
+  const dayStemColor = getWuxingColor(dayStemNode?.wuxing);
 
   return (
     <div
@@ -190,8 +179,8 @@ export default function BaziChartCard({ profileId }: { profileId: string }) {
         {columns.map(({ pos, stemNode, branch, stemShishen, branchWuxing }, idx) => {
           const cx = COL_W * idx + COL_W / 2;
           const stemWuxing: string = stemNode?.wuxing ?? 'gray';
-          const stemColor = ELEMENT_COLORS[stemWuxing] ?? ELEMENT_COLORS['gray'];
-          const branchColor = ELEMENT_COLORS[branchWuxing] ?? ELEMENT_COLORS['gray'];
+          const stemColor = getWuxingColor(stemWuxing);
+          const branchColor = getWuxingColor(branchWuxing);
           const isUnknown = !stemNode || !branch;
           const isDay = pos === 'Day';
           const stemText = mode === 'bazi'
@@ -255,7 +244,7 @@ export default function BaziChartCard({ profileId }: { profileId: string }) {
                 return (
                   <g key={`${pos}-cang`}>
                     {displayed.map((cg: any, ci: number) => {
-                      const cgColor = ELEMENT_COLORS[cg.wuxing as string] ?? ELEMENT_COLORS['gray'];
+                      const cgColor = getWuxingColor(cg.wuxing as string);
                       const display: string = mode === 'bazi'
                         ? (cg.stem ? t(`tiangan.${cg.stem}`) : '?')
                         : (cg.shishen ? t(`shishen.${cg.shishen}`) : '?');

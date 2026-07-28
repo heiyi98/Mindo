@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { BookText, BookImage, Notebook } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { MIND_CARD_FOLDER_NAME_MAX_LENGTH, truncateToGraphemes } from '@/lib/mindCards/textLength';
 
 export type MindCardFolderVisibility = 'private' | 'followers' | 'friends' | 'public';
 export type MindCardFolderDisplayMode = 'album' | 'stack';
@@ -34,36 +36,41 @@ export default function MindCardFolderCreateForm({ onCreated, onCancel }: MindCa
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState<MindCardFolderVisibility | null>(null);
   const [selection, setSelection] = useState<FormSelection | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+
+  const createMutation = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      const res = await fetch('/api/mind-cards/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('request failed');
+      return res.json() as Promise<{ folder?: CreatedMindCardFolder }>;
+    },
+    onSuccess: (d) => {
+      if (d.folder) onCreated(d.folder);
+    },
+  });
 
   const submit = () => {
     const trimmed = name.trim();
-    if (!trimmed || !visibility || !selection || submitting) return;
-    setSubmitting(true);
+    if (!trimmed || !visibility || !selection || createMutation.isPending) return;
     const body = selection === 'notebook'
       ? { name: trimmed, folder_kind: 'notebook', visibility }
       : { name: trimmed, folder_kind: 'collection', display_mode: selection, visibility };
-    fetch('/api/mind-cards/folders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.folder) onCreated(d.folder);
-      })
-      .finally(() => setSubmitting(false));
+    createMutation.mutate(body);
   };
 
-  const disabled = !name.trim() || !visibility || !selection || submitting;
+  const disabled = !name.trim() || !visibility || !selection || createMutation.isPending;
 
   return (
     <div className="px-2 py-3 space-y-3 rounded-xl" style={{ background: 'hsl(var(--foreground) / 0.04)' }}>
       <input
         type="text"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => setName(truncateToGraphemes(e.target.value, MIND_CARD_FOLDER_NAME_MAX_LENGTH))}
         placeholder={t('folderForm.namePlaceholder')}
+        maxLength={MIND_CARD_FOLDER_NAME_MAX_LENGTH * 8}
         className="w-full text-sm px-3 py-2 rounded-lg bg-transparent"
         style={{ border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
       />

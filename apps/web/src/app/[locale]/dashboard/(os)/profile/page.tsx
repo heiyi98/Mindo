@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Trash2, ChevronRight, Package, Shield, Copy, Check, Pencil } from 'lucide-react';
+import { LogOut, Trash2, ChevronRight, Layers, Shield, Check, Pencil, Link as LinkIcon, SquareUser } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LanguageSettingRow } from '@/components/os/LanguageSwitcher';
 
@@ -161,19 +161,20 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={openEdit}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-light transition-colors"
+            title={t('identity.edit')}
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-xs font-light transition-colors"
             style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
           >
-            <Pencil size={12} />
-            {t('identity.edit')}
+            <Pencil size={16} />
           </button>
           <button
             onClick={handleCopy}
             disabled={!handle}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-light transition-colors disabled:opacity-30"
+            title={t('identity.copyLink')}
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-xs font-light transition-colors disabled:opacity-30"
             style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
           >
-            {copied ? <><Check size={12} />{t('identity.copied')}</> : <><Copy size={12} />{t('identity.copyLink')}</>}
+            {copied ? <Check size={16} /> : <LinkIcon size={16} />}
           </button>
         </div>
       </motion.div>
@@ -191,7 +192,10 @@ export default function ProfilePage() {
           className="w-full flex items-center justify-between px-4 py-4 transition-colors hover:bg-muted/30"
           style={{ color: 'hsl(var(--foreground))' }}
         >
-          <span className="text-sm font-light">{t('manageProfiles')}</span>
+          <div className="flex items-center gap-2">
+            <SquareUser size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
+            <span className="text-sm font-light">{t('manageProfiles')}</span>
+          </div>
           <ChevronRight size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
         </Link>
         <div style={{ height: 1, background: 'hsl(var(--border))' }} />
@@ -215,7 +219,7 @@ export default function ProfilePage() {
           style={{ color: 'hsl(var(--foreground))' }}
         >
           <div className="flex items-center gap-2">
-            <Package size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
+            <Layers size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
             <span className="text-sm font-light">{t('assetsLabel')}</span>
           </div>
           <ChevronRight size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />

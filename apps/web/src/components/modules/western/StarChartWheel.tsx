@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import type { FullModeResult } from '@mindo/core';
 
 const ZODIAC_SIGNS = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'] as const;
@@ -14,19 +15,20 @@ export const ROWS = 3;
 export const CARD_META = { id: 'western-chart', cols: COLS, rows: ROWS, module: 'western' };
 
 export default function StarChartWheel({ profileId }: { profileId: string }) {
-  const [result, setResult] = useState<FullModeResult | null>(null);
-
-  useEffect(() => {
-    if (!profileId) return;
-    fetch('/api/astrology/western', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile_id: profileId }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d.result) setResult(d.result); })
-      .catch(() => {});
-  }, [profileId]);
+  const { data } = useQuery({
+    queryKey: ['western-chart', profileId],
+    queryFn: async () => {
+      const res = await fetch('/api/astrology/western', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: profileId }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch western chart');
+      return res.json();
+    },
+    enabled: !!profileId,
+  });
+  const result: FullModeResult | null = data?.result ?? null;
 
   const size = 500; const cx = size / 2; const cy = size / 2;
   const R_OUTER = 220; const R_ZODIAC = 200; const R_ZODIAC_IN = 165; const R_HOUSE = 155; const R_HOUSE_IN = 90; const R_PLANET = 125;

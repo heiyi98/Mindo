@@ -3,20 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { computeWuxingAssessment, toWuxingVector, toBigFiveVector, wuxingSimilarity, bigFiveSimilarity } from '@mindo/core';
 import type { BaziSnapshot, WuxingVector, BigFiveVector } from '@mindo/core';
 import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
-import { filterVisibleCards } from '@/lib/mindCards/visibility';
+import { filterVisibleCards, fetchRelationFlags } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
 import { computeBehaviorCandidateAuthors } from '@/lib/mindCards/behaviorCandidates';
+import { fetchAuthorMap } from '@/lib/mindCards/authors';
 import { CANDIDATE_POOL_WINDOW_DAYS } from '@/lib/mindCards/constants';
 
-// 四线并行选卡（Mindo-片语.md 第三十四节）：不再是"60%相似度+40%新鲜度"混合成
-// 一个分数，而是八字相似度/大五相似度/行为共现/随机四条完全独立的线各自选卡，
-// 拼成一组卡组——目的是让"命理相似度这套算法准不准"能被干净地单独验证，不被
-// 行为数据或新鲜度掺在一起分不清谁起作用。
 const RESULT_SIZE = 10;
-
-// 已读卡片不再从候选池整个剔除——卡片数量少的阶段，硬性剔除会导致用户很快把
-// 候选池刷完、之后无内容可看。改成对已读卡片的最终排序分打折，让它明显往后退，
-// 但仍有机会被刷到。折扣比例是可调的运营参数，不满意可以随时调整。
 const VIEWED_SCORE_MULTIPLIER = 0.3;
 
 type LineTag = 'wuxing' | 'bigfive' | 'behavior' | 'random';
@@ -30,19 +23,9 @@ interface CardRow {
   created_at: string;
 }
 
-// 两个已有文档案例的精确复现——同时具备八字+大五：1,4,7=八字 2,5,8=大五
-// 3,6,9=行为 10=随机；只有八字没有大五：1,2,4,7=八字 3,5,6,9=行为 8,10=随机。
-// 前端不需要知道"这张卡是哪条线来的"，这个顺序只是让四条线在卡组里交替出现、
-// 不扎堆在一起，不是什么严格业务规则，所以就地写死这两个案例，不做成通用算法。
 const POSITION_SEQUENCE_BOTH: LineTag[] = ['wuxing', 'bigfive', 'behavior', 'wuxing', 'bigfive', 'behavior', 'wuxing', 'bigfive', 'behavior', 'random'];
 const POSITION_SEQUENCE_WUXING_ONLY: LineTag[] = ['wuxing', 'wuxing', 'behavior', 'wuxing', 'behavior', 'behavior', 'wuxing', 'random', 'behavior', 'random'];
-// 两个因子都没有的边界情况文档未定义——沿用"某条线的名额被移除时，平分给
-// 剩余线"这条已验证过的规则往下推：八字的4个名额+大五的0个名额全部移除后，
-// 剩下behavior/random两条线平分，6/4。这里直接写死这个推导结果。
 const POSITION_SEQUENCE_NEITHER: LineTag[] = ['behavior', 'random', 'behavior', 'random', 'behavior', 'random', 'behavior', 'random', 'behavior', 'behavior'];
-// 位置对应的线如果候选不够（那条线的队列已经空了），按这个优先级从别的还有
-// 余量的队列里借一张顶上，保证最终卡组尽量凑满，不会因为某一条线候选不足
-// 就白白少一张——random因为承接了所有线的"缺口"，天然更可能有余量，排第一
 const FALLBACK_ORDER: LineTag[] = ['random', 'behavior', 'bigfive', 'wuxing'];
 
 interface ScoredCard {
@@ -70,15 +53,12 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-// GET /api/mind-cards/recommend — 推荐tab，四线并行选卡拼成一组卡组，
-// 已读降权（不剔除），排除浏览者自己发布的卡片
 export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 浏览者"我方"各因子向量：本人档案的实时最新计算，不依赖浏览者是否发过卡片
     let viewerWuxing: WuxingVector | null = null;
     let viewerBigfive: BigFiveVector | null = null;
     const { data: selfProfile } = await supabase
@@ -121,7 +101,6 @@ export async function GET() {
       .from('mind_cards')
       .select('id, user_id, content, visibility, style, created_at')
       .gte('created_at', windowStart)
-      // 明确排除浏览者自己发布的卡片
       .neq('user_id', user.id);
 
     if (candidatesError) {
@@ -131,14 +110,11 @@ export async function GET() {
 
     const pool = (candidates ?? []) as CardRow[];
 
-    // 铁律：四条线都必须从这一份已经过滤过可见性的候选池里挑，任何一条线都
-    // 不允许各自重新判断一次可见性（见 Mindo-片语.md 第三节/第三十四节3）
     const visiblePool = await filterVisibleCards(admin, user.id, pool);
     if (visiblePool.length === 0) {
       return NextResponse.json({ cards: [] });
     }
 
-    // 已读集合：只用来给已读卡片的排序分打折，不再用来过滤候选池
     const viewedIds = new Set<string>();
     const { data: viewedRows } = await admin
       .from('mind_card_views')
@@ -149,7 +125,6 @@ export async function GET() {
 
     const discount = (cardId: string) => (viewedIds.has(cardId) ? VIEWED_SCORE_MULTIPLIER : 1);
 
-    // 批量拉候选卡片的五行/大五metrics，按card_id分组
     const { data: metricRows } = await admin
       .from('mind_card_metrics')
       .select('card_id, metric_type, metric_data')
@@ -165,7 +140,6 @@ export async function GET() {
     const usedIds = new Set<string>();
     const sourceByCardId = new Map<string, LineTag>();
 
-    // ===== 线1：八字相似度 =====
     let wuxingPicked: CardRow[] = [];
     if (hasWuxing) {
       const scored: ScoredCard[] = visiblePool
@@ -177,7 +151,6 @@ export async function GET() {
       for (const c of wuxingPicked) sourceByCardId.set(c.id, 'wuxing');
     }
 
-    // ===== 线2：大五相似度 =====
     let bigfivePicked: CardRow[] = [];
     if (hasBigfive) {
       const scored: ScoredCard[] = visiblePool
@@ -188,7 +161,6 @@ export async function GET() {
       for (const c of bigfivePicked) sourceByCardId.set(c.id, 'bigfive');
     }
 
-    // ===== 线3：行为共现 =====
     const behaviorAuthors = await computeBehaviorCandidateAuthors(admin, user.id);
     const authorRank = new Map(behaviorAuthors.map((a) => [a.authorId, a.coOccurrenceCount]));
     const behaviorScored: ScoredCard[] = visiblePool
@@ -199,8 +171,6 @@ export async function GET() {
     const behaviorPicked = pickTopN(behaviorScored, behaviorTarget, usedIds);
     for (const c of behaviorPicked) sourceByCardId.set(c.id, 'behavior');
 
-    // ===== 线4：随机——名额=10减去前三条线实际选出的数量，任何一条线候选
-    // 不足时，缺口自动全部转给随机线补足，保证卡组尽量凑满10张 =====
     const pickedSoFar = wuxingPicked.length + bigfivePicked.length + behaviorPicked.length;
     const randomTarget = Math.max(0, RESULT_SIZE - pickedSoFar);
     const remainingPool = shuffle(visiblePool.filter((c) => !usedIds.has(c.id)));
@@ -208,7 +178,6 @@ export async function GET() {
     randomPicked.forEach((c) => usedIds.add(c.id));
     for (const c of randomPicked) sourceByCardId.set(c.id, 'random');
 
-    // ===== 组装成最终卡组，按文档定下的交替顺序排列 =====
     const queues: Record<LineTag, CardRow[]> = {
       wuxing: [...wuxingPicked],
       bigfive: [...bigfivePicked],
@@ -232,8 +201,6 @@ export async function GET() {
       if (card) finalCards.push(card);
     }
 
-    // 每张卡片记一笔"是哪条线选出来的"——普通字符串，不设枚举约束，以后加新线
-    // 只是多一个新的文字值，不需要改表结构（见第三十四节2）
     const sourceRows = finalCards.map((c) => ({
       viewer_id: user.id,
       card_id: c.id,
@@ -242,7 +209,6 @@ export async function GET() {
     if (sourceRows.length > 0) {
       const { error: sourceError } = await admin.from('mind_card_recommendation_sources').insert(sourceRows);
       if (sourceError) {
-        // 记录来源失败不影响推荐本身正常返回
         console.error('[mind-cards/recommend GET] source insert error:', sourceError);
       }
     }
@@ -250,12 +216,17 @@ export async function GET() {
     const cardIds = finalCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);
 
-    // is_own：候选池已经在查询阶段排除了浏览者自己的卡片，这里理论上恒为false，
-    // 仍如实计算，保持所有返回卡片列表接口的字段行为一致
+    // 作者信息 + 是否已关注——供卡片详情页左下角"名字+关注胶囊"使用
+    const authorIds = finalCards.map((c) => c.user_id);
+    const authorMap = await fetchAuthorMap(admin, authorIds);
+    const relations = await fetchRelationFlags(admin, user.id, authorIds);
+
     const cards = finalCards.map((c) => ({
       ...c,
       favorited: myFavorites.has(c.id),
       is_own: c.user_id === user.id,
+      author: authorMap.get(c.user_id) ?? null,
+      authorFollowedByViewer: relations.get(c.user_id)?.viewerFollowsAuthor ?? false,
     }));
 
     return NextResponse.json({ cards });

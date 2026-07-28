@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/reading-recovery",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/mind-card-views-cleanup",
+      "schedule": "0 0 * * *"
     }
   ]
 }

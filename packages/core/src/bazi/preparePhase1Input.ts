@@ -183,12 +183,25 @@ export function preparePhase1Input(snapshot: BaziSnapshot): string {
     ? ssActive.reduce((s, g) => s + g.totalInfluence, 0) / ssActive.length
     : 0;
 
-  const allEntries: { shishen: ShiShen; totalInfluence: number }[] = [
-    ...activeInfluences.map(g => ({ shishen: g.shishen, totalInfluence: g.totalInfluence })),
-    ...ALL_TEN_SHISHEN
-      .filter(ss => !activeSet.has(ss))
-      .map(ss => ({ shishen: ss as ShiShen, totalInfluence: 0 })),
-  ];
+  const nodesByShishenTemp = new Map<ShiShen, typeof snapshot.energy.energyNodes>();
+  for (const node of snapshot.energy.energyNodes) {
+    const ss = new Map(snapshot.shishen.shishenMap.map(n => [n.id, n.shishen])).get(node.id);
+    if (!ss || ss === 'DayMaster') continue;
+    if (!nodesByShishenTemp.has(ss)) nodesByShishenTemp.set(ss, []);
+    nodesByShishenTemp.get(ss)!.push(node);
+  }
+
+  const allEntries: { shishen: ShiShen; totalInfluence: number }[] = ALL_TEN_SHISHEN.map(ss => {
+    const found = activeInfluences.find(g => g.shishen === ss);
+    return { shishen: ss as ShiShen, totalInfluence: found?.totalInfluence ?? 0 };
+  }).sort((a, b) => {
+    const aHasNodes = (nodesByShishenTemp.get(a.shishen) ?? []).length > 0;
+    const bHasNodes = (nodesByShishenTemp.get(b.shishen) ?? []).length > 0;
+    // 第一排序键：有节点排前，无节点（缺失）排后
+    if (aHasNodes !== bHasNodes) return aHasNodes ? -1 : 1;
+    // 第二排序键：同为有节点时，按影响力降序
+    return b.totalInfluence - a.totalInfluence;
+  });
 
   const shishenById = new Map(snapshot.shishen.shishenMap.map(n => [n.id, n.shishen]));
   const visibilityById = new Map(snapshot.tougen.cangGanVisibility.map(v => [v.cangganId, v]));

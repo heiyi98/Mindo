@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useSearchParams, useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { Send, Search, X } from 'lucide-react';
 
@@ -42,200 +43,190 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
 }
 
+const conversationsQueryKey = ['conversations'] as const;
+function messagesQueryKey(convId: string) {
+  return ['conversation-messages', convId] as const;
+}
+
 export default function MessagesPage() {
   const t = useTranslations('social');
   const searchParams = useSearchParams();
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const locale = params.locale as string;
   const convFromUrl = searchParams.get('conv');
 
   const [myId, setMyId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [loadingConvs, setLoadingConvs] = useState(true);
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
 
   // 搜索状态
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null);
-  const activeIdRef = useRef<string | null>(null);
-  const myIdRef = useRef<string | null>(null);
   const autoOpenedRef = useRef(false);
   const supabaseRef = useRef(createClient());
+
+  const conversationsQuery = useQuery({
+    queryKey: conversationsQueryKey,
+    queryFn: async () => {
+      const res = await fetch('/api/conversations');
+      const data = await res.json();
+      return (data.conversations ?? []) as Conversation[];
+    },
+  });
+  const conversations = conversationsQuery.data ?? [];
+  const loadingConvs = conversationsQuery.isLoading;
 
   const activeConv = conversations.find(c => c.id === activeId) ?? null;
   const isSearching = searchQuery.trim().length > 0;
 
-  const openConversation = async (convId: string) => {
-    if (activeIdRef.current === convId) return;
-    activeIdRef.current = convId;
-    setActiveId(convId);
-    setMessages([]);
-    setLoadingMsgs(true);
+  const messagesQuery = useQuery({
+    queryKey: messagesQueryKey(activeId ?? ''),
+    queryFn: async () => {
+      const res = await fetch(`/api/conversations/${activeId}/messages`);
+      const data = await res.json();
+      if (data.myId) setMyId(data.myId);
+      return (data.messages ?? []) as Message[];
+    },
+    enabled: !!activeId,
+  });
+  const messages = messagesQuery.data ?? [];
+  const loadingMsgs = messagesQuery.isLoading;
 
-    if (channelRef.current) {
-      await supabaseRef.current.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-
-    const res = await fetch(`/api/conversations/${convId}/messages`);
-    const { messages: msgs, myId: id } = await res.json();
-    if (id) {
-      myIdRef.current = id;
-      setMyId(id);
-    }
-    setMessages(msgs ?? []);
-    setLoadingMsgs(false);
-
-    const channel = supabaseRef.current
-      .channel(`conv-${convId}`)
+  // 当前会话的实时订阅——切换会话/组件卸载时自动清理上一个频道，不需要
+  // 手动维护一个ref去追踪"上一个频道是谁、什么时候该退订"。
+  useEffect(() => {
+    if (!activeId) return;
+    const supabase = supabaseRef.current;
+    const channel = supabase
+      .channel(`conv-${activeId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `conversation_id=eq.${convId}`,
+          filter: `conversation_id=eq.${activeId}`,
         },
         (payload: any) => {
           const newMsg = payload.new as Message;
-          setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
+          queryClient.setQueryData(messagesQueryKey(activeId), (old: Message[] | undefined) => {
+            if (!old) return old;
+            if (old.some(m => m.id === newMsg.id)) return old;
+            return [...old, newMsg];
           });
-          setConversations(prev =>
-            prev
-              .map(c =>
-                c.id === convId
-                  ? { ...c, lastMessage: { content: newMsg.content, created_at: newMsg.created_at } }
-                  : c
-              )
+          queryClient.setQueryData(conversationsQueryKey, (old: Conversation[] | undefined) => {
+            if (!old) return old;
+            return old
+              .map(c => c.id === activeId
+                ? { ...c, lastMessage: { content: newMsg.content, created_at: newMsg.created_at } }
+                : c)
               .sort((a, b) => {
                 const ta = a.lastMessage?.created_at ?? '';
                 const tb = b.lastMessage?.created_at ?? '';
                 return tb.localeCompare(ta);
-              })
-          );
+              });
+          });
         }
       );
-
     channel.subscribe();
-    channelRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [activeId, queryClient]);
+
+  const openConversation = (convId: string) => {
+    if (activeId === convId) return;
+    setActiveId(convId);
   };
 
-  // 点击搜索结果用户，创建或打开会话
-  const handleStartConversation = async (targetUser: SearchUser) => {
-    setSearchQuery('');
-    setSearchResults([]);
-
-    const res = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUserId: targetUser.id }),
-    });
-
-    if (!res.ok) return;
-    const { conversationId } = await res.json();
-
-    // 如果会话不在列表里，手动加入
-    setConversations(prev => {
-      if (prev.find(c => c.id === conversationId)) return prev;
-      return [
-        {
-          id: conversationId,
-          other: {
-            id: targetUser.id,
-            display_name: targetUser.display_name,
-            handle: targetUser.handle,
+  const startConversationMutation = useMutation({
+    mutationFn: async (targetUser: SearchUser) => {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: targetUser.id }),
+      });
+      if (!res.ok) throw new Error('request failed');
+      const { conversationId } = await res.json();
+      return { conversationId, targetUser };
+    },
+    onSuccess: ({ conversationId, targetUser }) => {
+      queryClient.setQueryData(conversationsQueryKey, (old: Conversation[] | undefined) => {
+        const prev = old ?? [];
+        if (prev.find(c => c.id === conversationId)) return prev;
+        return [
+          {
+            id: conversationId,
+            other: { id: targetUser.id, display_name: targetUser.display_name, handle: targetUser.handle },
+            lastMessage: null,
           },
-          lastMessage: null,
-        },
-        ...prev,
-      ];
-    });
+          ...prev,
+        ];
+      });
+      setActiveId(conversationId);
+    },
+  });
 
-    openConversation(conversationId);
+  // 点击搜索结果用户，创建或打开会话
+  const handleStartConversation = (targetUser: SearchUser) => {
+    setSearchQuery('');
+    startConversationMutation.mutate(targetUser);
   };
 
   // 搜索防抖
   useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
-    }
-
-    setSearching(true);
-    searchTimerRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      if (res.ok) {
-        const { users } = await res.json();
-        setSearchResults(users ?? []);
-      }
-      setSearching(false);
-    }, 300);
-
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const userSearchQuery = useQuery({
+    queryKey: ['user-search', debouncedSearchQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}`);
+      if (!res.ok) throw new Error('Failed to search users');
+      return res.json();
+    },
+    enabled: !!debouncedSearchQuery.trim(),
+  });
+  const searchResults: SearchUser[] = (isSearching && userSearchQuery.data?.users) || [];
+  const searching = isSearching && userSearchQuery.isFetching;
 
   useEffect(() => {
     const supabase = supabaseRef.current;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        myIdRef.current = user.id;
-        setMyId(user.id);
-      }
+      if (user) setMyId(user.id);
     });
-
-    fetch('/api/conversations')
-      .then(r => r.json())
-      .then(({ conversations: convs }) => {
-        const list: Conversation[] = convs ?? [];
-        setConversations(list);
-        setLoadingConvs(false);
-
-        if (convFromUrl && !autoOpenedRef.current) {
-          autoOpenedRef.current = true;
-          openConversation(convFromUrl);
-        }
-      });
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // URL带conv参数时自动打开对应会话，只在挂载时触发一次
+  useEffect(() => {
+    if (convFromUrl && !autoOpenedRef.current) {
+      autoOpenedRef.current = true;
+      setActiveId(convFromUrl);
+    }
+  }, [convFromUrl]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!activeIdRef.current || !input.trim() || sending) return;
+  const sendMessageMutation = useMutation({
+    mutationFn: async (vars: { convId: string; content: string }) => {
+      await fetch(`/api/conversations/${vars.convId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: vars.content }),
+      });
+    },
+  });
+
+  const handleSend = () => {
+    if (!activeId || !input.trim() || sendMessageMutation.isPending) return;
     const content = input.trim();
     setInput('');
-    setSending(true);
-    await fetch(`/api/conversations/${activeIdRef.current}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
-    setSending(false);
+    sendMessageMutation.mutate({ convId: activeId, content });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -297,7 +288,7 @@ export default function MessagesPage() {
             />
             {searchQuery && (
               <button
-                onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-3"
                 style={{ color: 'hsl(var(--muted-foreground))' }}
               >
@@ -505,7 +496,7 @@ export default function MessagesPage() {
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || sending}
+                disabled={!input.trim() || sendMessageMutation.isPending}
                 className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-opacity disabled:opacity-30"
                 style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
               >

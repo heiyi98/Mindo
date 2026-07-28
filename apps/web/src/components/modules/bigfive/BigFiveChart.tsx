@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
+import { useQuery } from '@tanstack/react-query';
 import type { StandardScores } from '@/components/modules/bigfive/BigFiveFacets';
 import { BIGFIVE_COLORS, DOMAIN_ORDER, DOMAIN_FACETS, DOMAIN_LETTER } from '@/lib/bigfive-constants';
 
@@ -32,18 +33,19 @@ function tScaleRadar(t: number) { return Math.max(0, (t - 20) / 45); }
 export default function BigFiveChart({ profileId }: { profileId: string }) {
   const [flipped, setFlipped] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [standardScores, setStandardScores] = useState<StandardScores | null>(null);
   const tChartDomains = useTranslations('bigfive.chart_domains');
   const t = useTranslations('bigfive');
 
-  useEffect(() => {
-    setStandardScores(null);
-    if (!profileId) return;
-    fetch(`/api/psychology/bigfive/result?profile_id=${profileId}`)
-      .then(r => r.json())
-      .then(d => { if (d.standard_scores) setStandardScores(d.standard_scores); })
-      .catch(() => {});
-  }, [profileId]);
+  const { data } = useQuery({
+    queryKey: ['bigfive-result', profileId],
+    queryFn: async () => {
+      const res = await fetch(`/api/psychology/bigfive/result?profile_id=${profileId}`);
+      if (!res.ok) throw new Error('Failed to fetch bigfive result');
+      return res.json();
+    },
+    enabled: !!profileId,
+  });
+  const standardScores: StandardScores | null = data?.standard_scores ?? null;
 
   const radarPoints = useMemo(() => {
     if (!standardScores?.domains) return [];
