@@ -17,6 +17,12 @@ node_modules
 .next/
 /out/
 
+# fumadocs-mdx generated cache
+.source/
+
+# Keystatic：翻译词典字段结构快照，predev/prebuild 自动重新生成，不需要提交
+apps/web/keystatic/messages-shapes.generated.json
+
 # production
 /build
 

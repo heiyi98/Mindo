@@ -9,8 +9,9 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   console.log('[proxy] path:', pathname)
 
-  // API路由直接放行，不经过intl处理
-  if (pathname.startsWith('/api/')) {
+  // API路由和Keystatic后台直接放行，不经过intl处理
+  // （/keystatic不带locale前缀，走intl会被当成"缺locale"307到/en/keystatic，导致后台打不开）
+  if (pathname.startsWith('/api/') || pathname.startsWith('/keystatic')) {
     const { supabaseResponse } = await updateSession(request)
     return supabaseResponse
   }
