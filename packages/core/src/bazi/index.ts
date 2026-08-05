@@ -1,8 +1,8 @@
 export { analyzeBazi, toBaziSnapshot } from './analysis';
 export { preparePhase1Input } from './preparePhase1Input';
 export { buildShishenMetadata } from './preparePhase1Input';
-export { detectPattern } from './pattern';
-export { computeWuxingAssessment } from './yongshen';
+export { detectPattern } from './structure';
+export { computeWuxingAssessment } from './energy/yongshen';
 export { computeFortuneImbalance, generateLifeChart, getMonthPillar, getDayPillar } from './fortune';
 export type {
   LinPillar,
@@ -29,6 +29,17 @@ export type {
   WuxingAssessment,
   WuxingRole,
   WuxingStrengthLabel,
+  Wuxing,
+  TianGan,
+  DiZhi,
+  ShiShen,
+  YinYang,
+  GongWeiPos,
+  TianGanHe,
+  TianGanChong,
+  DiZhiRelation,
+  TianGanHeResult,
+  DiZhiRelationType,
 } from './types';
 export * from './engine';
 export * from './timeline';

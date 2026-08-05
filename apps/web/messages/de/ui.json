@@ -1,4 +1,7 @@
 {
+  "common": {
+    "underConstruction": "Im Aufbau"
+  },
   "auth": {
     "login": {
       "title": "Bei Mindo anmelden",

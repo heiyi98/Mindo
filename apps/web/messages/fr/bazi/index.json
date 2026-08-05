@@ -1,7 +1,54 @@
 {
+  "title": "Schéma",
+  "year": "An",
+  "month": "Mois",
+  "day": "Jour",
+  "hour": "Heure",
+  "daymaster": "Pivot",
+  "tiangan": {
+    "Jia": "Jia",
+    "Yi": "Yi",
+    "Bing": "Bing",
+    "Ding": "Ding",
+    "Wu": "Wu",
+    "Ji": "Ji",
+    "Geng": "Geng",
+    "Xin": "Xin",
+    "Ren": "Ren",
+    "Gui": "Gui"
+  },
+  "dizhi": {
+    "Zi": "Zi",
+    "Chou": "Chou",
+    "Yin": "Yin",
+    "Mao": "Mao",
+    "Chen": "Chen",
+    "Si": "Si",
+    "Wu": "Wu",
+    "Wei": "Wei",
+    "Shen": "Shen",
+    "You": "You",
+    "Xu": "Xu",
+    "Hai": "Hai"
+  },
+  "shishen": {
+    "BiJian": "Camaraderie",
+    "JieCai": "Instrumentalisme",
+    "ShiShen": "Sensibilité",
+    "ShangGuan": "Rationalité",
+    "PianCai": "Flair",
+    "ZhengCai": "Pragmatisme",
+    "QiSha": "Résistance",
+    "ZhengGuan": "Ordre",
+    "PianYin": "Autonomie",
+    "ZhengYin": "Consensus",
+    "DayMaster": "Pivot",
+    "Unknown": ""
+  },
   "switchToShishen": "Dix Dieux",
   "switchToBazi": "BaZi",
   "unlockReading": "Débloquer la lecture complète",
+  "noReading": "Aucun rapport pour l'instant",
   "viewReading": "Voir la lecture complète",
   "klineTitle": "Courbe de vie K",
   "wuxing": {
@@ -21,5 +68,62 @@
     "modeDayun": "Cycle",
     "modeYear": "Cycle · Année",
     "modeMonth": "Cycle · Année · Mois"
+  },
+  "reading": {
+    "sectionTitle1": "Noyau de personnalité",
+    "sectionTitle2": "Mécanismes psychologiques",
+    "sectionTitle3": "Réactions concrètes",
+    "sectionTitle4": "Pistes d'ajustement",
+    "generating": "Génération en cours, veuillez patienter...",
+    "noReading": "Aucun rapport pour l'instant",
+    "interactions": "Interactions des mécanismes",
+    "coreConflict": "Tension centrale",
+    "selfAlignment": "Cohérence de vie",
+    "targeted": "Ajustements ciblés",
+    "buyReading": "Générer le rapport",
+    "viewReading": "Voir la lecture complète",
+    "mismatchTitle": "Informations de naissance modifiées",
+    "mismatchDesc": "Les informations de naissance du profil diffèrent de celles utilisées lors de la génération du rapport. Regénérer le rapport ?",
+    "mismatchContinue": "Continuer",
+    "mismatchRegenerate": "Regénérer",
+    "scenes": {
+      "friends": "Amitiés",
+      "work": "Travail",
+      "career": "Carrière",
+      "constraint": "Contraintes",
+      "accumulation": "Accumulation",
+      "love": "Amour",
+      "ideal": "Idéaux"
+    }
+  },
+  "metadata": {
+    "stem": "Céleste",
+    "branch": "Terrestre",
+    "touGen": "Enracinement",
+    "noTouGen": "Sans enracinement",
+    "touChu": "Percée",
+    "notTouChu": "Non-percée",
+    "muKuLocked": "Caveau verrouillé",
+    "huifang": "vers"
+  },
+  "yinyang": {
+    "Yang": "Yang",
+    "Yin": "Yin"
+  },
+  "relationKind": {
+    "ZhenHua": "Transformation véritable",
+    "HeBan": "Union entravée",
+    "ZhengHe": "Union disputée",
+    "DuHe": "Union jalouse",
+    "TianGanChong": "Choc des Tiges",
+    "SanHui": "Triple réunion",
+    "SanHe": "Triple union",
+    "BanHe": "Demi-union",
+    "GongHe": "Union en attente",
+    "LiuHe": "Union des Six",
+    "LiuChong": "Choc des Six",
+    "Xing": "Punition",
+    "Hai": "Nuisance",
+    "Po": "Rupture"
   }
 }

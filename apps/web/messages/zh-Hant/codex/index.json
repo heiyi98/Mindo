@@ -1,0 +1,32 @@
+{
+  "search": {
+    "placeholder": "搜尋內容庫…",
+    "loading": "搜尋中…",
+    "empty": "沒有找到結果"
+  },
+  "notFound": "這個詞條還不存在。",
+  "home": {
+    "graph": {
+      "baziLabel": "八字"
+    },
+    "cards": {
+      "bazi": {
+        "title": "八字",
+        "description": "佔位簡介文字，正式內容撰寫中。",
+        "cta": "進入"
+      }
+    }
+  },
+  "topicNav": {
+    "home": "主頁",
+    "directory": "詞條清單",
+    "search": "搜尋"
+  },
+  "citations": {
+    "showAll": "顯示引用",
+    "hideAll": "隱藏引用"
+  },
+  "directory": {
+    "title": "詞條清單"
+  }
+}

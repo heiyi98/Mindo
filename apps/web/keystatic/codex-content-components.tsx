@@ -1,12 +1,20 @@
 import { fields } from '@keystatic/core';
-import { wrapper, block } from '@keystatic/core/content-components';
+import { block, mark } from '@keystatic/core/content-components';
+import { Quote } from 'lucide-react';
 
 // 词条正文（MDX）里可插入的自定义组件。
 // 对应 content/codex/**/*.mdx 里手写的 <Cite title="..." url="...">...</Cite> JSX 标签，
 // 见 Mindo-内容库.md 词条外壳草稿第4节"双重编码"与已有词条示例（content/codex/china/bazi/zh.mdx）。
-export const Cite = wrapper({
+//
+// 用 mark（行内文字标记），不用 wrapper（区块容器）：现有文档里所有 <Cite> 都是单行写法
+// （标签、被引文字、闭合标签写在同一行，内部没有空行分段）。这种写法在MDX里会被解析成
+// "行内文本节点"（mdxJsxTextElement），而 wrapper 类型的组件要求子节点必须是"区块内容"
+// （像正文段落那样），两者对不上，编辑后保存会报"unexpected children"错误。
+// mark 类型的组件本来就只允许包裹一小段行内文字，跟现有写法完全匹配。
+export const Cite = mark({
   label: '引用角标',
-  description: '点击展开来源信息的引用标注，包裹一段被引用的正文',
+  icon: <Quote size={14} />,
+  tag: 'span',
   schema: {
     title: fields.text({ label: '来源标题' }),
     url: fields.url({ label: '来源链接' }),

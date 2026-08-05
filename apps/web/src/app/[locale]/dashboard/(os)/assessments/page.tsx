@@ -344,7 +344,7 @@ export default function AssessmentsPage() {
                           color: 'hsl(var(--muted-foreground))',
                         }}
                       >
-                        {t('assessments.comingSoon' as any)}
+                        {t('common.underConstruction' as any)}
                       </span>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BaziReadingView from '@/components/modules/bazi/BaziReadingView'
-import { buildShishenMetadata } from '@mindo/core'
+import { buildShishenRelations, buildGanZhiRelations } from '@/lib/bazi/reportRelations'
 
 interface Props {
   params: Promise<{ locale: string }>
@@ -59,14 +59,19 @@ export default async function BaziReadingPage({ params, searchParams }: Props) {
   }
 
   const shishenMetadata = reading.calculation_result
-    ? buildShishenMetadata(reading.calculation_result)
+    ? buildShishenRelations(reading.calculation_result)
     : {}
+
+  const ganZhiRelations = reading.calculation_result
+    ? buildGanZhiRelations(reading.calculation_result)
+    : []
 
   return (
     <BaziReadingView
       snapshotId={latestSnapshotId}
       readingId={readingId}
       shishenMetadata={shishenMetadata}
+      ganZhiRelations={ganZhiRelations}
       calculationResult={reading.calculation_result ?? null}
       locale={locale}
       birthMismatch={birthMismatch}

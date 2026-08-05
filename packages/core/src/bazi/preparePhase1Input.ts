@@ -1,5 +1,5 @@
 import type { BaziSnapshot, GongWeiPos, ShiShen, Wuxing, YinYang, TianGan } from './types';
-import { computeWuxingAssessment } from './yongshen';
+import { computeWuxingAssessment } from './energy/yongshen';
 import { TIANGAN_WUXING, TIANGAN_YINYANG, GENERATES, RESTRAINS } from './constants';
 
 const SHISHEN_ZH: Record<string, string> = {

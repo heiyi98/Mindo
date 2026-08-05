@@ -1,0 +1,32 @@
+{
+  "search": {
+    "placeholder": "Rechercher dans le codex…",
+    "loading": "Recherche…",
+    "empty": "Aucun résultat"
+  },
+  "notFound": "Cette entrée n'existe pas encore.",
+  "home": {
+    "graph": {
+      "baziLabel": "Bazi"
+    },
+    "cards": {
+      "bazi": {
+        "title": "Bazi (Quatre Piliers)",
+        "description": "Texte de présentation provisoire — contenu à venir.",
+        "cta": "Entrer"
+      }
+    }
+  },
+  "topicNav": {
+    "home": "Accueil",
+    "directory": "Répertoire",
+    "search": "Recherche"
+  },
+  "citations": {
+    "showAll": "Afficher les citations",
+    "hideAll": "Masquer les citations"
+  },
+  "directory": {
+    "title": "Répertoire des entrées"
+  }
+}

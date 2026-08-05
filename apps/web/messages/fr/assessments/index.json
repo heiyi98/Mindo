@@ -1,44 +1,15 @@
 {
-  "bazi": {
-    "name": "Four Pillars",
-    "description": "Your birth chart based on year, month, day and hour pillars"
-  },
-  "ziwei": {
-    "name": "Purple Star Astrology",
-    "description": "Ancient Chinese astrological system based on birth data"
-  },
-  "western": {
-    "name": "Western Astrology",
-    "description": "Birth chart based on planetary positions at time of birth"
-  },
-  "bigfive": {
-    "name": "Big Five Personality",
-    "description": "Scientific personality assessment across five dimensions"
-  },
-  "mbti": {
-    "name": "MBTI",
-    "description": "Myers-Briggs Type Indicator personality framework"
-  },
-  "enneagram": {
-    "name": "Enneagram",
-    "description": "Nine-type personality system"
-  },
-  "liuyao": {
-    "name": "Liu Yao",
-    "description": "Six-line divination system"
-  },
-  "tarot": {
-    "name": "Tarot",
-    "description": "Card-based insight and reflection"
-  },
-  "geomancy": {
-    "name": "Geomancy",
-    "description": "Earth-based divination system"
-  },
-  "divination": {
-    "bazi": { "desc": "Decode your elemental birth chart" },
-    "ziwei": { "desc": "Ancient Chinese stellar fate system" },
-    "western": { "desc": "Planetary chart at your birth" },
-    "bigfive": { "desc": "Five-factor personality science" }
-  }
+  "title": "Centre de fonctionnalités",
+  "destiny": "Destinée",
+  "psychology": "Psychologie",
+  "divination": "Divination",
+  "bazi": { "name": "BaZi (Quatre Piliers)", "desc": "Un schéma du destin élaboré à partir de l'année, du mois, du jour et de l'heure de naissance" },
+  "ziwei": { "name": "Ziwei Dou Shu", "desc": "Une astrologie classique fondée sur les informations de naissance" },
+  "western": { "name": "Astrologie occidentale", "desc": "Une analyse astrologique basée sur la position des planètes au moment de la naissance" },
+  "bigfive": { "name": "Big Five (OCEAN)", "desc": "Une mesure scientifique de la personnalité en cinq dimensions" },
+  "mbti": { "name": "MBTI", "desc": "Indicateur typologique de Myers-Briggs" },
+  "enneagram": { "name": "Ennéagramme", "desc": "Un système de neuf types de personnalité" },
+  "liuyao": { "name": "Liuyao", "desc": "Un système divinatoire chinois basé sur le Yi Jing" },
+  "tarot": { "name": "Tarot", "desc": "Perspicacité et réflexion par les cartes de tarot" },
+  "geomancy": { "name": "Géomancie", "desc": "Un système divinatoire basé sur les énergies telluriques" }
 }

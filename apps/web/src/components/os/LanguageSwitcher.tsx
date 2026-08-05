@@ -3,7 +3,7 @@ import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/navigation';
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, Languages } from 'lucide-react';
+import { Languages } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const SUPPORTED_LOCALES = [
@@ -64,7 +64,7 @@ export function LanguageSwitcher() {
         className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors"
         style={{ color: 'hsl(var(--muted-foreground))' }}
       >
-        <Globe size={14} />
+        <Languages size={14} />
         <span className="text-xs">{current?.label}</span>
       </button>
 
@@ -175,7 +175,6 @@ export function LanguageSettingRow({ label }: { label: string }) {
           </span>
         </div>
         <div className="flex items-center gap-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          <Languages size={14} />
           <span className="text-xs">{current?.label}</span>
         </div>
       </button>

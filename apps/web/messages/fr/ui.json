@@ -1,4 +1,23 @@
 {
+  "landing": {
+    "slogan": "Naviguez votre destin avec une précision cosmique",
+    "startButton": "Commencer",
+    "loginLink": "Déjà un compte ? Se connecter"
+  },
+  "nav": {
+    "home": "Accueil",
+    "assessments": "Fonctions",
+    "forum": "Forum",
+    "shop": "Boutique",
+    "messages": "Messages",
+    "profile": "Compte"
+  },
+  "common": {
+    "loading": "Chargement",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "underConstruction": "En construction"
+  },
   "auth": {
     "login": {
       "title": "Se connecter à Mindo",
@@ -41,8 +60,34 @@
     }
   },
   "onboarding": {
+    "datePicker": {
+      "title": "Quelle est votre date de naissance ?",
+      "year": "Année",
+      "month": "Mois",
+      "day": "Jour",
+      "confirm": "Suivant"
+    },
+    "timePicker": {
+      "title": "Quelle est votre heure de naissance ?",
+      "description": "L'heure de naissance permet de calculer le pilier de l'heure et d'affiner le schéma. Vous pouvez passer cette étape si vous ne la connaissez pas.",
+      "hourLabel": "Heure",
+      "unknownHour": "Heure de naissance inconnue",
+      "minuteLabel": "Minute",
+      "unknownMinute": "Minute de naissance inconnue",
+      "confirm": "Suivant",
+      "next": "Suivant",
+      "skip": "Passer"
+    },
     "cityPicker": {
-      "label": "Ville de naissance"
+      "title": "Où êtes-vous né(e) ?",
+      "description": "La ville de naissance permet de calculer le temps solaire vrai et affine la précision du pilier de l'heure. Vous pouvez passer cette étape si vous ne la connaissez pas.",
+      "label": "Ville de naissance",
+      "placeholder": "Rechercher une ville...",
+      "error": "Échec de la recherche, veuillez réessayer.",
+      "noResults": "Aucune ville trouvée.",
+      "confirm": "Suivant",
+      "next": "Suivant",
+      "skip": "Passer"
     },
     "timecity": {
       "title": "Heure et lieu de naissance",
@@ -104,13 +149,96 @@
         "Pacific_Tongatapu": "Nukuʻalofa, Apia",
         "Pacific_Kiritimati": "Île Christmas"
       }
-    }
+    },
+    "genderPicker": {
+      "title": "Quel est votre sexe de naissance ?",
+      "description": "Le sexe de naissance est utilisé pour déterminer la direction des cycles de fortune.",
+      "subdescription": "Il s'agit du sexe biologique à la naissance, sans rapport avec l'identité de genre.",
+      "male": "Homme",
+      "female": "Femme",
+      "decline": "Préférer ne pas répondre",
+      "confirm": "Suivant",
+      "next": "Suivant",
+      "skip": "Passer"
+    },
+    "teaser": {
+      "sameCore": "Les personnes ayant {core} comme Pivot, comme vous",
+      "loginButton": "Connectez-vous pour débloquer votre schéma complet"
+    },
+    "next": "Suivant",
+    "skip": "Passer",
+    "teaserPlaceholder": "Votre schéma a été généré.",
+    "loginToSave": "Connectez-vous pour enregistrer votre schéma"
+  },
+  "theme": {
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
   },
   "account": {
+    "title": "Compte",
+    "email": "E-mail",
+    "manageProfiles": "Gérer les profils",
     "manageAccount": "Sécurité du compte",
+    "assetsLabel": "Mes ressources",
+    "language": "Langue",
+    "signOut": "Se déconnecter",
+    "deleteAccount": "Supprimer le compte",
+    "deleteConfirmTitle": "Confirmer la suppression du compte ?",
+    "deleteConfirmDesc": "Cette action supprimera définitivement votre compte et toutes vos données. Tapez DELETE pour confirmer.",
+    "cancel": "Annuler",
+    "confirmDelete": "Supprimer définitivement",
+    "identity": {
+      "noName": "Aucun pseudo défini",
+      "copyLink": "Copier le lien du profil",
+      "copied": "Copié",
+      "edit": "Modifier",
+      "editTitle": "Modifier les informations",
+      "nameLabel": "Pseudo",
+      "namePlaceholder": "Définissez votre pseudo",
+      "nameTooLong": "Le pseudo ne peut pas dépasser 50 caractères",
+      "handleLabel": "ID",
+      "handleHint": "3 à 30 caractères, lettres, chiffres et underscores uniquement",
+      "handleInvalid": "Format d'ID invalide, lettres, chiffres et underscores uniquement (3 à 30 caractères)",
+      "handleTaken": "Cet ID est déjà utilisé",
+      "save": "Enregistrer",
+      "saveFailed": "Échec de l'enregistrement, veuillez réessayer"
+    },
+    "profiles": {
+      "title": "Gestion des profils",
+      "self": "Moi",
+      "add": "Ajouter un profil",
+      "deleteConfirm": "Supprimer ce profil ? Cette action est irréversible."
+    },
     "profileModal": {
+      "createTitle": "Ajouter un profil",
+      "editTitle": "Modifier le profil",
+      "name": "Nom",
+      "namePlaceholder": "Ex : conjoint, parent...",
+      "birthDate": "Date de naissance",
+      "birthTime": "Heure de naissance (facultatif)",
+      "birthCity": "Ville de naissance (facultatif)",
+      "gender": "Sexe de naissance (facultatif)",
+      "male": "Homme",
+      "female": "Femme",
+      "genderNote": "Utilisé pour déterminer la direction des cycles de fortune",
       "timezone": "Fuseau horaire",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    },
+    "assets": {
+      "title": "Mes ressources",
+      "empty": "Aucun rapport acheté pour l'instant.",
+      "basedOn": "Basé sur",
+      "types": {
+        "bazi": "Lecture du schéma BaZi",
+        "ziwei": "Lecture Ziwei Dou Shu",
+        "western": "Lecture d'astrologie occidentale",
+        "bigfive": "Analyse Big Five",
+        "mbti": "Analyse MBTI",
+        "enneagram": "Analyse de l'ennéagramme"
+      }
     },
     "linkedAccounts": {
       "title": "Sécurité du compte",
@@ -141,6 +269,22 @@
     }
   },
   "dashboard": {
+    "loadError": "Échec du chargement, veuillez actualiser la page.",
+    "profileCard": {
+      "yearsOld": "ans",
+      "solarTime": "Temps solaire vrai"
+    },
+    "fortune": {
+      "title": "Fortune du jour",
+      "comingSoon": "Bientôt disponible"
+    },
+    "energy": {
+      "title": "Énergie des Cinq Phases"
+    },
+    "profiles": {
+      "addProfile": "Ajouter un profil",
+      "manageProfiles": "Gérer les profils"
+    },
     "edit": "Modifier",
     "done": "Terminer",
     "widgetDrawer": {
@@ -149,21 +293,53 @@
     },
     "widgetNames": {
       "profile-card": "Carte de profil",
-      "bazi-chart": "Thème des quatre piliers",
-      "wuxing-radar": "Radar des cinq éléments",
-      "daymaster": "Maître du jour",
+      "bazi-chart": "Schéma BaZi",
+      "wuxing-radar": "Radar des Cinq Phases",
+      "daymaster": "Pivot",
       "bigfive-radar": "Radar Big Five",
       "western-chart": "Thème occidental",
-      "day-master": "日主小人",
-      "bazi-reading": "AI解读",
+      "day-master": "Figurine du Pivot",
+      "bazi-reading": "Lecture IA",
       "mind-cards": "Cartes d'esprit"
     }
   },
   "divination": {
+    "title": "Centre de calcul",
+    "destiny": "Calcul du destin",
+    "psychology": "Mesure psychologique",
     "oracle": "Oracle",
+    "comingSoon": "Bientôt disponible",
+    "minutes": " minutes",
     "bazi": { "desc": "Décoder votre thème natal élémentaire" },
     "ziwei": { "desc": "Système astrologique chinois ancien" },
     "western": { "desc": "Thème planétaire à votre naissance" },
     "bigfive": { "desc": "Science des cinq facteurs de personnalité" }
+  },
+  "payment": {
+    "buyReading": "Débloquer la lecture IA · 19,99 $",
+    "readingUnlocked": "Lecture IA débloquée",
+    "loading": "Chargement...",
+    "viewReading": "Voir la lecture complète"
+  },
+  "social": {
+    "follow": "Suivre",
+    "followBack": "Suivre en retour",
+    "following": "Suivi",
+    "unfollow": "Ne plus suivre",
+    "mutualFollow": "Abonnement mutuel",
+    "thisIsYou": "C'est votre profil",
+    "notFound": "Utilisateur introuvable",
+    "noName": "Aucun pseudo défini",
+    "followers": "Abonnés",
+    "following_list": "Abonnements",
+    "sendMessage": "Envoyer un message",
+    "messagesTitle": "Messages",
+    "noConversations": "Aucune conversation pour l'instant, suivez des personnes pour commencer à discuter",
+    "selectConversation": "Sélectionnez une conversation pour commencer à discuter",
+    "startConversation": "Envoyez le premier message",
+    "inputPlaceholder": "Écrivez un message...",
+    "searchPlaceholder": "Rechercher un utilisateur...",
+    "searchResults": "Résultats de recherche",
+    "searchNoResults": "Aucun utilisateur trouvé"
   }
 }

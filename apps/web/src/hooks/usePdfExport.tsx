@@ -1,6 +1,9 @@
 'use client'
 
 import React from 'react'
+import { useTranslations } from 'next-intl'
+import { SHISHEN_ZH_TO_KEY, SCENE_ZH_TO_KEY, formatRelationLine, formatGanZhiRelation } from '@/lib/bazi/relationsFormat'
+import type { ShishenRelations, ShishenNodeRelation, GanZhiRelation } from '@/lib/bazi/reportRelations'
 
 const FONT_CONFIGS: Record<string, { name: string; regular: string; bold: string }> = {
   zh: {
@@ -30,6 +33,13 @@ const FONT_CONFIGS: Record<string, { name: string; regular: string; bold: string
   },
 }
 
+// PDF下载文件名，按语言区分——中文场景用中文项目名，其余场景统一用国际品牌名Mindo
+const FILENAME_BY_LOCALE: Record<string, string> = {
+  zh: '命途报告.pdf',
+  fr: 'Rapport de Mindo.pdf',
+}
+const DEFAULT_FILENAME = 'Mindo Report.pdf'
+
 async function captureElement(el: HTMLElement): Promise<string> {
   const html2canvas = (await import('html2canvas')).default
   const canvas = await html2canvas(el, {
@@ -42,6 +52,8 @@ async function captureElement(el: HTMLElement): Promise<string> {
 }
 
 export function usePdfExport(locale: string) {
+  const t = useTranslations('bazi')
+
   const exportPdf = async (
     data: {
       theme1: any
@@ -49,7 +61,8 @@ export function usePdfExport(locale: string) {
       theme3: any
       theme4: any
       dayStemZH: string
-      shishenMetadata: Record<string, string[]>
+      shishenMetadata: ShishenRelations
+      ganZhiRelations: GanZhiRelation[]
     },
     chartRefs: {
       overviewRef: React.RefObject<HTMLDivElement | null>
@@ -79,7 +92,6 @@ export function usePdfExport(locale: string) {
     // 3. 注册字体（用完整URL，@react-pdf/renderer在浏览器端需要完整URL）
     const fontConfig = FONT_CONFIGS[locale] ?? FONT_CONFIGS['default']
     const origin = window.location.origin
-    // 加时间戳强制每次重新注册，避免缓存问题
     const fontFamily = `${fontConfig.name}-${Date.now()}`
     Font.register({
       family: fontFamily,
@@ -89,7 +101,6 @@ export function usePdfExport(locale: string) {
       ],
     })
 
-    // 允许中文换行，同时消除行尾的连字符（-）
     Font.registerHyphenationCallback((word) => {
       if (word.length === 1) return [word]
       return Array.from(word).flatMap((char) => [char, ''])
@@ -233,8 +244,8 @@ export function usePdfExport(locale: string) {
         <Page size="A4" style={pdfStyles.page}>
           <View style={pdfStyles.overviewRow}>
             <View style={pdfStyles.overviewTitleBlock}>
-              <Text style={pdfStyles.sectionTitle}>人格核心</Text>
-              {data.dayStemZH ? <Text style={pdfStyles.dayStem}>日主：{data.dayStemZH}</Text> : null}
+              <Text style={pdfStyles.sectionTitle}>{t('reading.sectionTitle1')}</Text>
+              {data.dayStemZH ? <Text style={pdfStyles.dayStem}>{t('daymaster')}：{data.dayStemZH}</Text> : null}
             </View>
             {overviewImg ? <Image style={pdfStyles.overviewChart} src={overviewImg} /> : null}
           </View>
@@ -245,19 +256,22 @@ export function usePdfExport(locale: string) {
 
         {/* 第二页：心理机制 */}
         <Page size="A4" style={pdfStyles.page}>
-          <Text style={pdfStyles.sectionTitle}>心理机制</Text>
+          <Text style={pdfStyles.sectionTitle}>{t('reading.sectionTitle2')}</Text>
           {mechanisms.map((m, i) => {
             const label: string = m['机制标签'] ?? ''
-            const metaLines: string[] = data.shishenMetadata[label] ?? []
-            const hasValidMeta = metaLines.length > 0 && metaLines[0] !== '（无节点）'
+            const ssKey = SHISHEN_ZH_TO_KEY[label]
+            const relations: ShishenNodeRelation[] = (ssKey && data.shishenMetadata[ssKey]) || []
+            const hasValidMeta = relations.length > 0
             const chartImg = shishenImgs[label]
             return (
               <View key={i} style={pdfStyles.fullWidth}>
                 <View style={pdfStyles.chartRow} wrap={false}>
                   <View style={pdfStyles.chartLeft}>
-                    <Text style={pdfStyles.subsectionTitle}>{label}</Text>
-                    {hasValidMeta && metaLines.map((line, j) => (
-                      <Text key={j} style={pdfStyles.metaLine}>{line}</Text>
+                    <Text style={pdfStyles.subsectionTitle}>
+                      {ssKey ? t(`shishen.${ssKey}`) : label}
+                    </Text>
+                    {hasValidMeta && relations.map((rel, j) => (
+                      <Text key={j} style={pdfStyles.metaLine}>{formatRelationLine(t, rel)}</Text>
                     ))}
                   </View>
                   {chartImg ? <Image style={pdfStyles.shishenChart} src={chartImg} /> : null}
@@ -270,13 +284,16 @@ export function usePdfExport(locale: string) {
           {interactions.length > 0 && (
             <>
               <View style={pdfStyles.longDivider} />
-              <Text style={pdfStyles.interactionSubTitle}>机制交互</Text>
+              <Text style={pdfStyles.interactionSubTitle}>{t('reading.interactions')}</Text>
               {interactions.map((item, i) => {
                 const chartImg = interactionImgs[i]
+                const structuredRel = data.ganZhiRelations[i]
                 return (
                   <View key={i} style={pdfStyles.fullWidth}>
                     <View style={pdfStyles.chartRow} wrap={false}>
-                      <Text style={pdfStyles.interactionLabel}>{item['关系'] ?? ''}</Text>
+                      <Text style={pdfStyles.interactionLabel}>
+                        {structuredRel ? formatGanZhiRelation(t, structuredRel) : ''}
+                      </Text>
                       {chartImg ? <Image style={pdfStyles.shishenChart} src={chartImg} /> : null}
                     </View>
                     <Text style={pdfStyles.paragraph}>{item['解析'] ?? ''}</Text>
@@ -290,10 +307,10 @@ export function usePdfExport(locale: string) {
 
         {/* 第三页：现实反应 */}
         <Page size="A4" style={pdfStyles.page}>
-          <Text style={pdfStyles.sectionTitle}>现实反应</Text>
+          <Text style={pdfStyles.sectionTitle}>{t('reading.sectionTitle3')}</Text>
           {validScenes.map((key, i) => (
             <View key={key} style={pdfStyles.fullWidth}>
-              <Text style={pdfStyles.sceneTitle}>{key}</Text>
+              <Text style={pdfStyles.sceneTitle}>{t(`reading.scenes.${SCENE_ZH_TO_KEY[key]}`)}</Text>
               <Text style={pdfStyles.paragraph}>{scenes[key]}</Text>
               {i < validScenes.length - 1 ? <View style={pdfStyles.shortDivider} /> : null}
             </View>
@@ -302,27 +319,29 @@ export function usePdfExport(locale: string) {
 
         {/* 第四页：调优建议 */}
         <Page size="A4" style={pdfStyles.page}>
-          <Text style={pdfStyles.sectionTitle}>调优建议</Text>
+          <Text style={pdfStyles.sectionTitle}>{t('reading.sectionTitle4')}</Text>
           {coreConflict ? (
             <View wrap={false}>
-              <Text style={pdfStyles.labelTitle}>核心矛盾</Text>
+              <Text style={pdfStyles.labelTitle}>{t('reading.coreConflict')}</Text>
               <Text style={pdfStyles.paragraph}>{coreConflict}</Text>
             </View>
           ) : null}
           {coreConflict && selfAlign ? <View style={pdfStyles.shortDivider} /> : null}
           {selfAlign ? (
             <View wrap={false}>
-              <Text style={pdfStyles.labelTitle}>人生自洽建议</Text>
+              <Text style={pdfStyles.labelTitle}>{t('reading.selfAlignment')}</Text>
               <Text style={pdfStyles.paragraph}>{selfAlign}</Text>
             </View>
           ) : null}
           {targetedEntries.length > 0 ? <View style={pdfStyles.longDivider} /> : null}
           {targetedEntries.length > 0 ? (
             <>
-              <Text style={pdfStyles.labelTitle}>针对性优化</Text>
+              <Text style={pdfStyles.labelTitle}>{t('reading.targeted')}</Text>
               {targetedEntries.map(([scene, content], i) => (
                 <View key={scene} style={pdfStyles.fullWidth}>
-                  <Text style={pdfStyles.sceneTitle}>{scene}</Text>
+                  <Text style={pdfStyles.sceneTitle}>
+                    {SCENE_ZH_TO_KEY[scene] ? t(`reading.scenes.${SCENE_ZH_TO_KEY[scene]}`) : scene}
+                  </Text>
                   <Text style={pdfStyles.paragraph}>{content}</Text>
                   {i < targetedEntries.length - 1 ? <View style={pdfStyles.shortDivider} /> : null}
                 </View>
@@ -338,7 +357,7 @@ export function usePdfExport(locale: string) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = '命都报告.pdf'
+    a.download = FILENAME_BY_LOCALE[locale] ?? DEFAULT_FILENAME
     a.click()
     URL.revokeObjectURL(url)
   }

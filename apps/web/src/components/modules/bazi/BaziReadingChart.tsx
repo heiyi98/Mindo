@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import type { ShishenNodeRelation, GanZhiRelation } from '@/lib/bazi/reportRelations'
 
 const ELEMENT_COLORS: Record<string, string> = {
   Wood: '#388E3C', Fire: '#D32F2F', Earth: '#F57F17',
@@ -19,6 +20,7 @@ const COL_W = VW / 4  // 125
 
 // ── 主题一总览命盘 ──────────────────────────────────────────────
 // viewBox 500×250，日干有颜色，其余全部淡化（含地支）
+// 本组件未涉及本轮改动，逻辑与原文件完全一致
 const VH_OVERVIEW = 250
 const STEM_Y_OV = 68
 const BRANCH_Y_OV = 188
@@ -54,14 +56,12 @@ export function BaziOverviewChart({ calculationResult }: { calculationResult: an
       preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', flexShrink: 0 }}
     >
-      {/* 日干框：只有列内框，无外框 */}
       <rect
         x={COL_W * 2 + 4} y={5}
         width={COL_W - 8} height={115}
         rx={10} fill="none"
         stroke={dayStemColor} strokeWidth="1.5" opacity="0.6"
       />
-      {/* 列分隔线（内框线，无外框） */}
       {[1, 2, 3].map(i => (
         <line key={i}
           x1={COL_W * i} y1={4} x2={COL_W * i} y2={VH_OVERVIEW - 4}
@@ -78,7 +78,6 @@ export function BaziOverviewChart({ calculationResult }: { calculationResult: an
               fill="hsl(var(--muted-foreground))" opacity="0.4"
             >{t(LABEL_KEYS[pos as Pos])}</text>
 
-            {/* 天干：只有日干有颜色 */}
             {isUnknown
               ? <text x={cx} y={STEM_Y_OV} textAnchor="middle" dominantBaseline="middle"
                   fontSize="46" fill="hsl(var(--muted-foreground))" opacity="0.15">?</text>
@@ -92,7 +91,6 @@ export function BaziOverviewChart({ calculationResult }: { calculationResult: an
             <line x1={cx - SHORT_LINE_HALF} y1={125} x2={cx + SHORT_LINE_HALF} y2={125}
               stroke="hsl(var(--muted-foreground))" strokeWidth="1" opacity="0.3" />
 
-            {/* 地支：全部淡化，包括日支 */}
             {isUnknown
               ? <text x={cx} y={BRANCH_Y_OV} textAnchor="middle" dominantBaseline="middle"
                   fontSize="46" fill="hsl(var(--muted-foreground))" opacity="0.15">?</text>
@@ -112,50 +110,47 @@ export function BaziOverviewChart({ calculationResult }: { calculationResult: an
 // ── 节点图共用常量 ──────────────────────────────────────────────
 const VH_NODE = 375
 const ROW_H = 125
-const STEM_Y = ROW_H / 2        // 62.5  天干行中心
-const BRANCH_Y = ROW_H * 1.5   // 187.5 地支行中心
-const CANG_Y = ROW_H * 2.5     // 312.5 藏干行中心
+const STEM_Y = ROW_H / 2
+const BRANCH_Y = ROW_H * 1.5
+const CANG_Y = ROW_H * 2.5
 const FONT_SIZE = 36
 const BOX_SIZE = 72
 const BOX_R = 10
 
-// 宫位→列号
-const LABEL_TO_COL: Record<string, number> = {
-  '年干': 0, '月干': 1, '日干': 2, '时干': 3,
-  '年支': 0, '月支': 1, '日支': 2, '时支': 3,
-  '年支藏干': 0, '月支藏干': 1, '日支藏干': 2, '时支藏干': 3,
-}
-type RowType = 'stem' | 'branch' | 'cang'
-const LABEL_TO_ROW: Record<string, RowType> = {
-  '年干': 'stem', '月干': 'stem', '日干': 'stem', '时干': 'stem',
-  '年支': 'branch', '月支': 'branch', '日支': 'branch', '时支': 'branch',
-  '年支藏干': 'cang', '月支藏干': 'cang', '日支藏干': 'cang', '时支藏干': 'cang',
+// ══════════════════════════════════════════════════════════════
+// 英文位置体系——BaziShishenChart 和 BaziInteractionChart 共用
+// ══════════════════════════════════════════════════════════════
+
+const STEM_POSITIONS = ['YearStem', 'MonthStem', 'DayStem', 'HourStem'] as const
+const BRANCH_POSITIONS = ['YearBranch', 'MonthBranch', 'DayBranch', 'HourBranch'] as const
+
+function colIndexOf(pos: string): number {
+  if (pos.startsWith('Year')) return 0
+  if (pos.startsWith('Month')) return 1
+  if (pos.startsWith('Day')) return 2
+  return 3
 }
 
-function nodeCenter(label: string): { x: number; y: number } | null {
-  const col = LABEL_TO_COL[label]
-  const row = LABEL_TO_ROW[label]
-  if (col === undefined || !row) return null
+function rowOf(pos: string): 'stem' | 'branch' {
+  return pos.endsWith('Stem') ? 'stem' : 'branch'
+}
+
+function nodeCenterByPos(pos: string, row: 'stem' | 'branch' | 'cang'): { x: number; y: number } {
+  const col = colIndexOf(pos)
   const x = COL_W * col + COL_W / 2
   const y = row === 'stem' ? STEM_Y : row === 'branch' ? BRANCH_Y : CANG_Y
   return { x, y }
 }
 
-// 折线路径（直角转弯）
-// 天干→藏干（通根）：天干底部→自坐地支中心→横向→目标地支中心→藏干顶部
-// 藏干→天干（透出）：藏干顶部→所在地支中心→横向→目标地支中心→天干底部
-function buildPath(fromLabel: string, toLabel: string): string {
-  const fromCol = LABEL_TO_COL[fromLabel]
-  const toCol = LABEL_TO_COL[toLabel]
-  const fromRow = LABEL_TO_ROW[fromLabel]
-  const toRow = LABEL_TO_ROW[toLabel]
-  if (fromCol === undefined || toCol === undefined || !fromRow || !toRow) return ''
-
-  const fromCx = COL_W * fromCol + COL_W / 2
-  const toCx = COL_W * toCol + COL_W / 2
+// 折线路径（直角转弯），仅处理 天干↔藏干 两种组合（BaziShishenChart唯一用到的情形）
+function buildPath(
+  fromPos: string, fromRow: 'stem' | 'cang',
+  toPos: string, toRow: 'stem' | 'cang',
+): string {
+  const fromCx = COL_W * colIndexOf(fromPos) + COL_W / 2
+  const toCx = COL_W * colIndexOf(toPos) + COL_W / 2
 
   if (fromRow === 'stem' && toRow === 'cang') {
-    // 天干→藏干（通根）
     return [
       `M ${fromCx} ${STEM_Y + FONT_SIZE / 2}`,
       `L ${fromCx} ${BRANCH_Y}`,
@@ -163,187 +158,116 @@ function buildPath(fromLabel: string, toLabel: string): string {
       `L ${toCx} ${CANG_Y - FONT_SIZE / 2}`,
     ].join(' ')
   }
-  if (fromRow === 'cang' && toRow === 'stem') {
-    // 藏干→天干（透出）
-    return [
-      `M ${fromCx} ${CANG_Y - FONT_SIZE / 2}`,
-      `L ${fromCx} ${BRANCH_Y}`,
-      `L ${toCx} ${BRANCH_Y}`,
-      `L ${toCx} ${STEM_Y + FONT_SIZE / 2}`,
-    ].join(' ')
-  }
-  // 天干↔天干 / 地支↔地支（机制交互）：直线
-  const fromY = fromRow === 'stem' ? STEM_Y : fromRow === 'branch' ? BRANCH_Y : CANG_Y
-  const toY = toRow === 'stem' ? STEM_Y : toRow === 'branch' ? BRANCH_Y : CANG_Y
-  return `M ${fromCx} ${fromY} L ${toCx} ${toY}`
+  return [
+    `M ${fromCx} ${CANG_Y - FONT_SIZE / 2}`,
+    `L ${fromCx} ${BRANCH_Y}`,
+    `L ${toCx} ${BRANCH_Y}`,
+    `L ${toCx} ${STEM_Y + FONT_SIZE / 2}`,
+  ].join(' ')
 }
 
-// 找五行匹配的藏干（用于连线目标——只要五行相同即可）
-function findMatchingCangGan(
-  branchPosKey: string,
-  shishenWuxing: string,
-  cangGanNodes: any[],
-): any | null {
+function findMatchingCangGan(branchPosKey: string, shishenWuxing: string, cangGanNodes: any[]): any | null {
   const candidates = cangGanNodes
     .filter((cg: any) => cg.branchPos === branchPosKey && cg.wuxing === shishenWuxing)
     .sort((a: any, b: any) => QI_ORDER.indexOf(a.qi) - QI_ORDER.indexOf(b.qi))
   return candidates[0] ?? null
 }
 
-// 找阴阳五行完全一致的藏干（用于方框——只框与该十神完全一致的节点）
 function findExactCangGan(
-  branchPosKey: string,
-  shishenWuxing: string,
-  shishenYinyang: string,
-  cangGanNodes: any[],
+  branchPosKey: string, shishenWuxing: string, shishenYinyang: string, cangGanNodes: any[],
 ): any | null {
   const candidates = cangGanNodes
     .filter((cg: any) =>
-      cg.branchPos === branchPosKey &&
-      cg.wuxing === shishenWuxing &&
-      cg.yinyang === shishenYinyang
+      cg.branchPos === branchPosKey && cg.wuxing === shishenWuxing && cg.yinyang === shishenYinyang
     )
     .sort((a: any, b: any) => QI_ORDER.indexOf(a.qi) - QI_ORDER.indexOf(b.qi))
   return candidates[0] ?? null
 }
 
-// 找阴阳五行完全一致的天干（用于透出目标方框判断）
 function isExactStemMatch(
-  stemPosKey: string,
-  shishenWuxing: string,
-  shishenYinyang: string,
-  tianGanNodes: any[],
+  stemPosKey: string, shishenWuxing: string, shishenYinyang: string, tianGanNodes: any[],
 ): boolean {
   const node = tianGanNodes.find((n: any) => n.pos === stemPosKey)
   if (!node) return false
   return node.wuxing === shishenWuxing && node.yinyang === shishenYinyang
 }
 
-const BRANCH_LABEL_TO_POS: Record<string, string> = {
-  '年支': 'YearBranch', '月支': 'MonthBranch', '日支': 'DayBranch', '时支': 'HourBranch',
-}
-const STEM_LABEL_TO_POS: Record<string, string> = {
-  '年干': 'YearStem', '月干': 'MonthStem', '日干': 'DayStem', '时干': 'HourStem',
-}
-
-// 解析metaLines，提取连接关系和节点状态
 interface NodeState {
-  boxed: Set<string>   // 有方框（阴阳五行完全一致）
-  colored: Set<string> // 有颜色无方框（五行相同但阴阳不同，或地支被穿过）
-  locked: Set<string>  // 墓库锁闭（虚线框）
+  boxed: Set<string>
+  colored: Set<string>
+  locked: Set<string>
 }
-
 interface Connection {
-  fromLabel: string  // 天干 or 藏干label
-  toLabel: string    // 藏干 or 天干label
+  fromPos: string; fromRow: 'stem' | 'cang'
+  toPos: string; toRow: 'stem' | 'cang'
 }
 
-function parseMetaLines(
-  metaLines: string[],
+function keyOf(pos: string, row: 'stem' | 'cang'): string {
+  return `${pos}#${row}`
+}
+
+function parseRelations(
+  relations: ShishenNodeRelation[],
   shishenWuxing: string,
   shishenYinyang: string,
   cangGanNodes: any[],
   tianGanNodes: any[],
-): {
-  nodeState: NodeState
-  connections: Connection[]
-} {
+): { nodeState: NodeState; connections: Connection[] } {
   const boxed = new Set<string>()
   const colored = new Set<string>()
   const locked = new Set<string>()
   const connections: Connection[] = []
 
-  for (const line of metaLines) {
-    // 墓库锁闭
-    if (line.includes('墓库锁闭')) {
-      const branchLabel = line.split('：')[0].trim()
-      const branchPos = BRANCH_LABEL_TO_POS[branchLabel]
-      if (branchPos) {
-        const cg = findMatchingCangGan(branchPos, shishenWuxing, cangGanNodes)
-        if (cg) locked.add(`${branchLabel}藏干`)
-      }
+  for (const rel of relations) {
+    if (rel.nodeType === 'CangGan' && rel.kind === 'MuKuLocked') {
+      const cg = findMatchingCangGan(rel.position, shishenWuxing, cangGanNodes)
+      if (cg) locked.add(keyOf(rel.position, 'cang'))
       continue
     }
 
-    // 通根：月干：通根→年支 月支
-    const touGenMatch = line.match(/^(.+?)：通根→(.+)$/)
-    if (touGenMatch) {
-      const stemLabel = touGenMatch[1].trim()
-      const stemPos = STEM_LABEL_TO_POS[stemLabel]
-      // 天干：完全一致→boxed，五行同阴阳不同→colored
-      if (stemPos) {
-        const exact = isExactStemMatch(stemPos, shishenWuxing, shishenYinyang, tianGanNodes)
-        if (exact) boxed.add(stemLabel)
-        else colored.add(stemLabel)
-      }
-      const targets = touGenMatch[2].trim().split(/\s+/)
-      for (const branchLabel of targets) {
-        const branchPos = BRANCH_LABEL_TO_POS[branchLabel]
-        if (!branchPos) continue
-        // 地支：不加colored，连线穿过但保持淡化
-        // 藏干：完全一致→boxed，五行同阴阳不同→colored
+    if (rel.nodeType === 'TianGan' && rel.kind === 'TouGen') {
+      const exact = isExactStemMatch(rel.position, shishenWuxing, shishenYinyang, tianGanNodes)
+      if (exact) boxed.add(keyOf(rel.position, 'stem'))
+      else colored.add(keyOf(rel.position, 'stem'))
+
+      for (const branchPos of rel.roots ?? []) {
         const cgAny = findMatchingCangGan(branchPos, shishenWuxing, cangGanNodes)
         if (!cgAny) continue
-        const cangLabel = `${branchLabel}藏干`
         const cgExact = findExactCangGan(branchPos, shishenWuxing, shishenYinyang, cangGanNodes)
-        if (cgExact) boxed.add(cangLabel)
-        else colored.add(cangLabel)
-        connections.push({ fromLabel: stemLabel, toLabel: cangLabel })
+        if (cgExact) boxed.add(keyOf(branchPos, 'cang'))
+        else colored.add(keyOf(branchPos, 'cang'))
+        connections.push({ fromPos: rel.position, fromRow: 'stem', toPos: branchPos, toRow: 'cang' })
       }
       continue
     }
 
-    // 无通根：天干本身有颜色，框线取决于阴阳
-    if (line.includes('无通根')) {
-      const stemLabel = line.split('：')[0].trim()
-      const stemPos = STEM_LABEL_TO_POS[stemLabel]
-      if (stemPos) {
-        const exact = isExactStemMatch(stemPos, shishenWuxing, shishenYinyang, tianGanNodes)
-        if (exact) boxed.add(stemLabel)
-        else colored.add(stemLabel)
+    if (rel.nodeType === 'TianGan' && rel.kind === 'NoTouGen') {
+      const exact = isExactStemMatch(rel.position, shishenWuxing, shishenYinyang, tianGanNodes)
+      if (exact) boxed.add(keyOf(rel.position, 'stem'))
+      else colored.add(keyOf(rel.position, 'stem'))
+      continue
+    }
+
+    if (rel.nodeType === 'CangGan' && rel.kind === 'TouChu' && rel.through) {
+      const cgAny = findMatchingCangGan(rel.position, shishenWuxing, cangGanNodes)
+      if (cgAny) {
+        const cgExact = findExactCangGan(rel.position, shishenWuxing, shishenYinyang, cangGanNodes)
+        if (cgExact) boxed.add(keyOf(rel.position, 'cang'))
+        else colored.add(keyOf(rel.position, 'cang'))
+
+        const exact = isExactStemMatch(rel.through, shishenWuxing, shishenYinyang, tianGanNodes)
+        if (exact) boxed.add(keyOf(rel.through, 'stem'))
+        else colored.add(keyOf(rel.through, 'stem'))
+
+        connections.push({ fromPos: rel.position, fromRow: 'cang', toPos: rel.through, toRow: 'stem' })
       }
       continue
     }
 
-    // 透出：月支：透出→月干
-    const touChuMatch = line.match(/^(.+?)：透出→(.+)$/)
-    if (touChuMatch) {
-      const branchLabel = touChuMatch[1].trim()
-      const stemLabel = touChuMatch[2].trim()
-      const branchPos = BRANCH_LABEL_TO_POS[branchLabel]
-      if (branchPos) {
-        const cgAny = findMatchingCangGan(branchPos, shishenWuxing, cangGanNodes)
-        if (cgAny) {
-          // 地支：不加colored，连线穿过但保持淡化
-          // 藏干：完全一致→boxed，否则→colored
-          const cangLabel = `${branchLabel}藏干`
-          const cgExact = findExactCangGan(branchPos, shishenWuxing, shishenYinyang, cangGanNodes)
-          if (cgExact) boxed.add(cangLabel)
-          else colored.add(cangLabel)
-          // 目标天干：完全一致→boxed，否则→colored
-          const stemPos = STEM_LABEL_TO_POS[stemLabel]
-          if (stemPos) {
-            const exact = isExactStemMatch(stemPos, shishenWuxing, shishenYinyang, tianGanNodes)
-            if (exact) boxed.add(stemLabel)
-            else colored.add(stemLabel)
-          }
-          connections.push({ fromLabel: cangLabel, toLabel: stemLabel })
-        }
-      }
-      continue
-    }
-
-    // 未透出：藏干有颜色，框线取决于阴阳，地支淡化
-    if (line.includes('未透出')) {
-      const branchLabel = line.split('：')[0].trim()
-      const branchPos = BRANCH_LABEL_TO_POS[branchLabel]
-      if (branchPos) {
-        // 地支不加colored，保持淡化
-        const cangLabel = `${branchLabel}藏干`
-        const cgExact = findExactCangGan(branchPos, shishenWuxing, shishenYinyang, cangGanNodes)
-        if (cgExact) boxed.add(cangLabel)
-        else colored.add(cangLabel)
-      }
+    if (rel.nodeType === 'CangGan' && rel.kind === 'NotTouChu') {
+      const cgExact = findExactCangGan(rel.position, shishenWuxing, shishenYinyang, cangGanNodes)
+      if (cgExact) boxed.add(keyOf(rel.position, 'cang'))
+      else colored.add(keyOf(rel.position, 'cang'))
       continue
     }
   }
@@ -351,9 +275,9 @@ function parseMetaLines(
   return { nodeState: { boxed, colored, locked }, connections }
 }
 
-// 获取节点显示文字和颜色
 function getNodeText(
-  label: string,
+  pos: string,
+  row: 'stem' | 'branch' | 'cang',
   calculationResult: any,
   shishenWuxing: string,
   t: any,
@@ -362,10 +286,8 @@ function getNodeText(
   const cangGanNodes: any[] = calculationResult.pillars?.cangGanNodes ?? []
   const pillarsData = calculationResult.pillars
 
-  // 天干
-  const stemPos = STEM_LABEL_TO_POS[label]
-  if (stemPos) {
-    const node = tianGanNodes.find((n: any) => n.pos === stemPos)
+  if (row === 'stem') {
+    const node = tianGanNodes.find((n: any) => n.pos === pos)
     if (!node) return { text: '?', color: ELEMENT_COLORS['gray'] }
     return {
       text: node.stem ? t(`tiangan.${node.stem}`) : '?',
@@ -373,58 +295,44 @@ function getNodeText(
     }
   }
 
-  // 地支
-  const branchPos = BRANCH_LABEL_TO_POS[label]
-  if (branchPos) {
-    const posKey = branchPos.replace('Branch', '').toLowerCase() as 'year' | 'month' | 'day' | 'hour'
+  if (row === 'branch') {
+    const posKey = pos.replace('Branch', '').toLowerCase() as 'year' | 'month' | 'day' | 'hour'
     const branch = pillarsData?.[posKey]?.branch
-    const benQi = cangGanNodes.find((cg: any) => cg.branchPos === branchPos && cg.qi === 'BenQi')
+    const benQi = cangGanNodes.find((cg: any) => cg.branchPos === pos && cg.qi === 'BenQi')
     return {
       text: branch ? t(`dizhi.${branch}`) : '?',
       color: ELEMENT_COLORS[benQi?.wuxing ?? 'gray'],
     }
   }
 
-  // 藏干：找五行匹配的藏干
-  if (label.endsWith('藏干')) {
-    const branchLabel = label.replace('藏干', '')
-    const bPos = BRANCH_LABEL_TO_POS[branchLabel]
-    if (!bPos) return { text: '?', color: ELEMENT_COLORS['gray'] }
-    const cg = findMatchingCangGan(bPos, shishenWuxing, cangGanNodes)
-    if (!cg) return { text: '?', color: ELEMENT_COLORS['gray'] }
-    return {
-      text: cg.stem ? t(`tiangan.${cg.stem}`) : '?',
-      color: ELEMENT_COLORS[cg.wuxing ?? 'gray'],
-    }
+  const cg = findMatchingCangGan(pos, shishenWuxing, cangGanNodes)
+  if (!cg) return { text: '?', color: ELEMENT_COLORS['gray'] }
+  return {
+    text: cg.stem ? t(`tiangan.${cg.stem}`) : '?',
+    color: ELEMENT_COLORS[cg.wuxing ?? 'gray'],
   }
-
-  return { text: '?', color: ELEMENT_COLORS['gray'] }
 }
-
-const ALL_STEM_LABELS = ['年干', '月干', '日干', '时干']
-const ALL_BRANCH_LABELS = ['年支', '月支', '日支', '时支']
-const ALL_CANG_LABELS = ['年支藏干', '月支藏干', '日支藏干', '时支藏干']
 
 // ── 主题二十神节点图 ──────────────────────────────────────────
 export function BaziShishenChart({
   calculationResult,
-  metaLines,
+  relations,
   shishenColor,
   shishenWuxing,
   shishenYinyang,
 }: {
   calculationResult: any
-  metaLines: string[]
+  relations: ShishenNodeRelation[]
   shishenColor: string
   shishenWuxing: string
   shishenYinyang: string
 }) {
   const t = useTranslations('bazi')
-  if (!calculationResult || metaLines[0] === '（无节点）') return null
+  if (!calculationResult || relations.length === 0) return null
 
   const cangGanNodes: any[] = calculationResult.pillars?.cangGanNodes ?? []
   const tianGanNodes: any[] = calculationResult.pillars?.tianGanNodes ?? []
-  const { nodeState, connections } = parseMetaLines(metaLines, shishenWuxing, shishenYinyang, cangGanNodes, tianGanNodes)
+  const { nodeState, connections } = parseRelations(relations, shishenWuxing, shishenYinyang, cangGanNodes, tianGanNodes)
   const { boxed, colored, locked } = nodeState
 
   return (
@@ -435,14 +343,12 @@ export function BaziShishenChart({
       preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', flexShrink: 0 }}
     >
-      {/* 行分隔线 */}
       {[1, 2].map(i => (
         <line key={i}
           x1={0} y1={ROW_H * i} x2={VW} y2={ROW_H * i}
           stroke="hsl(var(--border))" strokeWidth="1" opacity="0.2"
         />
       ))}
-      {/* 列分隔线 */}
       {[1, 2, 3].map(i => (
         <line key={i}
           x1={COL_W * i} y1={0} x2={COL_W * i} y2={VH_NODE}
@@ -450,9 +356,8 @@ export function BaziShishenChart({
         />
       ))}
 
-      {/* 连线（在节点下层） */}
       {connections.map((conn, i) => {
-        const path = buildPath(conn.fromLabel, conn.toLabel)
+        const path = buildPath(conn.fromPos, conn.fromRow, conn.toPos, conn.toRow)
         if (!path) return null
         return (
           <path key={i}
@@ -467,16 +372,14 @@ export function BaziShishenChart({
         )
       })}
 
-      {/* 天干节点 */}
-      {ALL_STEM_LABELS.map((label) => {
-        const center = nodeCenter(label)
-        if (!center) return null
-        const isBoxed = boxed.has(label)
-        const isColored = colored.has(label)
+      {STEM_POSITIONS.map((pos) => {
+        const center = nodeCenterByPos(pos, 'stem')
+        const isBoxed = boxed.has(keyOf(pos, 'stem'))
+        const isColored = colored.has(keyOf(pos, 'stem'))
         const isActive = isBoxed || isColored
-        const { text, color } = getNodeText(label, calculationResult, shishenWuxing, t)
+        const { text, color } = getNodeText(pos, 'stem', calculationResult, shishenWuxing, t)
         return (
-          <g key={label}>
+          <g key={pos}>
             {isBoxed && (
               <rect
                 x={center.x - BOX_SIZE / 2} y={center.y - BOX_SIZE / 2}
@@ -495,13 +398,11 @@ export function BaziShishenChart({
         )
       })}
 
-      {/* 地支节点：全部淡化，仅作结构占位 */}
-      {ALL_BRANCH_LABELS.map((label) => {
-        const center = nodeCenter(label)
-        if (!center) return null
-        const { text } = getNodeText(label, calculationResult, shishenWuxing, t)
+      {BRANCH_POSITIONS.map((pos) => {
+        const center = nodeCenterByPos(pos, 'branch')
+        const { text } = getNodeText(pos, 'branch', calculationResult, shishenWuxing, t)
         return (
-          <text key={label} x={center.x} y={center.y}
+          <text key={pos} x={center.x} y={center.y}
             textAnchor="middle" dominantBaseline="middle"
             fontSize={FONT_SIZE}
             fill="hsl(var(--muted-foreground))"
@@ -510,18 +411,16 @@ export function BaziShishenChart({
         )
       })}
 
-      {/* 藏干节点：boxed=框+颜色，colored=颜色无框，locked=虚线框，其余不显示 */}
-      {ALL_CANG_LABELS.map((label) => {
-        const center = nodeCenter(label)
-        if (!center) return null
-        const isBoxed = boxed.has(label)
-        const isColored = colored.has(label)
-        const isLocked = locked.has(label)
+      {BRANCH_POSITIONS.map((pos) => {
+        const center = nodeCenterByPos(pos, 'cang')
+        const isBoxed = boxed.has(keyOf(pos, 'cang'))
+        const isColored = colored.has(keyOf(pos, 'cang'))
+        const isLocked = locked.has(keyOf(pos, 'cang'))
         const isVisible = isBoxed || isColored || isLocked
         if (!isVisible) return null
-        const { text, color } = getNodeText(label, calculationResult, shishenWuxing, t)
+        const { text, color } = getNodeText(pos, 'cang', calculationResult, shishenWuxing, t)
         return (
-          <g key={label}>
+          <g key={pos}>
             {(isBoxed || isLocked) && (
               <rect
                 x={center.x - BOX_SIZE / 2} y={center.y - BOX_SIZE / 2}
@@ -546,60 +445,23 @@ export function BaziShishenChart({
 }
 
 // ── 机制交互节点图 ──────────────────────────────────────────────
-// 连线黑色，方框按各自五行色
+// 本轮改造：不再读AI返回的中文"关系"字符串猜测位置，改为直接接收结构化的
+// GanZhiRelation，位置数据来自代码计算，不存在猜错的可能
 export function BaziInteractionChart({
   calculationResult,
   relation,
 }: {
   calculationResult: any
-  relation: string
+  relation: GanZhiRelation
 }) {
   const t = useTranslations('bazi')
   if (!calculationResult) return null
 
-  const tianGanNodes: any[] = calculationResult.pillars?.tianGanNodes ?? []
-  const cangGanNodes: any[] = calculationResult.pillars?.cangGanNodes ?? []
-  const pillarsData = calculationResult.pillars
+  const activePositions = relation.sides.map(s => s.position)
+  const activeSet = new Set(activePositions)
 
-  // 从关系字符串里找涉及的天干/地支宫位
-  const activeLabels = new Set<string>()
-  for (const label of [...ALL_STEM_LABELS, ...ALL_BRANCH_LABELS]) {
-    if (relation.includes(label)) activeLabels.add(label)
-  }
-
-  function getLabelColor(label: string): string {
-    const stemPos = STEM_LABEL_TO_POS[label]
-    if (stemPos) {
-      const node = tianGanNodes.find((n: any) => n.pos === stemPos)
-      return ELEMENT_COLORS[node?.wuxing ?? 'gray']
-    }
-    const branchPos = BRANCH_LABEL_TO_POS[label]
-    if (branchPos) {
-      const benQi = cangGanNodes.find((cg: any) => cg.branchPos === branchPos && cg.qi === 'BenQi')
-      return ELEMENT_COLORS[benQi?.wuxing ?? 'gray']
-    }
-    return ELEMENT_COLORS['gray']
-  }
-
-  function getLabelText(label: string): string {
-    const stemPos = STEM_LABEL_TO_POS[label]
-    if (stemPos) {
-      const node = tianGanNodes.find((n: any) => n.pos === stemPos)
-      return node?.stem ? t(`tiangan.${node.stem}`) : '?'
-    }
-    const branchPos = BRANCH_LABEL_TO_POS[label]
-    if (branchPos) {
-      const posKey = branchPos.replace('Branch', '').toLowerCase() as 'year' | 'month' | 'day' | 'hour'
-      const branch = pillarsData?.[posKey]?.branch
-      return branch ? t(`dizhi.${branch}`) : '?'
-    }
-    return '?'
-  }
-
-  // active节点坐标，用于连线
-  const activeCoords = [...activeLabels]
-    .map(label => nodeCenter(label))
-    .filter(Boolean) as { x: number; y: number }[]
+  const activeCoords = activePositions
+    .map(pos => nodeCenterByPos(pos, rowOf(pos)))
 
   return (
     <svg
@@ -609,10 +471,8 @@ export function BaziInteractionChart({
       preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', flexShrink: 0 }}
     >
-      {/* 行分隔线（只显示天干/地支行分隔，藏干行不用，因为不显示藏干） */}
       <line x1={0} y1={ROW_H} x2={VW} y2={ROW_H}
         stroke="hsl(var(--border))" strokeWidth="1" opacity="0.2" />
-      {/* 列分隔线 */}
       {[1, 2, 3].map(i => (
         <line key={i}
           x1={COL_W * i} y1={0} x2={COL_W * i} y2={ROW_H * 2}
@@ -620,7 +480,6 @@ export function BaziInteractionChart({
         />
       ))}
 
-      {/* 连线：黑色（用foreground颜色），直线 */}
       {activeCoords.length >= 2 && (
         <line
           x1={activeCoords[0].x} y1={activeCoords[0].y}
@@ -630,15 +489,12 @@ export function BaziInteractionChart({
         />
       )}
 
-      {/* 天干节点：参与关系→颜色+方框，不参与→淡化 */}
-      {ALL_STEM_LABELS.map((label) => {
-        const center = nodeCenter(label)
-        if (!center) return null
-        const isActive = activeLabels.has(label)
-        const color = getLabelColor(label)
-        const text = getLabelText(label)
+      {STEM_POSITIONS.map((pos) => {
+        const center = nodeCenterByPos(pos, 'stem')
+        const isActive = activeSet.has(pos)
+        const { text, color } = getNodeText(pos, 'stem', calculationResult, '', t)
         return (
-          <g key={label}>
+          <g key={pos}>
             {isActive && (
               <rect
                 x={center.x - BOX_SIZE / 2} y={center.y - BOX_SIZE / 2}
@@ -657,15 +513,12 @@ export function BaziInteractionChart({
         )
       })}
 
-      {/* 地支节点：参与关系→颜色+方框，不参与→淡化 */}
-      {ALL_BRANCH_LABELS.map((label) => {
-        const center = nodeCenter(label)
-        if (!center) return null
-        const isActive = activeLabels.has(label)
-        const color = getLabelColor(label)
-        const text = getLabelText(label)
+      {BRANCH_POSITIONS.map((pos) => {
+        const center = nodeCenterByPos(pos, 'branch')
+        const isActive = activeSet.has(pos)
+        const { text, color } = getNodeText(pos, 'branch', calculationResult, '', t)
         return (
-          <g key={label}>
+          <g key={pos}>
             {isActive && (
               <rect
                 x={center.x - BOX_SIZE / 2} y={center.y - BOX_SIZE / 2}

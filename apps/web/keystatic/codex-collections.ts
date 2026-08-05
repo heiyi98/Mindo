@@ -9,8 +9,19 @@ import { LOCALES, LOCALE_LABELS, localeToKey } from './locales';
  * Keystatic 的 format.contentField 只能把"一份 frontmatter + 一份正文"合并进同一个文件，
  * 一个 collection 只能有一个这样的字段。要让9个语言文件都各自保留独立 frontmatter，
  * 唯一匹配的方式是"一个语言 = 一个 collection"，用 path 的字面量后缀锁定文件名
- * （如 `content/codex/**​/zh` → `content/codex/{词条路径}/zh.mdx`），
- * 9个 collection 各自独立读写自己那个语言文件，互不干扰。
+ * （如 `**​/zh` → `{词条路径}/zh.mdx`），9个 collection 各自独立读写自己那个语言文件，互不干扰。
+ *
+ * path 是相对 API 路由里配置的 localBaseDirectory（content/ 目录）算的，带一个 `codex/`
+ * 前缀——这是为了让 Keystatic 本地模式的扫描范围收窄到内容库目录本身，不再牵连 src/、
+ * public/、messages/ 这些无关目录，见 Mindo-内容库.md 第十一节的性能记录。
+ *
+ * 踩坑记录：localBaseDirectory 最初直接指到 content/codex 本身，path 相应地写成
+ * `./**​/{locale}`——这样算出来的"collection 基准路径"是空字符串（表示"collection 就在
+ * 根目录本身，不带任何前缀文件夹"）。但 Keystatic 后台侧边栏用来定位"这个 collection
+ * 对应磁盘树上哪个节点"的查找逻辑，天然要求这个基准路径至少有一段真实的文件夹名，
+ * 传空字符串时找不到任何匹配节点，界面直接显示"Empty collection"，即使磁盘上数据
+ * 完全正常、用只读接口能读到也没用。所以 localBaseDirectory 退后一级指到 content/，
+ * path 前缀保留 `codex/` 这一段，两边配合缺一不可。
  *
  * slugField 直接复用 title 字段（fields.slug 的标准用法：name 部分对应 frontmatter 里的
  * title 文本，slug 部分对应文件夹路径），这样磁盘上的 frontmatter 形状跟现有文件完全一致
@@ -23,7 +34,7 @@ import { LOCALES, LOCALE_LABELS, localeToKey } from './locales';
 function buildCodexEntryCollection(locale: string) {
   return collection({
     label: `词条 · ${LOCALE_LABELS[locale] ?? locale}`,
-    path: `content/codex/**/${locale}`,
+    path: `codex/**/${locale}`,
     format: { contentField: 'content' },
     entryLayout: 'content',
     slugField: 'title',
@@ -54,7 +65,7 @@ function buildCodexEntryCollection(locale: string) {
  */
 const codexMetaCollection = collection({
   label: '词条分类（meta.json）',
-  path: 'content/codex/**/meta',
+  path: 'codex/**/meta',
   format: { data: 'json' },
   slugField: 'title',
   schema: {

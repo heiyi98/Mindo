@@ -74,16 +74,60 @@
     "tab2": "心理机制",
     "tab3": "现实投射",
     "tab4": "系统优化",
-    "title1": "人格底层逻辑",
-    "title2": "心理防御与应对机制",
-    "title3": "现实场景投射",
-    "title4": "全局系统干预",
+    "sectionTitle1": "人格核心",
+    "sectionTitle2": "心理机制",
+    "sectionTitle3": "现实反应",
+    "sectionTitle4": "调优建议",
     "generating": "生成中，请稍候...",
     "noReading": "还没有报告",
     "interactions": "机制交互",
     "coreConflict": "核心矛盾",
+    "selfAlignment": "人生自洽建议",
     "targeted": "针对性优化",
     "buyReading": "生成报告",
-    "viewReading": "查看完整解读"
+    "viewReading": "查看完整解读",
+    "mismatchTitle": "出生信息已修改",
+    "mismatchDesc": "检测到档案的出生信息与报告生成时不一致，是否重新生成报告？",
+    "mismatchContinue": "继续查看",
+    "mismatchRegenerate": "重新生成",
+    "scenes": {
+      "friends": "交友",
+      "work": "工作",
+      "career": "事业",
+      "constraint": "约束",
+      "accumulation": "积累",
+      "love": "爱情",
+      "ideal": "理想"
+    }
+  },
+  "metadata": {
+    "stem": "干",
+    "branch": "支",
+    "touGen": "通根",
+    "noTouGen": "无通根",
+    "touChu": "透出",
+    "notTouChu": "未透出",
+    "muKuLocked": "墓库锁闭",
+    "huifang": "会方"
+  },
+  "yinyang": {
+    "Yang": "阳",
+    "Yin": "阴"
+  },
+  "relationKind": {
+    "ZhenHua": "真化",
+    "HeBan": "合绊",
+    "ZhengHe": "争合",
+    "DuHe": "妒合",
+    "TianGanChong": "天干冲",
+    "SanHui": "三会",
+    "SanHe": "三合",
+    "BanHe": "半合",
+    "GongHe": "拱合",
+    "LiuHe": "六合",
+    "LiuChong": "六冲",
+    "Xing": "刑",
+    "Hai": "害",
+    "Po": "破"
   }
 }

@@ -1,4 +1,7 @@
 {
+  "common": {
+    "underConstruction": "En construcción"
+  },
   "auth": {
     "login": {
       "title": "Iniciar sesión en Mindo",

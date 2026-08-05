@@ -15,7 +15,8 @@
   "common": {
     "loading": "加载中",
     "error": "出错了",
-    "retry": "重试"
+    "retry": "重试",
+    "underConstruction": "施工中"
   },
   "auth": {
     "login": {

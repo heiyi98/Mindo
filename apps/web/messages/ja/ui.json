@@ -1,4 +1,7 @@
 {
+  "common": {
+    "underConstruction": "工事中"
+  },
   "auth": {
     "login": {
       "title": "Mindoにサインイン",

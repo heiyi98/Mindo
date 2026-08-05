@@ -15,7 +15,8 @@
   "common": {
     "loading": "Loading",
     "error": "Something went wrong",
-    "retry": "Retry"
+    "retry": "Retry",
+    "underConstruction": "Under Construction"
   },
   "auth": {
     "login": {

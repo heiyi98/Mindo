@@ -1,0 +1,32 @@
+{
+  "search": {
+    "placeholder": "コーデックスを検索…",
+    "loading": "検索中…",
+    "empty": "結果がありません"
+  },
+  "notFound": "この項目はまだ存在しません。",
+  "home": {
+    "graph": {
+      "baziLabel": "八字"
+    },
+    "cards": {
+      "bazi": {
+        "title": "八字",
+        "description": "仮の紹介文です。正式な内容は準備中です。",
+        "cta": "入る"
+      }
+    }
+  },
+  "topicNav": {
+    "home": "ホーム",
+    "directory": "項目一覧",
+    "search": "検索"
+  },
+  "citations": {
+    "showAll": "引用を表示",
+    "hideAll": "引用を非表示"
+  },
+  "directory": {
+    "title": "項目一覧"
+  }
+}

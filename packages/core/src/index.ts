@@ -5,12 +5,15 @@ export * from './time/index';
 export { analyzeBazi, toBaziSnapshot } from './bazi/analysis';
 export { preparePhase1Input } from './bazi/preparePhase1Input';
 export { buildShishenMetadata } from './bazi/preparePhase1Input';
-export { computeWuxingAssessment } from './bazi/yongshen';
+export { computeWuxingAssessment } from './bazi/energy/yongshen';
 export type {
   BaziAnalysis,
   BaziSnapshot,
   BaziMeta,
-  Wuxing, TianGan, DiZhi, ShiShen, EnergyNode, ShiShenInfluenceGroup,
+  Wuxing, TianGan, DiZhi, ShiShen, YinYang, GongWeiPos,
+  TianGanHe, TianGanChong, DiZhiRelation,
+  TianGanHeResult, DiZhiRelationType,
+  EnergyNode, ShiShenInfluenceGroup,
   WuxingAssessment, WuxingRole, WuxingStrengthLabel,
 } from './bazi/types';
 export * from './bazi/engine';

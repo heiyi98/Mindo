@@ -1,0 +1,32 @@
+{
+  "search": {
+    "placeholder": "搜索内容库…",
+    "loading": "搜索中…",
+    "empty": "没有找到结果"
+  },
+  "notFound": "这个词条还不存在。",
+  "home": {
+    "graph": {
+      "baziLabel": "八字"
+    },
+    "cards": {
+      "bazi": {
+        "title": "八字",
+        "description": "占位简介文字，正式内容撰写中。",
+        "cta": "进入"
+      }
+    }
+  },
+  "topicNav": {
+    "home": "主页",
+    "directory": "词条清单",
+    "search": "搜索"
+  },
+  "citations": {
+    "showAll": "显示引用",
+    "hideAll": "隐藏引用"
+  },
+  "directory": {
+    "title": "词条清单"
+  }
+}

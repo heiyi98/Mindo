@@ -1,4 +1,7 @@
 {
+  "common": {
+    "underConstruction": "공사 중"
+  },
   "auth": {
     "login": {
       "title": "Mindo에 로그인",

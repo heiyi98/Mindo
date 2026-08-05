@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/generate-keystatic-schema.js",
     "dev": "next dev",
-    "prebuild": "node scripts/generate-keystatic-schema.js",
     "build": "next build",
     "lint": "next lint",
     "type-check": "tsc --noEmit"

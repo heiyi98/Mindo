@@ -8,9 +8,8 @@
   },
   "composer": {
     "placeholder": "Partagez une pensée...",
-    "attachWuxing": "Joindre mes Cinq Éléments",
+    "attachWuxing": "Joindre mes Cinq Phases",
     "attachBigfive": "Joindre mon Big Five",
-    "attachDayMaster": "Joindre mon maître du jour",
     "publish": "Publier",
     "toolbar": {
       "fontSize": "Taille de police",
@@ -52,6 +51,13 @@
   "profile": {
     "tabs": {
       "myCards": "Mes cartes",
+      "folders": "Collections",
+      "subscriptions": "Abonnements"
+    }
+  },
+  "userProfile": {
+    "tabs": {
+      "cards": "Cartes",
       "folders": "Collections",
       "subscriptions": "Abonnements"
     }
@@ -103,10 +109,25 @@
   },
   "subscription": {
     "subscribeButton": "S'abonner",
+    "subscribedLabel": "Abonné",
     "unsubscribeButton": "Se désabonner"
   },
   "emptyState": {
     "noCards": "Aucune carte pour le moment"
+  },
+  "comments": {
+    "empty": "Aucun commentaire",
+    "reply": "Répondre",
+    "hideReplies": "Masquer",
+    "viewReplies": "Afficher {count} réponses",
+    "replyTargetDeleted": "Ce commentaire a été supprimé",
+    "replyingTo": "Répondre à {name}",
+    "inputPlaceholder": "Écrivez quelque chose...",
+    "send": "Envoyer",
+    "maxLengthReached": "Limite de {max} caractères atteinte",
+    "delete": "Supprimer",
+    "deleteConfirmTitle": "Supprimer le commentaire",
+    "deleteConfirmBody": "Cette action est irréversible"
   },
   "notifications": {
     "empty": "Pas encore de notifications",

@@ -1,4 +1,7 @@
 {
+  "common": {
+    "underConstruction": "In costruzione"
+  },
   "auth": {
     "login": {
       "title": "Accedi a Mindo",

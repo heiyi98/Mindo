@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import type { Wuxing } from '@mindo/core';
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
 
@@ -9,22 +10,12 @@ const ELEMENT_COLORS: Record<string, string> = {
   Metal: '#757575', Water: '#1976D2', gray:  '#6b7280',
 };
 
-const WUXING_LABELS: Record<string, string> = {
-  Wood: '木', Fire: '火', Earth: '土', Metal: '金', Water: '水',
-};
-
 const WUXING_ORDER: Wuxing[] = ['Wood', 'Fire', 'Earth', 'Metal', 'Water'];
 
 const WUXING_SHENG: Record<string, Wuxing> = { Wood: 'Fire', Fire: 'Earth', Earth: 'Metal', Metal: 'Water', Water: 'Wood' };
 const WUXING_KE: Record<string, Wuxing> = { Wood: 'Earth', Earth: 'Water', Water: 'Fire', Fire: 'Metal', Metal: 'Wood' };
 const WUXING_KE_ME: Record<string, Wuxing> = { Wood: 'Metal', Fire: 'Water', Earth: 'Wood', Metal: 'Fire', Water: 'Earth' };
 const WUXING_SHENG_ME: Record<string, Wuxing> = { Wood: 'Water', Fire: 'Wood', Earth: 'Fire', Metal: 'Earth', Water: 'Metal' };
-
-const SHISHEN_LABELS: Record<string, string> = {
-  BiJian: '比肩', JieCai: '劫财', ShiShen: '食神', ShangGuan: '伤官',
-  PianCai: '偏财', ZhengCai: '正财', QiSha: '七杀', ZhengGuan: '正官',
-  PianYin: '偏印', ZhengYin: '正印',
-};
 
 const ALL_SHISHEN = [
   'BiJian','JieCai','ShiShen','ShangGuan',
@@ -44,6 +35,7 @@ function getShishenWuxing(shishen: string, dayMasterElement: Wuxing): Wuxing {
 }
 
 function RadarFace({ energyData, dayMasterElement }: { energyData: Record<Wuxing, number>; dayMasterElement: Wuxing; }) {
+  const t = useTranslations('bazi');
   const maxVal = Math.max(...WUXING_ORDER.map(k => energyData[k] ?? 0), 1);
   const size = 200;
   const cx = size / 2;
@@ -89,7 +81,7 @@ function RadarFace({ energyData, dayMasterElement }: { energyData: Record<Wuxing
           const ly = cy + labelR * Math.sin(p.angle);
           return (
             <text key={p.key} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="12" fill={ELEMENT_COLORS[p.key] ?? 'hsl(var(--muted-foreground))'} opacity="0.85">
-              {WUXING_LABELS[p.key]}
+              {t(`wuxing.${p.key}`)}
             </text>
           );
         })}
@@ -99,6 +91,7 @@ function RadarFace({ energyData, dayMasterElement }: { energyData: Record<Wuxing
 }
 
 function ShishenFace({ shishenInfluence, dayMasterElement, dayMasterEnergy }: { shishenInfluence: { shishen: string; totalInfluence: number }[]; dayMasterElement: Wuxing; dayMasterEnergy: number; }) {
+  const t = useTranslations('bazi');
   const influenceMap = new Map(shishenInfluence.map(s => [s.shishen, s.totalInfluence]));
   const maxVal = Math.max(...shishenInfluence.map(s => s.totalInfluence), dayMasterEnergy, 1);
 
@@ -117,8 +110,8 @@ function ShishenFace({ shishenInfluence, dayMasterElement, dayMasterEnergy }: { 
   const BAR_R = 2;
 
   const allRows = [
-    { key: 'DayMaster', label: '日主', color: ELEMENT_COLORS[dayMasterElement] ?? ELEMENT_COLORS['gray'], pct: dayMasterEnergy / maxVal, isDay: true },
-    ...sorted.map(({ shishen, totalInfluence }) => ({ key: shishen, label: SHISHEN_LABELS[shishen] ?? shishen, color: ELEMENT_COLORS[getShishenWuxing(shishen, dayMasterElement)] ?? ELEMENT_COLORS['gray'], pct: totalInfluence / maxVal, isDay: false })),
+    { key: 'DayMaster', label: t('daymaster'), color: ELEMENT_COLORS[dayMasterElement] ?? ELEMENT_COLORS['gray'], pct: dayMasterEnergy / maxVal, isDay: true },
+    ...sorted.map(({ shishen, totalInfluence }) => ({ key: shishen, label: t(`shishen.${shishen}`), color: ELEMENT_COLORS[getShishenWuxing(shishen, dayMasterElement)] ?? ELEMENT_COLORS['gray'], pct: totalInfluence / maxVal, isDay: false })),
   ];
 
   return (
@@ -192,3 +185,4 @@ export default function WuxingRadarCard({ profileId }: { profileId: string }) {
     </div>
   );
 }
+

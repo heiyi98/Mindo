@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未登录' }, { status: 401 });
     }
 
-    const { snapshotId } = await request.json();
+    const { snapshotId, locale } = await request.json();
     if (!snapshotId) {
       return NextResponse.json({ error: '缺少snapshotId' }, { status: 400 });
     }
@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
       .eq('id', snapshot.profile_id)
       .single();
 
+    // 确定报告语言：优先用传入的locale，兜底用zh
+    const reportLocale = locale ?? 'zh';
+
     // 在 bazi_readings 创建新记录
     // calculation_result：把这次的命盘计算结果原样复制一份，钉死在报告自己
     // 身上——之后渲染报告命盘图表只读这一份自留副本，不再跨表查
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
         birth_place_name: profile?.birth_place_name ?? null,
         birth_gender: profile?.gender ?? null,
         calculation_result: snapshot.calculation_result,
+        locale: reportLocale,
         ai_reading_status: 'generating',
       })
       .select('id')
@@ -66,14 +70,13 @@ export async function POST(request: NextRequest) {
 
     const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-phase1`;
 
-    // Fire and forget：传 readingId 给 Edge Function
     fetch(edgeFunctionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({ snapshotId, readingId: reading.id, dataSheet }),
+      body: JSON.stringify({ snapshotId, readingId: reading.id, dataSheet, locale: reportLocale }),
     }).catch(err => console.error('Edge Function触发失败:', err));
 
     return NextResponse.json({ success: true, readingId: reading.id, message: '报告生成中' });
