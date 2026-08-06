@@ -4,18 +4,22 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Trash2, ChevronRight, Layers, Shield, Check, Pencil, Link as LinkIcon, SquareUser } from 'lucide-react';
+import { LogOut, Trash2, ChevronRight, Layers, Shield, Check, Pencil, Link as LinkIcon, SquareUser, Ticket } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LanguageSettingRow } from '@/components/os/LanguageSwitcher';
 
 export default function ProfilePage() {
   const t = useTranslations('account');
+  const tRedeem = useTranslations('payment.redeem');
+  const tPayment = useTranslations('payment');
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [handle, setHandle] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [isVip, setIsVip] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
   // 编辑弹窗状态
@@ -25,22 +29,35 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // 兑换码弹窗状态
+  const [showRedeem, setShowRedeem] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState(false);
+
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       supabase
         .from('users')
-        .select('handle, display_name')
+        .select('handle, display_name, vip_expires_at')
         .eq('id', user.id)
         .single()
         .then(({ data }) => {
           if (data) {
             setHandle(data.handle ?? null);
             setDisplayName(data.display_name ?? null);
+            setIsVip(!!data.vip_expires_at && new Date(data.vip_expires_at).getTime() > Date.now());
           }
         });
     });
+
+    fetch('/api/payments/assets')
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.balance === 'number') setBalance(d.balance); })
+      .catch(() => {});
   }, []);
 
   const openEdit = () => {
@@ -105,6 +122,45 @@ export default function ProfilePage() {
     });
   };
 
+  const openRedeem = () => {
+    setRedeemCode('');
+    setRedeemError(null);
+    setRedeemSuccess(false);
+    setShowRedeem(true);
+  };
+
+  const handleRedeem = async () => {
+    if (redeeming || !redeemCode.trim()) return;
+    setRedeeming(true);
+    setRedeemError(null);
+    try {
+      const res = await fetch('/api/payments/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: redeemCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const errorMap: Record<string, string> = {
+          code_not_found: tRedeem('errors.codeNotFound'),
+          already_redeemed: tRedeem('errors.alreadyRedeemed'),
+          code_expired: tRedeem('errors.codeExpired'),
+        };
+        setRedeemError(errorMap[data.code] ?? tRedeem('errors.generic'));
+        return;
+      }
+      setRedeemSuccess(true);
+      fetch('/api/payments/assets')
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.balance === 'number') setBalance(d.balance); })
+        .catch(() => {});
+    } catch {
+      setRedeemError(tRedeem('errors.generic'));
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteInput !== 'DELETE') return;
     setDeleting(true);
@@ -149,12 +205,17 @@ export default function ProfilePage() {
 
         {/* 昵称 + handle */}
         <div className="flex-1 min-w-0">
-          <p className="text-base font-light truncate" style={{ color: 'hsl(var(--foreground))' }}>
+          <p className="text-base font-light truncate" style={{ color: isVip ? 'hsl(var(--vip-gold))' : 'hsl(var(--foreground))' }}>
             {displayName ?? t('identity.noName')}
           </p>
           <p className="text-xs font-light mt-0.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {handle ? `@${handle}` : '—'}
           </p>
+          {balance !== null && (
+            <p className="text-xs font-light mt-0.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              {tPayment('balanceLabel', { unit: tPayment('walletUnit'), balance })}
+            </p>
+          )}
         </div>
 
         {/* 操作按钮 */}
@@ -224,6 +285,18 @@ export default function ProfilePage() {
           </div>
           <ChevronRight size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
         </Link>
+        <div style={{ height: 1, background: 'hsl(var(--border))' }} />
+        <button
+          onClick={openRedeem}
+          className="w-full flex items-center justify-between px-4 py-4 transition-colors hover:bg-muted/30"
+          style={{ color: 'hsl(var(--foreground))' }}
+        >
+          <div className="flex items-center gap-2">
+            <Ticket size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
+            <span className="text-sm font-light">{tRedeem('entry')}</span>
+          </div>
+          <ChevronRight size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        </button>
       </motion.div>
 
       {/* 危险操作区块 */}
@@ -347,6 +420,75 @@ export default function ProfilePage() {
               >
                 {saving ? '...' : t('identity.save')}
               </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* 兑换码弹窗 */}
+      {showRedeem && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 flex items-center justify-center z-50 px-4"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={() => setShowRedeem(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-sm p-6 rounded-3xl space-y-4"
+            style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-light" style={{ color: 'hsl(var(--foreground))' }}>
+              {tRedeem('title')}
+            </h2>
+
+            {redeemSuccess ? (
+              <p className="text-sm font-light" style={{ color: 'hsl(var(--foreground))' }}>
+                {tRedeem('success')}
+              </p>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={redeemCode}
+                  onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                  placeholder={tRedeem('placeholder')}
+                  className="w-full px-4 py-3 rounded-xl text-sm font-light tracking-wide focus:outline-none"
+                  style={{
+                    background: 'hsl(var(--muted))',
+                    color: 'hsl(var(--foreground))',
+                    border: '1px solid hsl(var(--border))',
+                  }}
+                />
+                {redeemError && (
+                  <p className="text-xs font-light" style={{ color: 'hsl(var(--destructive))' }}>
+                    {redeemError}
+                  </p>
+                )}
+              </>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowRedeem(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-light"
+                style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--foreground))' }}
+              >
+                {redeemSuccess ? tRedeem('close') : t('cancel')}
+              </button>
+              {!redeemSuccess && (
+                <button
+                  onClick={handleRedeem}
+                  disabled={redeeming || !redeemCode.trim()}
+                  className="flex-1 py-3 rounded-xl text-sm font-light disabled:opacity-30"
+                  style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+                >
+                  {redeeming ? '...' : tRedeem('submit')}
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>

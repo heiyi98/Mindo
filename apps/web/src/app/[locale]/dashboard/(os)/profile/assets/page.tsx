@@ -1,9 +1,11 @@
 'use client';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import { FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import PendingAssetsTab from '@/components/payments/PendingAssetsTab';
 
 interface Asset {
   id: string;
@@ -17,9 +19,13 @@ interface Asset {
   created_at: string;
 }
 
+type Tab = 'purchased' | 'pending';
+
 export default function AssetsPage() {
   const t = useTranslations('account.assets');
+  const tAssets = useTranslations('assets');
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>('purchased');
   const { data, isLoading: loading } = useQuery({
     queryKey: ['account-assets'],
     queryFn: async () => {
@@ -48,7 +54,25 @@ export default function AssetsPage() {
         </h1>
       </motion.div>
 
-      {loading ? (
+      <div className="flex gap-2 justify-center mb-2">
+        {(['purchased', 'pending'] as const).map((tabKey) => (
+          <button
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
+            className="px-4 py-2 rounded-xl text-sm font-light"
+            style={{
+              background: tab === tabKey ? 'hsl(var(--foreground) / 0.08)' : 'transparent',
+              color: 'hsl(var(--foreground))',
+            }}
+          >
+            {tAssets(`tabs.${tabKey}`)}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'pending' && <PendingAssetsTab />}
+
+      {tab === 'purchased' && (loading ? (
         <div className="flex justify-center py-12">
           <div
             className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
@@ -120,7 +144,7 @@ export default function AssetsPage() {
             </div>
           </motion.div>
         ))
-      )}
+      ))}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { BaziOverviewChart, BaziShishenChart, BaziInteractionChart } from './Baz
 import { usePdfExport } from '@/hooks/usePdfExport'
 import { SHISHEN_ZH_TO_KEY, SCENE_ZH_TO_KEY, formatRelationLine, formatGanZhiRelation } from '@/lib/bazi/relationsFormat'
 import type { ShishenRelations, ShishenNodeRelation, GanZhiRelation } from '@/lib/bazi/reportRelations'
+import VoucherSelector from '@/components/payments/VoucherSelector'
 
 interface ThemeData {
   ai_reading_theme1: any | null
@@ -21,7 +22,7 @@ interface ThemeData {
 
 interface Props {
   snapshotId: string | null
-  readingId: string
+  readingId: string | null
   shishenMetadata: ShishenRelations
   ganZhiRelations: GanZhiRelation[]
   calculationResult: any
@@ -59,6 +60,10 @@ export default function BaziReadingView({
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [showMismatch, setShowMismatch] = useState(birthMismatch)
+  const [voucherId, setVoucherId] = useState<string | null>(null)
+  const [price, setPrice] = useState<number | null>(null)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+  const tPayment = useTranslations('payment')
 
   const overviewRef = useRef<HTMLDivElement>(null)
   const shishenRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -138,6 +143,8 @@ export default function BaziReadingView({
   }
 
   useEffect(() => {
+    // 还没生成过报告时readingId是null，没有行可订阅，不建立realtime连接
+    if (!readingId) return
     const supabase = createClient()
     const channel = supabase
       .channel(`reading-${readingId}`)
@@ -151,21 +158,42 @@ export default function BaziReadingView({
     return () => { supabase.removeChannel(channel) }
   }, [readingId])
 
+  useEffect(() => {
+    // 只有还没生成过报告时才需要展示价格
+    if (readingId) return
+    fetch('/api/payments/price?service_type=bazi_report')
+      .then(r => r.json())
+      .then(d => { if (typeof d.price === 'number') setPrice(d.price) })
+      .catch(() => {})
+  }, [readingId])
+
   const handleGenerate = async () => {
     setGenerating(true)
     setShowMismatch(false)
+    setGenerateError(null)
     try {
       const res = await fetch('/api/ai/reading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshotId, locale }),
+        body: JSON.stringify({ snapshotId, locale, voucherId }),
       })
       const d = await res.json()
-      if (d.readingId) {
+      if (res.ok && d.readingId) {
         router.push(`/dashboard/assessments/bazi/reading?readingId=${d.readingId}`)
+        return
       }
+      // 非2xx（余额不足/凭证不可用/价格未配置/建记录失败等）都要落到这里给出提示，
+      // 不能什么都不做——之前只判断了d.readingId存在与否，失败时页面会一直停在
+      // "生成中"，什么反馈都没有
+      const errorMap: Record<string, string> = {
+        insufficient_balance: t('reading.errors.insufficientBalance'),
+        voucher_unavailable: t('reading.errors.voucherUnavailable'),
+      }
+      setGenerateError(errorMap[d.code] ?? d.error ?? t('reading.errors.generic'))
+      setGenerating(false)
     } catch (err) {
       console.error(err)
+      setGenerateError(t('reading.errors.generic'))
       setGenerating(false)
     }
   }
@@ -218,15 +246,28 @@ export default function BaziReadingView({
           <p className="text-sm text-muted-foreground text-center">
             {generating ? t('reading.generating') : t('reading.noReading')}
           </p>
+          {!generating && price !== null && (
+            <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
+              {t('reading.priceLabel', { price, unit: tPayment('walletUnit') })}
+            </p>
+          )}
           {!generating && (
-            <button
-              onClick={handleGenerate}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light"
-              style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
-            >
-              <Sparkles size={14} />
-              {t('reading.buyReading')}
-            </button>
+            <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+              <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
+              <button
+                onClick={handleGenerate}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light"
+                style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+              >
+                <Sparkles size={14} />
+                {t('reading.buyReading')}
+              </button>
+              {generateError && (
+                <p className="text-xs text-center" style={{ color: 'hsl(var(--destructive))' }}>
+                  {generateError}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </>
@@ -246,6 +287,9 @@ export default function BaziReadingView({
             <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
               {t('reading.mismatchDesc')}
             </p>
+            <div className="mb-3">
+              <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowMismatch(false)}
@@ -401,6 +445,11 @@ export default function BaziReadingView({
         {generating && (
           <p className="text-sm text-muted-foreground text-center mt-8">
             {t('reading.generating')}
+          </p>
+        )}
+        {!generating && generateError && (
+          <p className="text-sm text-center mt-8" style={{ color: 'hsl(var(--destructive))' }}>
+            {generateError}
           </p>
         )}
       </div>

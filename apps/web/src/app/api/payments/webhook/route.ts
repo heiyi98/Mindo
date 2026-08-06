@@ -51,15 +51,9 @@ export async function POST(request: Request) {
       status: 'completed',
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-web.vercel.app';
-    await fetch(`${baseUrl}/api/ai/reading`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-internal-secret': process.env.LEMONSQUEEZY_WEBHOOK_SECRET!,
-      },
-      body: JSON.stringify({ userId, profileId, assessmentType }),
-    });
+    // 原本这里会直接调 /api/ai/reading 触发生成，跳过了新付费系统的扣款/核销逻辑
+    // ——这条Lemon Squeezy流程本身依赖的products/purchases表已删，现在还是打不通，
+    // 已按用户决定去掉这处直接触发调用，不再留这个跳过扣款判断的入口
 
     return NextResponse.json({ received: true });
   } catch (error: any) {

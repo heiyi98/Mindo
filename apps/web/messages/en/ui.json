@@ -305,9 +305,31 @@
     "bigfive": { "desc": "Five-factor personality science" }
   },
   "payment": {
+    "walletUnit": "coins",
+    "balanceLabel": "{unit}: {balance}",
     "buyReading": "Unlock AI Reading · $19.99",
     "readingUnlocked": "AI Reading Unlocked",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "voucher": {
+      "none": "Don't use a voucher, pay with wallet balance",
+      "full": "Free voucher ({issuer})",
+      "percentage": "{issuer} · {value}% off",
+      "fixedAmount": "{issuer} · {value} {unit} off"
+    },
+    "redeem": {
+      "entry": "Redeem Code",
+      "title": "Redeem Code",
+      "placeholder": "Enter your code",
+      "submit": "Redeem",
+      "success": "Redeemed successfully",
+      "close": "Close",
+      "errors": {
+        "codeNotFound": "This code doesn't exist",
+        "alreadyRedeemed": "This code has already been used",
+        "codeExpired": "This code has expired",
+        "generic": "Redemption failed, please try again"
+      }
+    }
   },
   "social": {
     "follow": "Follow",

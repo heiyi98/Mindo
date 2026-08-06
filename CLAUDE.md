@@ -21,6 +21,7 @@
 | 片语模块 | `Mindo-片语.md` |
 | 开发环境/部署/第三方服务配置 | `Mindo-工作栈与服务.md` |
 | 内容库（Codex） | `Mindo-内容库.md` |
+| 支付系统（虚拟币/VIP/凭证/兑换码/后台管理面板） | `Mindo-支付系统.md` |
 
 西洋星盘、紫微斗数、MBTI、论坛、商城、私信——尚未拆出独立文档，做到哪个模块再建哪个模块的文档，不要提前占位建空文件。
 
@@ -200,7 +201,7 @@ contexts/
   ⚠️ 物理位置不在(os)路由组底下——故意搬出去的，避免报告页出现导航栏
 /{locale}/dashboard/profile/            → 账户管理
 /{locale}/dashboard/profile/profiles/   → 档案管理（拖拽排序）
-/{locale}/dashboard/profile/assets/     → 资产管理（所有付费报告）
+/{locale}/dashboard/profile/assets/     → 资产管理（已购报告 + 待消费资产[虚拟币/VIP/兑换券]标签切换，见Mindo-支付系统.md）
 /{locale}/dashboard/profile/account/    → 账户安全
 /{locale}/dashboard/mind-cards/         → 片语主页，物理位置不在(os)路由组底下
 /{locale}/dashboard/mind-cards/profile/{handle} → 片语个人主页（自己/别人共用同一路由，
@@ -246,12 +247,16 @@ contexts/
 
 ## 关键教训
 
+- **向Claude Code提供的施工/规格文档中，任何要求原样写入实际文件的字面内容（SQL、代码、配置），必须用代码块或引号清晰围起，并标注"以下是要写入的原文"，与解释设计理由的说明性文字物理分开**——防止执行者把设计理由的叙述性文字误当成要抄进文件的实际内容
 - PowerShell -replace命令会损坏UTF-8中文字符，含中文的文件必须发给Claude修改后输出
 - Turbo远程缓存会掩盖TypeScript错误，新建Vercel项目时会暴露历史积累的错误
 - Noto_Sans_SC/TC 不接受 subsets 参数，直接省略即可
 - vercel.json的cron表达式Hobby账号只支持每天一次（`0 0 * * *`）
 - Vercel webhook偶发失效时，删除重建项目是最彻底的解法
 - @react-pdf/renderer中文换行：必须用hyphenationCallback把每个字符拆开，不能用useCallback（缓存问题），字体必须用.ttf格式，路径必须用window.location.origin拼完整URL
+- **Supabase新建表后，PostgREST接口层的表结构缓存不会立刻感知到**：SQL Editor里执行CREATE TABLE成功，不代表马上就能通过`supabase.from(表名)`查到——接口层报"找不到这张表"（`PGRST205`）时，先去SQL Editor跑`NOTIFY pgrst, 'reload schema';`手动触发刷新，不要先怀疑刚写的代码逻辑
+- **本项目里"表没开RLS"不等于"anon/authenticated角色就能读写"**：常见的"Supabase默认会给新表自动grant权限"这个印象在本项目实测不成立——没开RLS、也没手动执行GRANT的表，session client（anon key+用户cookie）查询会静默返回空结果（不报错，就是查不到行），只有service role client能不受限访问。所有支付/账本相关的表，后端一律用service role client读写，即使表面上只是个"只读查询"，不要假设session client能读到
+- **RLS policy要按"这张表的写入本该只能通过后端逻辑发生"来设计，不能只看"数据敏不敏感"**：`bazi_readings`历史上有一条允许owner直接INSERT的policy，本身看似合理（"用户当然能建自己的报告记录"），但这张表的INSERT实际上必须先过扣款逻辑，客户端直接insert就等于绕过付费——凡是"表面上是用户自己的数据，但写入这个动作背后有业务规则（扣款/权限校验/状态机）要跑"的表，客户端角色应该只给SELECT，写入一律走后端service role，不能默认"owner能读能写"这个RLS思维定式
 - **engine → baziEngine 重命名（已完成）**：`packages/core/src/bazi/engine.ts` 导出的对象从 `engine` 改名为 `baziEngine`。**禁止在任何新代码里 import** `engine` **from** `@mindo/core`**，正确名字是** `baziEngine`
 - **divination → assessments 全局改名（已完成）**：这类改名极易漏改分散在各处的硬编码路径字符串，改名后必须做一次全局搜索旧名字确认零残留
 - **CSS自定义属性在calc()里必须带单位**：`--ext-len`这类自定义属性如果设成纯数字（无px），`calc(-1 * var(--ext-len))`算出来的是无量纲数值，某些浏览器场景下会被判定为非法声明整条丢弃——不是"能不能用变量"的问题，是"变量值要不要带单位"的问题
@@ -278,7 +283,7 @@ contexts/
 - [x] 通用时间引擎独立模块（packages/core/src/time/）
 - [x] 大五人格（120题/引擎/常模匹配/T分），详见 `Mindo-算法-大五.md`
 - [x] 西洋星盘（SVG星盘图）
-- [x] 付费系统（Lemon Squeezy）
+- [x] 付费系统（虚拟币/VIP/服务覆盖凭证/兑换码/`/admin`后台管理面板，取代原Lemon Squeezy买断制），详见 `Mindo-支付系统.md`
 - [x] 仪表盘6列网格（自定义拖拽/碰撞解决/布局持久化）
 - [x] 卡片架构重构（modules/目录，卡片自治，profileId唯一prop）
 - [x] 测算中心页面（原divination，已全局改名assessments）

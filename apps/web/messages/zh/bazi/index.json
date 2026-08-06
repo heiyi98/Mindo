@@ -85,11 +85,17 @@
     "selfAlignment": "人生自洽建议",
     "targeted": "针对性优化",
     "buyReading": "生成报告",
+    "priceLabel": "{price} {unit}",
     "viewReading": "查看完整解读",
     "mismatchTitle": "出生信息已修改",
     "mismatchDesc": "检测到档案的出生信息与报告生成时不一致，是否重新生成报告？",
     "mismatchContinue": "继续查看",
     "mismatchRegenerate": "重新生成",
+    "errors": {
+      "insufficientBalance": "虚拟币余额不足，请充值或使用兑换码",
+      "voucherUnavailable": "所选凭证不可用或已用完，请重新选择",
+      "generic": "生成失败，请重试"
+    },
     "scenes": {
       "friends": "交友",
       "work": "工作",

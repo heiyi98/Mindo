@@ -81,11 +81,17 @@
     "selfAlignment": "Cohérence de vie",
     "targeted": "Ajustements ciblés",
     "buyReading": "Générer le rapport",
+    "priceLabel": "{price} {unit}",
     "viewReading": "Voir la lecture complète",
     "mismatchTitle": "Informations de naissance modifiées",
     "mismatchDesc": "Les informations de naissance du profil diffèrent de celles utilisées lors de la génération du rapport. Regénérer le rapport ?",
     "mismatchContinue": "Continuer",
     "mismatchRegenerate": "Regénérer",
+    "errors": {
+      "insufficientBalance": "Solde insuffisant, veuillez recharger ou utiliser un code promotionnel",
+      "voucherUnavailable": "Le bon sélectionné n'est plus disponible, veuillez en choisir un autre",
+      "generic": "Échec de la génération, veuillez réessayer"
+    },
     "scenes": {
       "friends": "Amitiés",
       "work": "Travail",

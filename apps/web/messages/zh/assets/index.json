@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "purchased": "已购报告",
+    "pending": "待消费资产"
+  },
+  "wallet": {
+    "balance": "{unit}余额"
+  },
+  "vip": {
+    "activeUntil": "会员有效期至 {date}",
+    "inactive": "非会员"
+  },
+  "vouchers": {
+    "title": "兑换券",
+    "empty": "暂无兑换券",
+    "coverageFull": "全额抵扣",
+    "coveragePercentage": "{value}% 折扣",
+    "coverageFixedAmount": "抵扣 {value} {unit}",
+    "remainingUses": "剩余 {count} 次"
+  }
+}

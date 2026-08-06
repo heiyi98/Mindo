@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "purchased": "Purchased Reports",
+    "pending": "Pending Assets"
+  },
+  "wallet": {
+    "balance": "Wallet Balance"
+  },
+  "vip": {
+    "activeUntil": "Member until {date}",
+    "inactive": "Not a member"
+  },
+  "vouchers": {
+    "title": "Vouchers",
+    "empty": "No vouchers yet",
+    "coverageFull": "Full coverage",
+    "coveragePercentage": "{value}% off",
+    "coverageFixedAmount": "{value} {unit} off",
+    "remainingUses": "{count} left"
+  }
+}

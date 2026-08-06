@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
-import { useLocale } from 'next-intl';
 import { Sparkles } from 'lucide-react';
 
 export const COLS = 1;
@@ -12,7 +11,6 @@ export const CARD_META = { id: 'bazi-reading', cols: COLS, rows: ROWS, module: '
 export default function BaziReadingCard({ profileId }: { profileId: string }) {
   const t = useTranslations('payment');
   const router = useRouter();
-  const locale = useLocale();
   const [readingId, setReadingId] = useState<string | null>(null);
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -39,19 +37,13 @@ export default function BaziReadingCard({ profileId }: { profileId: string }) {
     );
   }
 
+  // 点卡片只负责免费进入报告页面，不做任何扣款/余额判断——是否生成、
+  // 用不用兑换券，都是进了报告页面之后用户自己在"生成报告"按钮那一步的决定
   const handleClick = () => {
     if (readingId) {
       router.push(`/dashboard/assessments/bazi/reading?readingId=${readingId}`);
     } else if (snapshotId) {
-      fetch('/api/ai/reading', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshotId, locale }),
-      }).then(r => r.json()).then(d => {
-        if (d.readingId) {
-          router.push(`/dashboard/assessments/bazi/reading?readingId=${d.readingId}`);
-        }
-      });
+      router.push(`/dashboard/assessments/bazi/reading?snapshotId=${snapshotId}`);
     }
   };
 

@@ -120,3 +120,9 @@ export function getAssessmentsByCategory(category: AssessmentCategory): Assessme
 export function getAvailableAssessments(): Assessment[] {
   return ASSESSMENTS.filter(a => a.isAvailable);
 }
+
+// 付费系统里 service_type 的命名是 `{assessmentId}_report`（如'bazi_report'），
+// 服务覆盖凭证展示服务名称时复用这里已有的多语言配置，不新建翻译键
+export function getAssessmentByServiceType(serviceType: string): Assessment | undefined {
+  return getAssessmentById(serviceType.replace(/_report$/, ''));
+}

@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.trim();
+    // 默认排除自己（"加好友"场景不该搜到自己）；"直接发放"这类管理员操作场景
+    // 需要搜到自己（给自己账号发测试额度），显式传excludeSelf=false跳过这条过滤，
+    // 不改动这个接口原本对私信模块的默认行为
+    const excludeSelf = searchParams.get('excludeSelf') !== 'false';
 
     if (!q || q.length < 1) {
       return NextResponse.json({ users: [] });
@@ -22,12 +26,17 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // 用 admin 绕过 RLS，搜索 handle 或 display_name
-    const { data } = await adminClient
+    let query = adminClient
       .from('users')
       .select('id, handle, display_name')
       .or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`)
-      .neq('id', user.id)
       .limit(10);
+
+    if (excludeSelf) {
+      query = query.neq('id', user.id);
+    }
+
+    const { data } = await query;
 
     return NextResponse.json({ users: data ?? [] });
   } catch (error) {

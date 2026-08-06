@@ -316,10 +316,32 @@
     "bigfive": { "desc": "五大维度科学人格" }
   },
   "payment": {
+    "walletUnit": "虚拟币",
+    "balanceLabel": "{unit}: {balance}",
     "buyReading": "解锁AI解读 · $19.99",
     "readingUnlocked": "AI解读已解锁",
     "loading": "加载中...",
-    "viewReading": "查看完整解读"
+    "viewReading": "查看完整解读",
+    "voucher": {
+      "none": "不使用凭证，直接用{unit}支付",
+      "full": "免费凭证（{issuer}）",
+      "percentage": "{issuer} · {value}% 折扣",
+      "fixedAmount": "{issuer} · 抵扣{value}{unit}"
+    },
+    "redeem": {
+      "entry": "输入兑换码",
+      "title": "兑换码",
+      "placeholder": "输入兑换码",
+      "submit": "兑换",
+      "success": "兑换成功，已到账",
+      "close": "关闭",
+      "errors": {
+        "codeNotFound": "兑换码不存在",
+        "alreadyRedeemed": "这张兑换码已经被使用过了",
+        "codeExpired": "这张兑换码已经过期",
+        "generic": "兑换失败，请重试"
+      }
+    }
   },
   "social": {
     "follow": "关注",

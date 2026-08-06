@@ -41,5 +41,13 @@
     "modeDayun": "Cycle",
     "modeYear": "Cycle · Year",
     "modeMonth": "Cycle · Year · Month"
+  },
+  "reading": {
+    "priceLabel": "{price} {unit}",
+    "errors": {
+      "insufficientBalance": "Insufficient balance. Please top up or use a redemption code.",
+      "voucherUnavailable": "The selected voucher is no longer available. Please choose another.",
+      "generic": "Generation failed. Please try again."
+    }
   }
 }

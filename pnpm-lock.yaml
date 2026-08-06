@@ -41,6 +41,9 @@ importers:
       '@mindo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@mindo/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
       '@react-pdf/renderer':
         specifier: ^4.5.1
         version: 4.5.1(react@19.2.5)
@@ -226,6 +229,16 @@ importers:
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/payments:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.103.0
+        version: 2.103.0
+    devDependencies:
       typescript:
         specifier: ^5
         version: 5.9.3

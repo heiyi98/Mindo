@@ -316,10 +316,32 @@
     "bigfive": { "desc": "Science des cinq facteurs de personnalité" }
   },
   "payment": {
+    "walletUnit": "pièces",
+    "balanceLabel": "{unit} : {balance}",
     "buyReading": "Débloquer la lecture IA · 19,99 $",
     "readingUnlocked": "Lecture IA débloquée",
     "loading": "Chargement...",
-    "viewReading": "Voir la lecture complète"
+    "viewReading": "Voir la lecture complète",
+    "voucher": {
+      "none": "Ne pas utiliser de bon, payer avec le solde du portefeuille",
+      "full": "Bon gratuit ({issuer})",
+      "percentage": "{issuer} · {value}% de réduction",
+      "fixedAmount": "{issuer} · {value} {unit} de réduction"
+    },
+    "redeem": {
+      "entry": "Utiliser un code",
+      "title": "Code promotionnel",
+      "placeholder": "Entrez votre code",
+      "submit": "Utiliser",
+      "success": "Code utilisé avec succès",
+      "close": "Fermer",
+      "errors": {
+        "codeNotFound": "Ce code n'existe pas",
+        "alreadyRedeemed": "Ce code a déjà été utilisé",
+        "codeExpired": "Ce code a expiré",
+        "generic": "Échec, veuillez réessayer"
+      }
+    }
   },
   "social": {
     "follow": "Suivre",

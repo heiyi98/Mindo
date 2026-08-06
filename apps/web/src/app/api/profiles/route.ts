@@ -36,11 +36,13 @@ export async function POST(request: Request) {
 
   const { data: userData } = await supabase
     .from('users')
-    .select('vip_tier')
+    .select('vip_expires_at')
     .eq('id', user.id)
     .single();
 
-  if (existingProfiles && existingProfiles.length >= 1 && userData?.vip_tier === 'free') {
+  const isVip = !!userData?.vip_expires_at && new Date(userData.vip_expires_at).getTime() > Date.now();
+
+  if (existingProfiles && existingProfiles.length >= 1 && !isVip) {
     return NextResponse.json({ error: 'vip_required' }, { status: 403 });
   }
 
