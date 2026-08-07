@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
-
-const adminClient = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 // GET /api/users/search?q=xxx
 export async function GET(request: Request) {
@@ -21,24 +16,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ users: [] });
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 用 admin 绕过 RLS，搜索 handle 或 display_name
-    let query = adminClient
-      .from('users')
-      .select('id, handle, display_name')
-      .or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`)
-      .limit(10);
+    const users = await createSocialRepository(supabase).searchUsers(q, excludeSelf ? user.id : null);
 
-    if (excludeSelf) {
-      query = query.neq('id', user.id);
-    }
-
-    const { data } = await query;
-
-    return NextResponse.json({ users: data ?? [] });
+    return NextResponse.json({ users });
   } catch (error) {
     console.error('[users/search] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

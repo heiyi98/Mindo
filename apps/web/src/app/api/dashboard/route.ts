@@ -1,66 +1,54 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createAccountRepository } from '@/lib/account/adminClient';
+import { createBaziRepository } from '@/lib/bazi/adminClient';
 import {
   calculateUniversalTime, baziEngine, analyzeBazi, toBaziSnapshot, computeWuxingAssessment,
   generateDestinyTimeline, generateLifeChart,
 } from '@mindo/core';
 import type { TianGan, DiZhi, BaziSnapshot } from '@mindo/core';
+import type { BaziRepository } from '@mindo/db';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const requestedProfileId = searchParams.get('profile_id');
 
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('[dashboard API] user:', user?.id, 'authError:', authError);
+    const { supabase, user } = await requireApiUser();
+    console.log('[dashboard API] user:', user?.id);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let profileQuery = supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id);
+    const accountRepo = createAccountRepository(supabase);
+    const baziRepo = createBaziRepository(supabase);
 
-    if (requestedProfileId) {
-      profileQuery = profileQuery.eq('id', requestedProfileId);
-    } else {
-      profileQuery = profileQuery.eq('is_self', true);
-    }
+    const profileRow = await accountRepo.getProfileForDashboard(user.id, requestedProfileId);
+    console.log('[dashboard API] profile:', (profileRow as { id?: string } | null)?.id);
 
-    const { data: profiles } = await profileQuery
-      .order('created_at', { ascending: true })
-      .limit(1);
-
-    const profile = profiles?.[0] || null;
-    console.log('[dashboard API] profile:', profile?.id);
-
-    if (!profile) {
+    if (!profileRow) {
       return NextResponse.json({ error: 'No profile found' }, { status: 404 });
     }
+    const profile = profileRow as Record<string, any>;
 
     let baziSnapshot: BaziSnapshot;
     let fromCache = true;
 
-    const { data: existingSnapshot } = await supabase
-      .from('bazi_snapshots')
-      .select('id, calculation_result')
-      .eq('profile_id', profile.id)
-      .maybeSingle();
+    const existingSnapshot = await baziRepo.getSnapshotForDashboard(profile.id);
     console.log('[dashboard API] existingSnapshot:', !!existingSnapshot);
 
     if (existingSnapshot) {
+      const calcResult = existingSnapshot.calculation_result as any;
       const isNewFormat =
-        existingSnapshot.calculation_result?.pillars?.yuelingWuxing !== undefined &&
-        existingSnapshot.calculation_result?.relations !== undefined &&
-        existingSnapshot.calculation_result?.influence !== undefined;
+        calcResult?.pillars?.yuelingWuxing !== undefined &&
+        calcResult?.relations !== undefined &&
+        calcResult?.influence !== undefined;
 
       if (isNewFormat) {
-        if (!existingSnapshot.calculation_result?.pattern) {
+        if (!calcResult?.pattern) {
           console.log('[dashboard API] lazy migration: rebuilding pattern for snapshot:', existingSnapshot.id);
-          const pillars = existingSnapshot.calculation_result.pillars as BaziSnapshot['pillars'];
+          const pillars = calcResult.pillars as BaziSnapshot['pillars'];
           const migratedAnalysis = analyzeBazi({
             year:  { stem: pillars.year.stem,  branch: pillars.year.branch  },
             month: { stem: pillars.month.stem, branch: pillars.month.branch },
@@ -79,46 +67,35 @@ export async function GET(request: Request) {
           }
           baziSnapshot = toBaziSnapshot(
             migratedAnalysis,
-            existingSnapshot.calculation_result.meta,
+            calcResult.meta,
             migratedScores as any,
           );
-          supabase
-            .from('bazi_snapshots')
-            .update({ calculation_result: baziSnapshot })
-            .eq('id', existingSnapshot.id)
-            .then(() => {
-              console.log('[dashboard API] lazy migration written for snapshot:', existingSnapshot.id);
-            });
+          baziRepo.updateSnapshotResult(existingSnapshot.id, baziSnapshot).then(() => {
+            console.log('[dashboard API] lazy migration written for snapshot:', existingSnapshot.id);
+          });
         } else {
-          baziSnapshot = existingSnapshot.calculation_result as BaziSnapshot;
+          baziSnapshot = calcResult as BaziSnapshot;
         }
       } else {
-        await supabase
-          .from('bazi_snapshots')
-          .delete()
-          .eq('profile_id', profile.id);
+        await baziRepo.deleteSnapshotsForProfile(profile.id);
 
-        baziSnapshot = await computeAndSave(supabase, profile, user.id);
+        baziSnapshot = await computeAndSave(baziRepo, profile, user.id);
         fromCache = false;
       }
     } else {
-      baziSnapshot = await computeAndSave(supabase, profile, user.id);
+      baziSnapshot = await computeAndSave(baziRepo, profile, user.id);
       fromCache = false;
     }
 
-    const { data: existingTimeline } = await supabase
-      .from('life_timeline')
-      .select('baseline_imbalance, baseline_energies, years')
-      .eq('profile_id', profile.id)
-      .single();
+    const existingTimeline = await baziRepo.getLifeTimeline(profile.id);
 
     let lifeTimeline: { baseline: number; baselineEnergies: unknown; years: unknown[] };
 
     if (existingTimeline) {
       lifeTimeline = {
-        baseline: existingTimeline.baseline_imbalance as number,
+        baseline: existingTimeline.baseline_imbalance,
         baselineEnergies: existingTimeline.baseline_energies,
-        years: existingTimeline.years as unknown[],
+        years: existingTimeline.years,
       };
     } else {
       const tStr = profile.birth_time || '12:00:00';
@@ -130,11 +107,11 @@ export async function GET(request: Request) {
       const destinyTimeline = generateDestinyTimeline(dateStr, gender, currentYear);
       const lifeChartData = generateLifeChart(baziSnapshot, destinyTimeline, birthYear);
 
-      await supabase.from('life_timeline').insert({
-        profile_id: profile.id,
-        user_id: user.id,
-        baseline_imbalance: lifeChartData.baseline,
-        baseline_energies: lifeChartData.baselineEnergies,
+      await baziRepo.insertLifeTimeline({
+        profileId: profile.id,
+        userId: user.id,
+        baselineImbalance: lifeChartData.baseline,
+        baselineEnergies: lifeChartData.baselineEnergies,
         years: lifeChartData.years,
       });
       console.log('[dashboard API] life_timeline generated for profile:', profile.id);
@@ -159,15 +136,15 @@ export async function GET(request: Request) {
 }
 
 async function computeAndSave(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  baziRepo: BaziRepository,
   profile: Record<string, any>,
   userId: string,
 ): Promise<BaziSnapshot> {
   const birthDate: string = profile.birth_date;
   const rawBirthTime: string = profile.birth_time || '12:00:00';
   const timeUnknown = !profile.birth_time;
-  const isMinuteUnknown = profile.is_minute_unknown === true; 
-  const dateStr = `${birthDate}T${rawBirthTime}`; 
+  const isMinuteUnknown = profile.is_minute_unknown === true;
+  const dateStr = `${birthDate}T${rawBirthTime}`;
   const lat: number = profile.birth_lat || 39.9042;
   const lng: number = profile.birth_lng || 116.4074;
 
@@ -219,11 +196,7 @@ async function computeAndSave(
 
   const snapshot = toBaziSnapshot(analysis, meta, energyScores as any);
 
-  await supabase.from('bazi_snapshots').insert({
-    profile_id: profile.id,
-    user_id: userId,
-    calculation_result: snapshot,
-  });
+  await baziRepo.insertSnapshotForProfile(profile.id, userId, snapshot);
 
   return snapshot;
 }

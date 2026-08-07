@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 export async function GET(
   _request: Request,
@@ -7,18 +8,12 @@ export async function GET(
 ) {
   try {
     const { handle } = await params;
-    const supabase = await createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: target } = await supabase
-      .from('users')
-      .select('id, handle, display_name')
-      .eq('handle', handle)
-      .single();
+    const target = await createSocialRepository(supabase).getUserByHandle(handle);
 
     if (!target) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 
 // DELETE /api/mind-cards/comments/:id — 删除一条留言（一级或二级）
 // 权限：留言本人，或者这张卡片的作者，都能删。
@@ -13,22 +13,13 @@ export async function DELETE(
 ) {
   try {
     const { id: commentId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: comment } = await admin
-      .from('mind_card_comments')
-      .select('id, author_id, card_id')
-      .eq('id', commentId)
-      .maybeSingle();
+    const comment = await repo.getCommentById(commentId);
     if (!comment) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const { data: card } = await admin
-      .from('mind_cards')
-      .select('user_id')
-      .eq('id', comment.card_id)
-      .maybeSingle();
+    const card = await repo.getCard(comment.card_id);
 
     const isCommentAuthor = comment.author_id === user.id;
     const isCardAuthor = card?.user_id === user.id;
@@ -36,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { error } = await admin.from('mind_card_comments').delete().eq('id', commentId);
+    const { error } = await repo.deleteComment(commentId);
     if (error) {
       console.error('[mind-cards comments DELETE] error:', error);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

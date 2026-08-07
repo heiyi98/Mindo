@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import type { LedgerAdapter, LedgerResult, RewardType } from './types';
+import type { PaymentsRepository, LedgerResult, RewardType } from './types';
 import { ok, fail } from './types';
 import { creditWallet } from './wallet';
 import { extendVip } from './vip';
@@ -28,49 +28,38 @@ export interface RedeemCodeResult {
  * 分别给前端不同的错误提示。核销成功后按批次的reward_type分流入账。
  */
 export async function redeemCode(
-  client: LedgerAdapter,
+  repo: PaymentsRepository,
   code: string,
   userId: string
 ): Promise<LedgerResult<RedeemCodeResult>> {
-  const { data: redeemed, error: redeemError } = await client
-    .rpc('redeem_code', { p_code: code, p_user_id: userId })
-    .maybeSingle();
+  const { data: redeemed, error: redeemError } = await repo.redeemCodeRaw(code, userId);
 
   if (redeemError) return fail('db_error', redeemError.message);
 
   if (!redeemed) {
-    const { data: existing } = await client
-      .from('redemption_codes')
-      .select('status, batch_id, redemption_code_batches(code_expires_at)')
-      .eq('code', code)
-      .maybeSingle();
+    const diagnostic = await repo.getRedemptionCodeDiagnostic(code);
 
-    if (!existing) return fail('code_not_found', '兑换码不存在');
-    if (existing.status === 'redeemed') return fail('already_redeemed', '这张兑换码已经被使用过了');
+    if (!diagnostic) return fail('code_not_found', '兑换码不存在');
+    if (diagnostic.status === 'redeemed') return fail('already_redeemed', '这张兑换码已经被使用过了');
 
-    const batch = existing.redemption_code_batches as unknown as { code_expires_at: string | null } | null;
-    if (batch?.code_expires_at && new Date(batch.code_expires_at).getTime() <= Date.now()) {
+    if (diagnostic.code_expires_at && new Date(diagnostic.code_expires_at).getTime() <= Date.now()) {
       return fail('code_expired', '这张兑换码已经过期');
     }
 
     return fail('code_not_found', '兑换码不存在');
   }
 
-  const { id: redemptionCodeId, batch_id: batchId } = redeemed as { id: string; batch_id: string };
+  const { id: redemptionCodeId, batch_id: batchId } = redeemed;
 
-  const { data: batch, error: batchError } = await client
-    .from('redemption_code_batches')
-    .select('reward_type, reward_config, code_prefix')
-    .eq('id', batchId)
-    .single();
+  const { data: batch, error: batchError } = await repo.getBatchById(batchId);
 
   if (batchError || !batch) return fail('db_error', batchError?.message ?? '批次不存在');
 
-  const rewardType = batch.reward_type as RewardType;
+  const rewardType = batch.reward_type;
   const config = batch.reward_config as Record<string, any>;
 
   if (rewardType === 'wallet') {
-    const result = await creditWallet(client, userId, config.amount, 'redeem', {
+    const result = await creditWallet(repo, userId, config.amount, 'redeem', {
       referenceId: redemptionCodeId,
     });
     if (!result.success) return fail(result.code, result.error);
@@ -78,13 +67,13 @@ export async function redeemCode(
   }
 
   if (rewardType === 'vip') {
-    const result = await extendVip(client, userId, config.days, 'redeem');
+    const result = await extendVip(repo, userId, config.days, 'redeem');
     if (!result.success) return fail(result.code, result.error);
     return ok({ rewardType, vipExpiresAt: result.data.expiresAt });
   }
 
   // voucher
-  const result = await grantVoucher(client, {
+  const result = await grantVoucher(repo, {
     userId,
     serviceType: config.service_type,
     coverageType: config.coverage_type,
@@ -117,28 +106,24 @@ export interface CreateBatchResult {
  * 整批重新生成候选码重试（冲突概率极低，不做逐条局部重试的复杂化处理）。
  */
 export async function createBatch(
-  client: LedgerAdapter,
+  repo: PaymentsRepository,
   input: CreateBatchInput
 ): Promise<LedgerResult<CreateBatchResult>> {
   const codePrefix = input.codePrefix?.trim() ?? '';
 
-  const { data: batch, error: batchError } = await client
-    .from('redemption_code_batches')
-    .insert({
-      code_prefix: codePrefix,
-      reward_type: input.rewardType,
-      reward_config: input.rewardConfig,
-      code_expires_at: input.codeExpiresAt ?? null,
-      total_count: input.totalCount,
-      note: input.note ?? null,
-      created_by: input.createdBy ?? null,
-    })
-    .select('id')
-    .single();
+  const { data: batch, error: batchError } = await repo.insertBatch({
+    codePrefix,
+    rewardType: input.rewardType,
+    rewardConfig: input.rewardConfig,
+    codeExpiresAt: input.codeExpiresAt ?? null,
+    totalCount: input.totalCount,
+    note: input.note ?? null,
+    createdBy: input.createdBy ?? null,
+  });
 
   if (batchError || !batch) return fail('db_error', batchError?.message ?? '创建批次失败');
 
-  const batchId = batch.id as string;
+  const batchId = batch.id;
   const maxAttempts = 5;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -154,19 +139,47 @@ export async function createBatch(
     // 极小概率同批次内部生成了重复码，凑不够数量时直接进入下一次整批重试
     if (codes.length !== input.totalCount) continue;
 
-    const { error: insertError } = await client
-      .from('redemption_codes')
-      .insert(codes.map((code) => ({ batch_id: batchId, code })));
+    const { error: insertError } = await repo.insertCodes(batchId, codes);
 
     if (!insertError) {
       return ok({ batchId, codes });
     }
 
     // 23505 = unique_violation，说明跟其他批次的码撞车了，整批重新生成再试
-    if ((insertError as { code?: string }).code !== '23505') {
+    if (insertError.code !== '23505') {
       return fail('db_error', insertError.message);
     }
   }
 
   return fail('code_generation_failed', '兑换码生成多次冲突，请重试');
+}
+
+export interface BatchSummary {
+  id: string;
+  code_prefix: string;
+  reward_type: RewardType;
+  reward_config: Record<string, unknown>;
+  code_expires_at: string | null;
+  total_count: number;
+  note: string | null;
+  created_at: string;
+  redeemedCount: number;
+}
+
+/**
+ * 后台管理面板用：列出全部兑换码批次，附带每批已核销数量。
+ */
+export async function listBatchesWithCounts(repo: PaymentsRepository): Promise<LedgerResult<BatchSummary[]>> {
+  const { data: batches, error } = await repo.listBatches();
+
+  if (error) return fail('db_error', error.message);
+
+  const withCounts = await Promise.all(
+    batches.map(async (batch) => ({
+      ...batch,
+      redeemedCount: await repo.countRedeemedCodes(batch.id),
+    }))
+  );
+
+  return ok(withCounts);
 }

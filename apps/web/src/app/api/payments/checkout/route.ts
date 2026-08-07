@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 import {
   lemonSqueezySetup,
   createCheckout,
@@ -7,8 +8,7 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
@@ -18,12 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const { data: product } = await supabase
-      .from('products')
-      .select('*')
-      .eq('assessment_type', assessment_type)
-      .eq('is_active', true)
-      .single();
+    const product = await paymentsRepository.getActiveProduct(assessment_type);
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -31,11 +26,7 @@ export async function POST(request: Request) {
 
     lemonSqueezySetup({ apiKey: process.env.LEMONSQUEEZY_API_KEY! });
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('email')
-      .eq('id', user.id)
-      .single();
+    const email = await paymentsRepository.getUserEmail(user.id);
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-web.vercel.app';
 
@@ -48,7 +39,7 @@ export async function POST(request: Request) {
           media: false,
         },
         checkoutData: {
-          email: userData?.email || user.email || '',
+          email: email || user.email || '',
           custom: {
             user_id: user.id,
             profile_id,

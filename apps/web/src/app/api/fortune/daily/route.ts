@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createBaziRepository } from '@/lib/bazi/adminClient';
 import {
   computeFortuneImbalance, getMonthPillar, getDayPillar,
 } from '@mindo/core';
@@ -15,8 +16,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'profileId is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // 解析日期（默认今天）
@@ -25,23 +25,17 @@ export async function GET(request: Request) {
     const month = target.getMonth() + 1;
     const day   = target.getDate();
 
+    const baziRepo = createBaziRepository(supabase);
+
     // 加载八字快照
-    const { data: snapshotRow } = await supabase
-      .from('bazi_snapshots')
-      .select('calculation_result')
-      .eq('profile_id', profileId)
-      .single();
+    const snapshotRow = await baziRepo.getSnapshotForDashboard(profileId);
     if (!snapshotRow) {
       return NextResponse.json({ error: 'No bazi snapshot found' }, { status: 404 });
     }
     const natal = snapshotRow.calculation_result as BaziSnapshot;
 
     // 加载人生K线（含大运流年）
-    const { data: timelineRow } = await supabase
-      .from('life_timeline')
-      .select('years')
-      .eq('profile_id', profileId)
-      .single();
+    const timelineRow = await baziRepo.getLifeTimeline(profileId);
     if (!timelineRow) {
       return NextResponse.json({ error: 'life_timeline not found — call /api/dashboard first' }, { status: 404 });
     }

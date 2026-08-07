@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 const HANDLE_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
 
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json() as { display_name?: string; handle?: string };
+    const socialRepo = createSocialRepository(supabase);
 
     const updates: Record<string, string> = {};
 
@@ -27,13 +28,8 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: 'handle_invalid' }, { status: 400 });
       }
       // 检查唯一性
-      const { data: existing } = await supabase
-        .from('users')
-        .select('id')
-        .eq('handle', handle)
-        .neq('id', user.id)
-        .maybeSingle();
-      if (existing) {
+      const taken = await socialRepo.isHandleTaken(handle, user.id);
+      if (taken) {
         return NextResponse.json({ error: 'handle_taken' }, { status: 409 });
       }
       updates.handle = handle;
@@ -43,10 +39,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user.id);
+    const { error } = await socialRepo.updateUserProfile(user.id, updates);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -54,7 +47,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ ok: true, updates });
   } catch (error) {
-    console.error('[users/me PATCH] error:', error);
+    console.error('[users PATCH] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

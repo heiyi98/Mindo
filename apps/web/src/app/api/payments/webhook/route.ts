@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 import crypto from 'crypto';
 
 export async function POST(request: Request) {
@@ -39,16 +39,12 @@ export async function POST(request: Request) {
     const amountCents = payload.data?.attributes?.total;
     const currency = payload.data?.attributes?.currency;
 
-    const supabase = await createClient();
-
-    await supabase.from('purchases').insert({
-      user_id: userId,
-      snapshot_type: assessmentType,
-      amount_cents: amountCents,
+    await paymentsRepository.insertLegacyPurchase({
+      userId,
+      snapshotType: assessmentType,
+      amountCents,
       currency: (currency || 'USD').toLowerCase(),
-      provider: 'lemonsqueezy',
-      provider_order_id: String(orderId),
-      status: 'completed',
+      providerOrderId: String(orderId),
     });
 
     // 原本这里会直接调 /api/ai/reading 触发生成，跳过了新付费系统的扣款/核销逻辑

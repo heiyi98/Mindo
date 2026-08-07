@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { preparePhase1Input } from '@mindo/core';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { paymentsRepository } from '@/lib/payments/adminClient';
+import { baziRepositoryAdmin } from '@/lib/bazi/adminClient';
+import { refundWallet } from '@mindo/payments';
+import type { StuckReadingRow } from '@mindo/db';
 
 // Vercel Cron Job - 每5分钟扫描卡住的报告任务
 //
@@ -20,22 +23,13 @@ export async function GET(request: Request) {
 
   // cron是服务端到服务端触发（Vercel带CRON_SECRET调用），没有真实用户session，
   // 用session client查/改bazi_readings在RLS收紧成"仅owner可SELECT"之后会永远
-  // 查到空结果（auth.uid()是null，匹配不上任何user_id）——这里统一改用service
-  // role的paymentsAdminClient，不受RLS限制
+  // 查到空结果（auth.uid()是null，匹配不上任何user_id）——baziRepositoryAdmin
+  // 内部全程走service role，不受RLS限制
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  const { data: stuckJobs } = await paymentsAdminClient
-    .from('bazi_readings')
-    .select(
-      'id, user_id, calculation_result, locale, ai_reading_status, ai_reading_draft, ai_reading_theme1, ai_reading_theme2, ai_reading_theme3, ai_reading_theme4, created_at, charge_type, charge_wallet_amount, charge_voucher_id, charge_refunded_at'
-    )
-    .not('ai_reading_status', 'is', null)
-    .neq('ai_reading_status', 'done')
-    .neq('ai_reading_status', 'failed_permanent')
-    .lt('created_at', fiveMinutesAgo)
-    .limit(10);
+  const stuckJobs = await baziRepositoryAdmin.getStuckReadings(fiveMinutesAgo);
 
-  if (!stuckJobs || stuckJobs.length === 0) {
+  if (stuckJobs.length === 0) {
     return NextResponse.json({ message: '无卡住任务' });
   }
 
@@ -43,39 +37,24 @@ export async function GET(request: Request) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   const results = await Promise.allSettled(
-    stuckJobs.map(async (job) => {
+    stuckJobs.map(async (job: StuckReadingRow) => {
       const elapsed = Date.now() - new Date(job.created_at).getTime();
 
       if (elapsed > GIVE_UP_AFTER_MS) {
         if (job.charge_refunded_at) return { id: job.id, action: 'already_refunded' };
 
         if (job.charge_type === 'wallet' && job.charge_wallet_amount > 0) {
-          await paymentsAdminClient.rpc('credit_wallet', {
-            p_user_id: job.user_id,
-            p_amount: job.charge_wallet_amount,
-            p_type: 'refund',
-            p_reference_id: job.id,
-            p_actor_id: null,
-          });
+          await refundWallet(paymentsRepository, job.user_id, job.charge_wallet_amount, { referenceId: job.id });
         } else if (job.charge_type === 'voucher') {
           if (job.charge_voucher_id) {
-            await paymentsAdminClient.rpc('restore_voucher_use', { p_voucher_id: job.charge_voucher_id });
+            await paymentsRepository.restoreVoucherUse(job.charge_voucher_id);
           }
           if (job.charge_wallet_amount > 0) {
-            await paymentsAdminClient.rpc('credit_wallet', {
-              p_user_id: job.user_id,
-              p_amount: job.charge_wallet_amount,
-              p_type: 'refund',
-              p_reference_id: job.id,
-              p_actor_id: null,
-            });
+            await refundWallet(paymentsRepository, job.user_id, job.charge_wallet_amount, { referenceId: job.id });
           }
         }
 
-        await paymentsAdminClient
-          .from('bazi_readings')
-          .update({ ai_reading_status: 'failed_permanent', charge_refunded_at: new Date().toISOString() })
-          .eq('id', job.id);
+        await baziRepositoryAdmin.markReadingFailedPermanent(job.id);
 
         console.log(`[Cron] ${job.id} 超过30分钟未完成，已放弃并退款`);
         return { id: job.id, action: 'refunded' };
@@ -94,7 +73,7 @@ export async function GET(request: Request) {
         targetFunction === 'generate-phase1'
           ? JSON.stringify({
               readingId: job.id,
-              dataSheet: preparePhase1Input(job.calculation_result),
+              dataSheet: preparePhase1Input(job.calculation_result as any),
               locale: job.locale,
             })
           : JSON.stringify({ readingId: job.id });

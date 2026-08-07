@@ -1,5 +1,13 @@
-// packages/db 统一出口
-// 具体客户端在 apps/web 层创建，这里导出类型契约
+// packages/db 统一出口：只导出接口定义/类型契约，不含任何具体数据库实现。
+// 具体的Supabase实现从 '@mindo/db/supabase' 单独导入。
+
+export * from './payments/interface';
+export * from './account/interface';
+export * from './bazi/interface';
+export * from './bigfive/interface';
+export * from './mindCards/interface';
+export * from './western/interface';
+export * from './social/interface';
 
 export interface ProfileInsert {
   user_id: string;

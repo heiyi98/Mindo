@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin/requireAdmin';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 
 export async function DELETE(
   _request: Request,
@@ -10,11 +10,7 @@ export async function DELETE(
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id, currencyCode } = await params;
-  const { error } = await paymentsAdminClient
-    .from('wallet_topup_tier_prices')
-    .delete()
-    .eq('tier_id', id)
-    .eq('currency_code', currencyCode);
+  const { error } = await paymentsRepository.deleteTierPrice(id, currencyCode);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

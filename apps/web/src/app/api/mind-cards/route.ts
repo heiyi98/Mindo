@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
 import { computeWuxingAssessment, toWuxingVector, toBigFiveVector } from '@mindo/core';
 import type { BaziSnapshot } from '@mindo/core';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import type { CardVisibility } from '@/lib/mindCards/visibility';
 import type { MindCardCardStyle, MindCardRun, MindCardStyleV2 } from '@/lib/mindCards/style';
 import { runsToPlainText } from '@/lib/mindCards/style';
@@ -12,8 +12,7 @@ const VALID_VISIBILITY: CardVisibility[] = ['private', 'followers', 'friends', '
 // POST /api/mind-cards — 发布片语
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json() as {
@@ -42,13 +41,7 @@ export async function POST(request: Request) {
     let selfProfileId: string | null = null;
     const ensureSelfProfile = async () => {
       if (selfProfileId !== null) return selfProfileId;
-      const { data: selfProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_self', true)
-        .maybeSingle();
-      selfProfileId = selfProfile?.id ?? null;
+      selfProfileId = await repo.getSelfProfileId(user.id);
       return selfProfileId;
     };
 
@@ -59,17 +52,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No self profile found for wuxing snapshot' }, { status: 400 });
       }
 
-      const { data: snapshot } = await supabase
-        .from('bazi_snapshots')
-        .select('calculation_result')
-        .eq('profile_id', profileId)
-        .maybeSingle();
-
-      if (!snapshot?.calculation_result) {
+      const calcResult = await repo.getBaziCalculationResult(profileId);
+      if (!calcResult) {
         return NextResponse.json({ error: 'No bazi snapshot found for wuxing snapshot' }, { status: 400 });
       }
 
-      const assessment = computeWuxingAssessment(snapshot.calculation_result as BaziSnapshot);
+      const assessment = computeWuxingAssessment(calcResult as BaziSnapshot);
       wuxingVector = toWuxingVector(assessment);
     }
 
@@ -80,27 +68,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No self profile found for bigfive snapshot' }, { status: 400 });
       }
 
-      const { data: assessment } = await supabase
-        .from('bigfive_assessments')
-        .select('domain_scores')
-        .eq('profile_id', profileId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!assessment?.domain_scores) {
+      const domainScores = await repo.getBigfiveDomainScores(profileId, user.id);
+      if (!domainScores) {
         return NextResponse.json({ error: 'No bigfive assessment found for bigfive snapshot' }, { status: 400 });
       }
 
-      bigfiveVector = toBigFiveVector(assessment.domain_scores as Record<string, number>);
+      bigfiveVector = toBigFiveVector(domainScores);
     }
 
     const style: MindCardStyleV2 = { card: cardStyle, runs };
 
-    const { data: card, error: cardError } = await admin
-      .from('mind_cards')
-      .insert({ user_id: user.id, content, visibility, style })
-      .select('id, user_id, content, visibility, style, created_at')
-      .single();
+    const { data: card, error: cardError } = await repo.insertCard({
+      user_id: user.id,
+      content,
+      visibility,
+      style,
+    });
 
     if (cardError || !card) {
       console.error('[mind-cards POST] insert card error:', cardError);
@@ -112,14 +95,7 @@ export async function POST(request: Request) {
       bigfiveVector ? { card_id: card.id, metric_type: 'bigfive', metric_data: bigfiveVector } : null,
     ].filter((row): row is { card_id: string; metric_type: string; metric_data: Record<string, number> } => row !== null);
 
-    if (metricRows.length > 0) {
-      const { error: metricError } = await admin.from('mind_card_metrics').insert(metricRows);
-
-      if (metricError) {
-        // 卡片本体已创建成功，metric写入失败不回滚卡片——只是少了相似度参与资格，不影响卡片正常展示
-        console.error('[mind-cards POST] insert metric error:', metricError);
-      }
-    }
+    await repo.insertCardMetrics(metricRows);
 
     return NextResponse.json({ card: { ...card, wuxing: wuxingVector, bigfive: bigfiveVector } });
   } catch (error) {

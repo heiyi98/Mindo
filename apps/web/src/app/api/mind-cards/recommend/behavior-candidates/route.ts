@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
 import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
 import { computeBehaviorCandidateAuthors } from '@/lib/mindCards/behaviorCandidates';
 
@@ -9,8 +9,7 @@ import { computeBehaviorCandidateAuthors } from '@/lib/mindCards/behaviorCandida
 // 的管理员门槛——这次先不做，见 Mindo-片语.md 第三十四节施工顺序）。
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);

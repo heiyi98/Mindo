@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createBigfiveRepository } from '@/lib/bigfive/adminClient';
 import { calculateBigFive } from '@mindo/core';
 import type { BigFiveUserAnswer } from '@mindo/core';
-
-const serviceClient = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 function calcAgeGroup(birthDate: string): string {
   const birth = new Date(birthDate);
@@ -25,8 +20,7 @@ function calcAgeGroup(birthDate: string): string {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
@@ -52,12 +46,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, birth_date, gender')
-      .eq('id', profile_id)
-      .eq('user_id', user.id)
-      .single();
+    const bigfiveRepo = createBigfiveRepository(supabase);
+    const profile = await bigfiveRepo.getOwnedProfileForAssessment(profile_id, user.id);
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
@@ -75,23 +65,19 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('bigfive_assessments')
-      .insert({
-        profile_id,
-        user_id: user.id,
-        domain_scores,
-        facet_scores,
-        region_country,
-        region_level1,
-        region_level2,
-        region_level3,
-        region_display_name,
-        age_group,
-        gender: profile.gender || null,
-      })
-      .select('id')
-      .single();
+    const { data: inserted, error: insertError } = await bigfiveRepo.insertAssessment({
+      profile_id,
+      user_id: user.id,
+      domain_scores,
+      facet_scores,
+      region_country,
+      region_level1,
+      region_level2,
+      region_level3,
+      region_display_name,
+      age_group,
+      gender: profile.gender || null,
+    });
 
     if (insertError || !inserted) {
       console.error('[BigFive] insert failed:', insertError);
@@ -101,16 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('[bigfive] deleting old records for profile_id:', profile_id, 'keeping id:', inserted.id);
-    const { error: deleteError } = await serviceClient
-      .from('bigfive_assessments')
-      .delete()
-      .eq('profile_id', profile_id)
-      .neq('id', inserted.id);
-
-    if (deleteError) {
-      console.error('[bigfive] delete error:', deleteError);
-    }
+    await bigfiveRepo.deleteOldAssessments(profile_id, inserted.id);
 
     return NextResponse.json({ result: report, fromCache: false });
   } catch (error: any) {

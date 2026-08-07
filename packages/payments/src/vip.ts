@@ -1,4 +1,4 @@
-import type { LedgerAdapter, LedgerResult, VipTransactionType } from './types';
+import type { PaymentsRepository, LedgerResult, VipTransactionType } from './types';
 import { ok, fail } from './types';
 
 /**
@@ -7,18 +7,13 @@ import { ok, fail } from './types';
  * lifetime会员用一个极远未来日期表示，不需要额外的特殊值判断逻辑。
  */
 export async function extendVip(
-  client: LedgerAdapter,
+  repo: PaymentsRepository,
   userId: string,
   days: number,
   type: VipTransactionType,
   actorId?: string
 ): Promise<LedgerResult<{ expiresAt: string }>> {
-  const { data, error } = await client.rpc('extend_vip', {
-    p_user_id: userId,
-    p_days: days,
-    p_type: type,
-    p_actor_id: actorId ?? null,
-  });
+  const { data, error } = await repo.extendVipRaw(userId, days, type, actorId ?? null);
 
   if (error) return fail('db_error', error.message);
 
@@ -29,19 +24,15 @@ export async function extendVip(
  * 查询VIP是否在有效期内，统一只判断 vip_expires_at > now()。
  */
 export async function checkVipActive(
-  client: LedgerAdapter,
+  repo: PaymentsRepository,
   userId: string
 ): Promise<LedgerResult<{ active: boolean; expiresAt: string | null }>> {
-  const { data, error } = await client
-    .from('users')
-    .select('vip_expires_at')
-    .eq('id', userId)
-    .maybeSingle();
+  const { data, error } = await repo.getUserVipExpiry(userId);
 
   if (error) return fail('db_error', error.message);
   if (!data) return fail('not_found', '用户不存在');
 
-  const expiresAt = data.vip_expires_at as string | null;
+  const expiresAt = data.vip_expires_at;
   const active = expiresAt !== null && new Date(expiresAt).getTime() > Date.now();
 
   return ok({ active, expiresAt });

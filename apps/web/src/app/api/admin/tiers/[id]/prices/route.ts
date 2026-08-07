@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin/requireAdmin';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminUser();
@@ -12,12 +12,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: '缺少currencyCode或price' }, { status: 400 });
   }
 
-  const { error } = await paymentsAdminClient.from('wallet_topup_tier_prices').upsert({
-    tier_id: id,
-    currency_code: currencyCode.toUpperCase(),
-    price: Number(price),
-    updated_at: new Date().toISOString(),
-  });
+  const { error } = await paymentsRepository.upsertTierPrice(id, currencyCode.toUpperCase(), Number(price));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

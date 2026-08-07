@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,18 +13,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('stem_content')
-    .select('content')
-    .eq('stem_id', stemId)
-    .eq('locale', locale)
-    .eq('content_type', contentType)
-    .eq('is_published', true)
-    .single();
+  const content = await createSocialRepository(supabase).getStemContent(stemId, locale, contentType);
 
-  if (error || !data) {
-    return NextResponse.json({ content: null });
-  }
-
-  return NextResponse.json({ content: data.content });
+  return NextResponse.json({ content });
 }

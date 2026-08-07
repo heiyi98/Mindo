@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin/requireAdmin';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 import { creditWallet, extendVip, grantVoucher } from '@mindo/payments';
 
 export async function POST(request: NextRequest) {
@@ -14,18 +14,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '缺少handle或type' }, { status: 400 });
   }
 
-  const { data: targetUser, error: userError } = await paymentsAdminClient
-    .from('users')
-    .select('id')
-    .eq('handle', handle)
-    .maybeSingle();
+  const targetUserId = await paymentsRepository.findUserIdByHandle(handle);
 
-  if (userError || !targetUser) {
+  if (!targetUserId) {
     return NextResponse.json({ error: '找不到该handle对应的用户' }, { status: 404 });
   }
 
   if (type === 'wallet') {
-    const result = await creditWallet(paymentsAdminClient, targetUser.id, Number(body.amount), 'admin_grant', {
+    const result = await creditWallet(paymentsRepository, targetUserId, Number(body.amount), 'admin_grant', {
       actorId: admin.id,
     });
     if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 });
@@ -33,14 +29,14 @@ export async function POST(request: NextRequest) {
   }
 
   if (type === 'vip') {
-    const result = await extendVip(paymentsAdminClient, targetUser.id, Number(body.days), 'admin_grant', admin.id);
+    const result = await extendVip(paymentsRepository, targetUserId, Number(body.days), 'admin_grant', admin.id);
     if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true, expiresAt: result.data.expiresAt });
   }
 
   if (type === 'voucher') {
-    const result = await grantVoucher(paymentsAdminClient, {
-      userId: targetUser.id,
+    const result = await grantVoucher(paymentsRepository, {
+      userId: targetUserId,
       serviceType: body.serviceType,
       coverageType: body.coverageType,
       coverageValue: Number(body.coverageValue),

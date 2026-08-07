@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import type { CardVisibility } from '@/lib/mindCards/visibility';
 
 const VALID_VISIBILITY: CardVisibility[] = ['private', 'followers', 'friends', 'public'];
@@ -17,15 +17,10 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: folder } = await admin
-      .from('mind_card_folders')
-      .select('id, user_id, is_default')
-      .eq('id', id)
-      .maybeSingle();
+    const folder = await repo.getFolderOwnership(id);
 
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -62,12 +57,7 @@ export async function PATCH(
       return NextResponse.json({ ok: true });
     }
 
-    const { data: updated, error } = await admin
-      .from('mind_card_folders')
-      .update(updates)
-      .eq('id', id)
-      .select('id, name, description, folder_kind, display_mode, visibility, is_default, order_index, created_at')
-      .single();
+    const { data: updated, error } = await repo.updateFolder(id, updates);
 
     if (error || !updated) {
       console.error('[mind-cards/folders PATCH] error:', error);
@@ -89,15 +79,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: folder } = await admin
-      .from('mind_card_folders')
-      .select('id, user_id, is_default')
-      .eq('id', id)
-      .maybeSingle();
+    const folder = await repo.getFolderOwnership(id);
 
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -107,7 +92,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot delete default folder' }, { status: 403 });
     }
 
-    const { error } = await admin.from('mind_card_folders').delete().eq('id', id);
+    const { error } = await repo.deleteFolder(id);
 
     if (error) {
       console.error('[mind-cards/folders DELETE] error:', error);

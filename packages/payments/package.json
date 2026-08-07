@@ -8,7 +8,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.0"
+    "@mindo/db": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5"

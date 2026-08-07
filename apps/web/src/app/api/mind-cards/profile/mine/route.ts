@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { filterVisibleCards, fetchRelationFlags } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
 import { fetchAuthorMap } from '@/lib/mindCards/authors';
@@ -8,27 +8,17 @@ import { fetchAuthorMap } from '@/lib/mindCards/authors';
 // GET /api/mind-cards/profile/mine?userId= — 目标用户自己创作的所有卡片（虚拟视图）
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const targetUserId = searchParams.get('userId') ?? user.id;
 
-    const { data: rawCards, error } = await admin
-      .from('mind_cards')
-      .select('id, user_id, content, visibility, style, created_at')
-      .eq('user_id', targetUserId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('[mind-cards/profile/mine GET] error:', error);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
+    const rawCards = await repo.listCardsByAuthor(targetUserId);
 
     const visibleCards = targetUserId === user.id
-      ? (rawCards ?? [])
-      : await filterVisibleCards(admin, user.id, rawCards ?? []);
+      ? rawCards
+      : await filterVisibleCards(admin, user.id, rawCards);
 
     const cardIds = visibleCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);

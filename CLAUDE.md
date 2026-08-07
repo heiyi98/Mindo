@@ -42,7 +42,8 @@
 ```
 apps/web/          ← Next.js前端主应用
 packages/core/     ← 命理+心理计算引擎（纯逻辑，无UI依赖）
-packages/db/       ← 数据库schema和Supabase客户端
+packages/db/       ← 数据库访问层：接口定义 + Supabase具体实现，见下方"数据库访问层"一节
+packages/payments/ ← 支付业务逻辑（扣款/续VIP/核销凭证/兑换码），依赖packages/db的接口定义
 packages/ui/       ← 共享UI组件库
 packages/config/   ← 共享TypeScript/ESLint配置
 
@@ -220,6 +221,37 @@ contexts/
 
 `(os)` **路由组说明**：括号目录不影响网址，只影响"继承哪个layout"。`(os)`底下的页面共用同一个layout.tsx（含Dock+TopBar）。任何不该有导航栏的独立页面（报告页、片语模块），应该放在`(os)`外面，会自动跳过这层布局、直接继承根布局。这是路由组的标准用法，不是bug。
 
+## 数据库访问层（`packages/db`）
+
+业务代码（route.ts等）不直接调用`supabase.from()`/`.rpc()`/`supabase.auth`，中间隔一层：
+
+```
+packages/db/src/
+  {module}/
+    interface.ts          ← 接口定义：类型 + XxxRepository interface，不含任何Supabase代码
+    supabaseRepository.ts ← Supabase具体实现：createSupabaseXxxRepository(client) 工厂函数
+  supabase/index.ts        ← 汇总导出所有 createSupabaseXxxRepository
+  index.ts                 ← 汇总导出所有接口定义/类型
+
+apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接口→具体实现"的最后绑定：
+                                              在这里创建真正的Supabase连接（session/service role），
+                                              调用 createSupabaseXxxRepository() 组装成可用的repository对象，
+                                              route.ts 只import这里导出的repository，不知道也不关心底下是Supabase
+```
+
+已拆出的模块：`payments`（支付/钱包/凭证/兑换码，含`/admin`后台）、`account`（档案管理/账户安全/onboarding）、`bazi`（八字报告生成/reading-recovery）、`bigfive`（大五测算/导入）、`mindCards`（片语，21个route文件）、`western`（西洋星盘）、`social`（用户资料/关注/私信/名人库/天干内容库）。
+
+**新增一个数据操作的步骤**：
+1. 去对应模块的 `packages/db/src/{module}/interface.ts` 加一个方法签名（入参/返回值，不写实现）
+2. 去同目录 `supabaseRepository.ts` 写这个方法的Supabase实现
+3. 业务代码里通过 `apps/web/src/lib/{module}/adminClient.ts` 导出的repository对象调用
+
+**认证检查统一收口**：API路由不再各自写`const supabase = await createClient(); const {data:{user}} = await supabase.auth.getUser()`，统一调用 `lib/auth/requireAuth.ts` 里的 `requireApiUser()`，返回`{supabase, user}`——`supabase`是session client（尊重RLS），路由自己的业务查询继续拿它传给对应模块的repository工厂函数。**例外**（不受这次收敛管，仍然直接用Supabase）：`api/auth/callback`、`api/auth/confirm`（OAuth/邮箱验证的真实实现本身，不是重复样板）、`lib/supabase/middleware.ts`（session刷新基础设施）、以及`LoginForm.tsx`/`LanguageSwitcher.tsx`等标了`'use client'`的浏览器端组件（登录/登出/浏览器侧语言切换这类动作，本来就该用browser client直接调，不适合塞进服务端repository）。
+
+**片语模块的特殊情况**：`lib/mindCards/{visibility,favorites,authors,folderCover,behaviorCandidates}.ts`这5个共享业务函数内部是多步强耦合查询（尤其`behaviorCandidates.ts`一个函数六次查询），拆分收益低，这次**没有**把它们内部的`.from()`调用也搬进接口层，继续直接持有`mindCardsAdminClient`——21个route文件自己的直接查询已经全部走`mindCardsRepository`了。
+
+**以后中国版怎么接入阿里云**：不改`interface.ts`、不改route.ts业务代码。只在对应模块下新建一个`aliyunRepository.ts`（实现同一个XxxRepository接口），然后把`apps/web-cn`（或`apps/web`里判断环境的分支）里的`lib/{module}/adminClient.ts`换成调用这个新工厂函数即可。
+
 ## 架构铁律
 
 1. 模块完全解耦：任何单一模块的修改不得影响其他模块
@@ -274,6 +306,9 @@ contexts/
 - **React `useMemo`/`useEffect` 等的依赖数组，长度必须每次渲染保持一致**：依赖数组里如果用 `...array.map(...)` 展开一个长度可变的数组，一旦这个数组长度变化（比如用户展开/收起了几个条目），会触发"依赖数组大小变化"的报错。这类运算如果本身很轻，直接去掉useMemo每次重新计算即可，不需要保留这层优化
 - **无限滚动/分页机制，"还有没有更多"不能只看"这次接口有没有返回内容"**：如果数据源本身没有天然的游标/顺序概念（比如每次都是重新独立选一批，不是按顺序发页），"返回了内容"不代表"有新内容"——完全可能连续几次返回的都是已经拿到过的重复数据。正确判断标准是"这次返回的里面，有没有哪怕一条是之前所有页里都没出现过的"，否则容易陷入"接口一直有返回、但去重后实际新增趋近于零"的死循环，请求会不停发出去
 - **改了构建配置文件（如 fumadocs 的 source.config.ts）后，dev server 打印"重新编译/重启"不代表内部缓存真的清干净了**：踩过一次改完配置反复测试、报错纹丝不动的坑，最后发现是某层内部处理器缓存没跟着热重载失效。改构建层配置后如果行为跟预期不符，先整个杀掉进程、删掉`.next`（以及有的话`.source`等框架自己的构建缓存目录）再重新启动，比反复相信"热重载已经生效"更可靠
+- **删除一个route.ts文件后，`.next/dev/types/validator.ts`可能还残留对它的引用，报出"找不到模块"的类型错误**：这是Next.js typed-routes功能的开发缓存产物，不是真代码错误，删`.next`重启即可，不要在这个文件本身上排查
+- **`packages/payments`这类"业务函数接收一个client参数、内部直接`client.rpc()/client.from()`"的写法，是"接口+实现"两层拆分的半成品**：函数签名已经不绑死"连哪个Supabase实例"，但还绑死"是不是Supabase"。彻底拆完的标志是这个参数从`SupabaseClient`类型换成自定义的`XxxRepository`接口类型，内部改叫`repo.xxxRaw()`而不是`client.rpc()`——这次阶段二数据库访问层拆分就是把项目里所有这类半成品（payments如此，`lib/mindCards/*.ts`的部分函数也是这个模式）里，路由文件自己的直接查询这一层全部拆成了这个终态，5个片语共享业务函数因为内部多步查询耦合度高被保留为半成品，是权衡后的例外，不是遗漏
+- **`.auth.getUser()`不能不分青红皂白地全项目批量替换**：这个方法在项目里有两种性质完全不同的调用——大多数API路由里是"判断谁登录了"的重复样板（该收口成`requireApiUser()`），但`api/auth/callback`/`api/auth/confirm`里是OAuth/邮箱验证流程本身在拿到session后确认用户身份（这是认证功能的实现细节），客户端组件（`LoginForm.tsx`等）里是浏览器侧的登录状态展示（用的是browser client，不是server client，机制上就不同）。批量替换前必须先分清"这是重复的检查样板"还是"这本来就是认证这个功能自己的一部分"
 
 ## 已完成模块（一句话+指向详情文档，细节不在本文件展开）
 
@@ -291,6 +326,7 @@ contexts/
 - [x] 片语模块（后端全套/前端全套/卡片集/留言/提醒/推荐算法/感想/合并个人主页），详见 `Mindo-片语.md`
 - [x] 片语+若干其他模块（档案/仪表盘/八字卡片/大五/西洋星盘/私信/用户主页）改造为使用 TanStack Query，含跨组件共享缓存与乐观更新重写。支付/AI报告生成链路/账户认证与安全明确排除在外，未改造
 - [x] 内容库（Codex）技术地基：fumadocs-core+fumadocs-mdx装框架、/codex路由、搜索/链接校验/sitemap/llms.txt配套功能、八字首批词条目录骨架（仅占位，未写正式内容），详见 `Mindo-内容库.md`
+- [x] 数据库访问层拆分（`packages/db`接口定义+Supabase实现两层，详见"数据库访问层"一节）：支付/账户/八字报告/大五/片语/西洋星盘/用户关系与私信全部改造完毕，业务代码不再直接调用`supabase.from()/.rpc()`；同时把66处分散的API路由登录态检查统一收口成`requireApiUser()`
 
 ## 待完成（项目全局性的留在这里，具体模块内部的待办去对应模块文档看）
 
@@ -308,3 +344,7 @@ contexts/
 - [ ] 大五：颜色系统需要正式写入 `Mindo-算法-大五.md`（已知存在于`bigfive-constants.ts`，尚未拿到文件内容确认细节）
 - [ ] 内容库：首批词条（八字板块）正式内容撰写——本次只搭了技术地基，所有词条文件都是占位文字，详见 `Mindo-内容库.md`
 - [ ] 内容库：代码块语法高亮（Shiki）目前整体关闭，因为和 remark-math 的公式渲染冲突排查未彻底解决，详见 `Mindo-内容库.md`
+- [ ] `packages/core/src/bazi/pro.ts` 里还在 `import { engine } from './engine'`，但`engine.ts`早就把导出改名成了`baziEngine`——这是阶段二施工全局type-check时顺带发现的一个已存在的类型错误，不属于这次数据库访问层拆分的范围，没有动，需要单独排查这个文件是什么时候、被谁引入的
+- [ ] `app/api/users/route.ts` 和 `app/api/users/me/route.ts` 两个文件内容完全一样（都是PATCH更新display_name/handle），疑似重复文件，待确认哪个是废弃的、可以删除
+- [ ] 阶段二数据库访问层拆分时，`[locale]/dashboard/assessments/bazi/reading/page.tsx` 和 `[locale]/page.tsx`（落地页）这两个服务端页面里的`supabase.auth.getUser()`没有跟着收口进`requireApiUser()`——它们各自有自定义的重定向逻辑（前者未登录跳`/auth/login`而不是`requireAuth()`默认的`/`；后者要在有session时额外判断有没有档案再决定跳仪表盘还是onboarding），强行统一会改变现有行为，故意留下没动
+- [ ] 中国版数据库实现（阿里云）：`packages/db`里每个模块的`aliyunRepository.ts`还没写，等阿里云那边的连接信息定下来再实现，实现完只需要改`apps/web-cn`各模块的`lib/{module}/adminClient.ts`指向新工厂函数，不用碰接口定义和业务代码

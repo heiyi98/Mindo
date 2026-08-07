@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { fetchVisibleFolder } from '@/lib/mindCards/visibility';
 
 // POST /api/mind-cards/folders/:id/subscribe — 订阅指定夹
@@ -10,16 +10,13 @@ export async function POST(
 ) {
   try {
     const { id: folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const folder = await fetchVisibleFolder(admin, user.id, folderId);
     if (!folder) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { error } = await admin
-      .from('mind_card_folder_subscriptions')
-      .insert({ subscriber_id: user.id, folder_id: folderId });
+    const { error } = await repo.insertFolderSubscription(folderId, user.id);
 
     if (error) {
       if (error.code === '23505') return NextResponse.json({ ok: true });
@@ -41,15 +38,10 @@ export async function DELETE(
 ) {
   try {
     const { id: folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { error } = await admin
-      .from('mind_card_folder_subscriptions')
-      .delete()
-      .eq('folder_id', folderId)
-      .eq('subscriber_id', user.id);
+    const { error } = await repo.deleteFolderSubscription(folderId, user.id);
 
     if (error) {
       console.error('[mind-cards folders subscribe DELETE] error:', error);

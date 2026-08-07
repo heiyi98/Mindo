@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import type { CardVisibility } from '@/lib/mindCards/visibility';
 import { isCardVisible, fetchRelationFlags, type RelationFlags } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
@@ -18,16 +18,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: card } = await admin
-      .from('mind_cards')
-      .select('id, user_id, content, visibility, style, created_at')
-      .eq('id', id)
-      .maybeSingle();
-
+    const card = await repo.getCard(id);
     if (!card) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const relations = await fetchRelationFlags(admin, user.id, [card.user_id]);
@@ -62,16 +56,10 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: card } = await admin
-      .from('mind_cards')
-      .select('id, user_id')
-      .eq('id', id)
-      .maybeSingle();
-
+    const card = await repo.getCard(id);
     if (!card || card.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -81,12 +69,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid visibility' }, { status: 400 });
     }
 
-    const { data: updated, error } = await admin
-      .from('mind_cards')
-      .update({ visibility: body.visibility })
-      .eq('id', id)
-      .select('id, user_id, content, visibility, style, created_at')
-      .single();
+    const { data: updated, error } = await repo.updateCardVisibility(id, body.visibility);
 
     if (error || !updated) {
       console.error('[mind-cards PATCH] error:', error);
@@ -109,26 +92,15 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: card } = await admin
-      .from('mind_cards')
-      .select('id, user_id')
-      .eq('id', id)
-      .maybeSingle();
-
+    const card = await repo.getCard(id);
     if (!card || card.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const { error } = await admin.from('mind_cards').delete().eq('id', id);
-
-    if (error) {
-      console.error('[mind-cards DELETE] error:', error);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
+    await repo.deleteCard(id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

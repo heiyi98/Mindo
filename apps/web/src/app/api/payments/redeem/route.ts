@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 import { redeemCode } from '@mindo/payments';
 
 const ERROR_STATUS: Record<string, number> = {
@@ -10,8 +10,7 @@ const ERROR_STATUS: Record<string, number> = {
 };
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await requireApiUser();
   if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 });
 
   const { code } = await request.json();
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '缺少兑换码' }, { status: 400 });
   }
 
-  const result = await redeemCode(paymentsAdminClient, code.trim().toUpperCase(), user.id);
+  const result = await redeemCode(paymentsRepository, code.trim().toUpperCase(), user.id);
   if (!result.success) {
     return NextResponse.json({ error: result.error, code: result.code }, {
       status: ERROR_STATUS[result.code] ?? 500,

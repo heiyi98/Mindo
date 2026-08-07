@@ -1,18 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { filterVisibleCards, fetchRelationFlags } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
 import { fetchAuthorMap } from '@/lib/mindCards/authors';
-
-interface CardRow {
-  id: string;
-  user_id: string;
-  content: string;
-  visibility: string;
-  style: unknown;
-  created_at: string;
-}
 
 // POST /api/mind-cards/batch — 传一批card_id，返回这些卡片的完整内容
 // （content/style这些重量级字段）。用POST不用GET：传大量id放在query string
@@ -24,25 +15,16 @@ interface CardRow {
 // 不能假设"清单接口当时筛过了，这次就一定还安全"。
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json() as { ids?: string[] };
     const ids = [...new Set(body?.ids ?? [])].slice(0, 100); // 单次最多100张，防止异常大批量请求
     if (ids.length === 0) return NextResponse.json({ cards: [] });
 
-    const { data: rawCards, error } = await admin
-      .from('mind_cards')
-      .select('id, user_id, content, visibility, style, created_at')
-      .in('id', ids);
+    const rawCards = await repo.listCardsByIds(ids);
 
-    if (error) {
-      console.error('[mind-cards/batch POST] error:', error);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    const visibleCards = await filterVisibleCards(admin, user.id, (rawCards ?? []) as CardRow[]);
+    const visibleCards = await filterVisibleCards(admin, user.id, rawCards);
 
     const cardIds = visibleCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin/requireAdmin';
-import { paymentsAdminClient } from '@/lib/payments/adminClient';
+import { paymentsRepository } from '@/lib/payments/adminClient';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdminUser();
@@ -8,16 +8,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const { data: codes, error } = await paymentsAdminClient
-    .from('redemption_codes')
-    .select('code')
-    .eq('batch_id', id)
-    .eq('status', 'unused')
-    .order('code', { ascending: true });
+  const { data: codes, error } = await paymentsRepository.listUnusedCodesInBatch(id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const csv = ['code', ...(codes ?? []).map((c) => c.code)].join('\n');
+  const csv = ['code', ...codes.map((c) => c.code)].join('\n');
 
   return new NextResponse(csv, {
     headers: {

@@ -1,54 +1,37 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createAccountRepository } from '@/lib/account/adminClient';
+import { createBaziRepository } from '@/lib/bazi/adminClient';
+import { createWesternRepository } from '@/lib/western/adminClient';
+import { createBigfiveRepository } from '@/lib/bigfive/adminClient';
 import { ASSESSMENTS } from '@/config/assessments';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const profileId = searchParams.get('profile_id');
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await requireApiUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!profileId) {
     return NextResponse.json({ error: 'profile_id required' }, { status: 400 });
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', profileId)
-    .eq('user_id', user.id)
-    .single();
+  const profile = await createAccountRepository(supabase).getOwnedProfile(profileId, user.id);
 
   if (!profile) {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const [baziSnapshotRes, baziReadingRes, westernRes, bigfiveRes] = await Promise.all([
-    supabase
-      .from('bazi_snapshots')
-      .select('id')
-      .eq('profile_id', profileId)
-      .maybeSingle(),
-    // 取最新的bazi_readings记录（报告可能有多个，取最新）
-    supabase
-      .from('bazi_readings')
-      .select('id, ai_reading_theme1, ai_reading_status')
-      .eq('profile_id', profileId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('astrology_snapshots')
-      .select('id, ai_reading')
-      .eq('profile_id', profileId)
-      .maybeSingle(),
-    supabase
-      .from('bigfive_assessments')
-      .select('id')
-      .eq('profile_id', profileId)
-      .maybeSingle(),
+  const baziRepo = createBaziRepository(supabase);
+  const westernRepo = createWesternRepository(supabase);
+  const bigfiveRepo = createBigfiveRepository(supabase);
+
+  const [baziSnapshot, latestReading, westernFlag, bigfiveAssessmentId] = await Promise.all([
+    baziRepo.getSnapshotForDashboard(profileId),
+    baziRepo.getLatestReadingSummary(profileId),
+    westernRepo.getAiReadingFlag(profileId),
+    bigfiveRepo.getAssessmentIdForProfile(profileId),
   ]);
 
   const completionMap: Record<string, {
@@ -58,21 +41,21 @@ export async function GET(request: Request) {
     readingId: string | null
   }> = {
     bazi: {
-      isCompleted: !!baziSnapshotRes.data,
-      hasAiReading: !!baziReadingRes.data?.ai_reading_theme1,
-      snapshotId: baziSnapshotRes.data?.id ?? null,
-      readingId: baziReadingRes.data?.id ?? null,
+      isCompleted: !!baziSnapshot,
+      hasAiReading: !!latestReading?.ai_reading_theme1,
+      snapshotId: baziSnapshot?.id ?? null,
+      readingId: latestReading?.id ?? null,
     },
     western: {
-      isCompleted: !!westernRes.data,
-      hasAiReading: !!westernRes.data?.ai_reading,
-      snapshotId: westernRes.data?.id ?? null,
+      isCompleted: !!westernFlag,
+      hasAiReading: !!westernFlag?.ai_reading,
+      snapshotId: westernFlag?.id ?? null,
       readingId: null,
     },
     bigfive: {
-      isCompleted: !!bigfiveRes.data,
+      isCompleted: !!bigfiveAssessmentId,
       hasAiReading: false,
-      snapshotId: bigfiveRes.data?.id ?? null,
+      snapshotId: bigfiveAssessmentId,
       readingId: null,
     },
   };

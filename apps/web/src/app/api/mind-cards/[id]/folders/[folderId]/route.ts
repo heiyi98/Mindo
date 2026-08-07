@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { fetchVisibleCard } from '@/lib/mindCards/visibility';
 
 // POST /api/mind-cards/:id/folders/:folderId — 把卡片加入指定夹（只能加进自己的夹）。
@@ -12,18 +12,13 @@ export async function POST(
 ) {
   try {
     const { id: cardId, folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const card = await fetchVisibleCard(admin, user.id, cardId);
     if (!card) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const { data: folder } = await admin
-      .from('mind_card_folders')
-      .select('id, user_id')
-      .eq('id', folderId)
-      .maybeSingle();
+    const folder = await repo.getFolderOwnership(folderId);
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -42,17 +37,10 @@ export async function POST(
     // 触发通知（因为"曾经收藏过一次"这个全局判断一旦成立就再也不会是"第一次"
     // 了）。每收藏进一个新的、之前没收藏过的具体夹子，都应该算一次独立的
     // 收藏事件，都要通知。
-    const { count: existingCount } = await admin
-      .from('mind_card_folder_items')
-      .select('folder_id', { count: 'exact', head: true })
-      .eq('card_id', cardId)
-      .eq('folder_id', folderId);
+    const existingCount = await repo.countFolderItem(folderId, cardId);
+    const isFirstFavorite = existingCount === 0;
 
-    const isFirstFavorite = (existingCount ?? 0) === 0;
-
-    const { error } = await admin
-      .from('mind_card_folder_items')
-      .insert({ folder_id: folderId, card_id: cardId, annotation });
+    const { error } = await repo.insertFolderItem(folderId, cardId, annotation);
 
     if (error) {
       // 已在该夹里（组合主键冲突）视为成功
@@ -62,7 +50,7 @@ export async function POST(
     }
 
     if (isFirstFavorite && card.user_id !== user.id) {
-      const { error: notifError } = await admin.from('mind_card_notifications').insert({
+      const { error: notifError } = await repo.insertNotification({
         recipient_id: card.user_id,
         actor_id: user.id,
         card_id: cardId,
@@ -92,15 +80,10 @@ export async function PATCH(
 ) {
   try {
     const { id: cardId, folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: folder } = await admin
-      .from('mind_card_folders')
-      .select('id, user_id')
-      .eq('id', folderId)
-      .maybeSingle();
+    const folder = await repo.getFolderOwnership(folderId);
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -108,11 +91,7 @@ export async function PATCH(
     const body = await request.json() as { annotation?: string };
     const annotation = body?.annotation?.trim() || null;
 
-    const { error } = await admin
-      .from('mind_card_folder_items')
-      .update({ annotation })
-      .eq('folder_id', folderId)
-      .eq('card_id', cardId);
+    const { error } = await repo.updateFolderItemAnnotation(folderId, cardId, annotation);
 
     if (error) {
       console.error('[mind-cards folders PATCH] error:', error);
@@ -133,24 +112,15 @@ export async function DELETE(
 ) {
   try {
     const { id: cardId, folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: folder } = await admin
-      .from('mind_card_folders')
-      .select('id, user_id')
-      .eq('id', folderId)
-      .maybeSingle();
+    const folder = await repo.getFolderOwnership(folderId);
     if (!folder || folder.user_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const { error } = await admin
-      .from('mind_card_folder_items')
-      .delete()
-      .eq('folder_id', folderId)
-      .eq('card_id', cardId);
+    const { error } = await repo.deleteFolderItem(folderId, cardId);
 
     if (error) {
       console.error('[mind-cards folders DELETE] error:', error);

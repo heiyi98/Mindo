@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,16 +11,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('celebrities')
-    .select('id, name, portrait_url, display_order')
-    .eq('stem_id', stemId)
-    .eq('is_active', true)
-    .order('display_order', { ascending: true });
+  const celebrities = await createSocialRepository(supabase).listCelebrities(stemId);
 
-  if (error) {
-    return NextResponse.json({ celebrities: [] });
-  }
-
-  return NextResponse.json({ celebrities: data || [] });
+  return NextResponse.json({ celebrities });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { CANDIDATE_POOL_WINDOW_DAYS } from '@/lib/mindCards/constants';
 
 // GET /api/cron/mind-card-views-cleanup — 每日清理已超出候选池窗口的已读记录（Vercel Hobby cron）
@@ -12,32 +12,20 @@ export async function GET(request: Request) {
   try {
     const windowStart = new Date(Date.now() - CANDIDATE_POOL_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
 
-    const { data: staleCards, error: staleCardsError } = await admin
-      .from('mind_cards')
-      .select('id')
-      .lt('created_at', windowStart);
+    const staleCardIds = await repo.listStaleCardIds(windowStart);
 
-    if (staleCardsError) {
-      console.error('[cron mind-card-views-cleanup] staleCards error:', staleCardsError);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    const staleCardIds = (staleCards ?? []).map((c) => c.id);
     if (staleCardIds.length === 0) {
       return NextResponse.json({ ok: true, deleted: 0 });
     }
 
-    const { error: deleteError, count } = await admin
-      .from('mind_card_views')
-      .delete({ count: 'exact' })
-      .in('card_id', staleCardIds);
+    const { count, error: deleteError } = await repo.deleteViewsForCards(staleCardIds);
 
     if (deleteError) {
       console.error('[cron mind-card-views-cleanup] delete error:', deleteError);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, deleted: count ?? 0 });
+    return NextResponse.json({ ok: true, deleted: count });
   } catch (error) {
     console.error('[cron mind-card-views-cleanup] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { fetchVisibleFolder, filterVisibleCards } from '@/lib/mindCards/visibility';
 
 interface LightCard {
@@ -19,38 +19,23 @@ export async function GET(
 ) {
   try {
     const { id: folderId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const folder = await fetchVisibleFolder(admin, user.id, folderId);
     if (!folder) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const { data: folderDetail } = await admin
-      .from('mind_card_folders')
-      .select('id, name, description, folder_kind, display_mode, visibility, is_default')
-      .eq('id', folderId)
-      .single();
+    const folderDetail = await repo.getFolderDetail(folderId);
+    const rawRows = await repo.getFolderItemsWithCards(folderId);
 
-    const { data: rows, error } = await admin
-      .from('mind_card_folder_items')
-      .select('added_at, annotation, mind_cards(id, user_id, visibility)')
-      .eq('folder_id', folderId)
-      .order('added_at', { ascending: false });
-
-    if (error) {
-      console.error('[mind-cards/folders/manifest GET] error:', error);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    const rawRows = (rows ?? [])
-      .map((r) => ({ addedAt: r.added_at, annotation: r.annotation as string | null, card: r.mind_cards as unknown as LightCard | null }))
+    const typedRows = rawRows
+      .map((r) => ({ addedAt: r.added_at, annotation: r.annotation, card: r.card as LightCard | null }))
       .filter((r): r is { addedAt: string; annotation: string | null; card: LightCard } => r.card !== null);
 
-    const visibleCards = await filterVisibleCards(admin, user.id, rawRows.map((r) => r.card));
+    const visibleCards = await filterVisibleCards(admin, user.id, typedRows.map((r) => r.card));
     const visibleIds = new Set(visibleCards.map((c) => c.id));
 
-    const items = rawRows
+    const items = typedRows
       .filter((r) => visibleIds.has(r.card.id))
       .map((r) => ({ card_id: r.card.id, added_at: r.addedAt, annotation: r.annotation }));
 

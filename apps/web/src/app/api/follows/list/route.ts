@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createSocialRepository } from '@/lib/social/adminClient';
 
 // GET /api/follows/list?type=following|followers&userId=xxx
 // userId 不传则默认当前用户
@@ -13,43 +14,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing or invalid type' }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = targetUserId || user.id;
+    const socialRepo = createSocialRepository(supabase);
 
-    let rows: { id: string; handle: string | null; display_name: string | null }[] = [];
-
-    if (type === 'following') {
-      // 我关注的人
-      const { data } = await supabase
-        .from('follows')
-        .select('following:users!follows_following_id_fkey(id, handle, display_name)')
-        .eq('follower_id', userId);
-
-      rows = (data ?? []).map((r: any) => r.following).filter(Boolean);
-    } else {
-      // 关注我的人
-      const { data } = await supabase
-        .from('follows')
-        .select('follower:users!follows_follower_id_fkey(id, handle, display_name)')
-        .eq('following_id', userId);
-
-      rows = (data ?? []).map((r: any) => r.follower).filter(Boolean);
-    }
+    const rows = type === 'following'
+      ? await socialRepo.listFollowing(userId)  // 我关注的人
+      : await socialRepo.listFollowers(userId); // 关注我的人
 
     // 附加当前用户对每人的关注状态
-    const myFollowingIds = new Set<string>();
-    if (rows.length > 0) {
-      const { data: myFollows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id)
-        .in('following_id', rows.map(r => r.id));
-
-      (myFollows ?? []).forEach((f: any) => myFollowingIds.add(f.following_id));
-    }
+    const myFollowingIds = rows.length > 0
+      ? await socialRepo.listMyFollowingIds(user.id, rows.map(r => r.id))
+      : new Set<string>();
 
     const result = rows.map(r => ({
       id: r.id,

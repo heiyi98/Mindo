@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createAccountRepository } from '@/lib/account/adminClient';
 
 // 从报告自留的命盘快照里解析出真太阳时，只在服务端做这件事——
 // calculation_result 是整份命盘计算结果，体积不小，列表页只需要
@@ -12,17 +13,12 @@ function extractSolarTime(calculationResult: any): string | null {
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await requireApiUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: baziReadings } = await supabase
-    .from('bazi_readings')
-    .select('id, profile_id, profile_display_name, birth_date, birth_place_name, ai_reading_status, created_at, calculation_result')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+  const baziReadings = await createAccountRepository(supabase).listBaziAssets(user.id);
 
-  const assets = (baziReadings ?? []).map(r => ({
+  const assets = baziReadings.map(r => ({
     id: r.id,
     type: 'bazi',
     profile_id: r.profile_id,

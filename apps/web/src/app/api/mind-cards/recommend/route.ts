@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireApiUser } from '@/lib/auth/requireAuth';
 import { computeWuxingAssessment, toWuxingVector, toBigFiveVector, wuxingSimilarity, bigFiveSimilarity } from '@mindo/core';
 import type { BaziSnapshot, WuxingVector, BigFiveVector } from '@mindo/core';
-import { mindCardsAdminClient as admin } from '@/lib/mindCards/adminClient';
+import { mindCardsAdminClient as admin, mindCardsRepository as repo } from '@/lib/mindCards/adminClient';
 import { filterVisibleCards, fetchRelationFlags } from '@/lib/mindCards/visibility';
 import { computeFavoritedSet } from '@/lib/mindCards/favorites';
 import { computeBehaviorCandidateAuthors } from '@/lib/mindCards/behaviorCandidates';
@@ -55,40 +55,23 @@ function shuffle<T>(arr: T[]): T[] {
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireApiUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     let viewerWuxing: WuxingVector | null = null;
     let viewerBigfive: BigFiveVector | null = null;
-    const { data: selfProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_self', true)
-      .maybeSingle();
+    const selfProfileId = await repo.getSelfProfileId(user.id);
 
-    if (selfProfile) {
-      const { data: snapshot } = await supabase
-        .from('bazi_snapshots')
-        .select('calculation_result')
-        .eq('profile_id', selfProfile.id)
-        .maybeSingle();
-
-      if (snapshot?.calculation_result) {
-        const assessment = computeWuxingAssessment(snapshot.calculation_result as BaziSnapshot);
+    if (selfProfileId) {
+      const calcResult = await repo.getBaziCalculationResult(selfProfileId);
+      if (calcResult) {
+        const assessment = computeWuxingAssessment(calcResult as BaziSnapshot);
         viewerWuxing = toWuxingVector(assessment);
       }
 
-      const { data: bigfiveAssessment } = await supabase
-        .from('bigfive_assessments')
-        .select('domain_scores')
-        .eq('profile_id', selfProfile.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (bigfiveAssessment?.domain_scores) {
-        viewerBigfive = toBigFiveVector(bigfiveAssessment.domain_scores as Record<string, number>);
+      const domainScores = await repo.getBigfiveDomainScores(selfProfileId, user.id);
+      if (domainScores) {
+        viewerBigfive = toBigFiveVector(domainScores);
       }
     }
 
@@ -97,42 +80,22 @@ export async function GET() {
 
     const windowStart = new Date(Date.now() - CANDIDATE_POOL_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
 
-    const { data: candidates, error: candidatesError } = await admin
-      .from('mind_cards')
-      .select('id, user_id, content, visibility, style, created_at')
-      .gte('created_at', windowStart)
-      .neq('user_id', user.id);
-
-    if (candidatesError) {
-      console.error('[mind-cards/recommend GET] candidates error:', candidatesError);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
-
-    const pool = (candidates ?? []) as CardRow[];
+    const pool = await repo.listRecentCardsExcludingUser(windowStart, user.id) as CardRow[];
 
     const visiblePool = await filterVisibleCards(admin, user.id, pool);
     if (visiblePool.length === 0) {
       return NextResponse.json({ cards: [] });
     }
 
-    const viewedIds = new Set<string>();
-    const { data: viewedRows } = await admin
-      .from('mind_card_views')
-      .select('card_id')
-      .eq('viewer_id', user.id)
-      .in('card_id', visiblePool.map((c) => c.id));
-    (viewedRows ?? []).forEach((v) => viewedIds.add(v.card_id));
+    const viewedIds = await repo.getViewedCardIds(user.id, visiblePool.map((c) => c.id));
 
     const discount = (cardId: string) => (viewedIds.has(cardId) ? VIEWED_SCORE_MULTIPLIER : 1);
 
-    const { data: metricRows } = await admin
-      .from('mind_card_metrics')
-      .select('card_id, metric_type, metric_data')
-      .in('card_id', visiblePool.map((c) => c.id));
+    const metricRows = await repo.getCardMetrics(visiblePool.map((c) => c.id));
 
     const wuxingByCard = new Map<string, WuxingVector>();
     const bigfiveByCard = new Map<string, BigFiveVector>();
-    for (const row of metricRows ?? []) {
+    for (const row of metricRows) {
       if (row.metric_type === 'wuxing') wuxingByCard.set(row.card_id, row.metric_data as WuxingVector);
       else if (row.metric_type === 'bigfive') bigfiveByCard.set(row.card_id, row.metric_data as BigFiveVector);
     }
@@ -201,17 +164,13 @@ export async function GET() {
       if (card) finalCards.push(card);
     }
 
-    const sourceRows = finalCards.map((c) => ({
-      viewer_id: user.id,
-      card_id: c.id,
-      source: sourceByCardId.get(c.id) ?? 'random',
-    }));
-    if (sourceRows.length > 0) {
-      const { error: sourceError } = await admin.from('mind_card_recommendation_sources').insert(sourceRows);
-      if (sourceError) {
-        console.error('[mind-cards/recommend GET] source insert error:', sourceError);
-      }
-    }
+    await repo.insertRecommendationSources(
+      finalCards.map((c) => ({
+        viewer_id: user.id,
+        card_id: c.id,
+        source: sourceByCardId.get(c.id) ?? 'random',
+      }))
+    );
 
     const cardIds = finalCards.map((c) => c.id);
     const myFavorites = await computeFavoritedSet(admin, user.id, cardIds);

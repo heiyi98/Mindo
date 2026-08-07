@@ -41,6 +41,9 @@ importers:
       '@mindo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@mindo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@mindo/payments':
         specifier: workspace:*
         version: link:../../packages/payments
@@ -233,11 +236,21 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/payments:
+  packages/db:
     dependencies:
       '@supabase/supabase-js':
         specifier: ^2.103.0
         version: 2.103.0
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/payments:
+    dependencies:
+      '@mindo/db':
+        specifier: workspace:*
+        version: link:../db
     devDependencies:
       typescript:
         specifier: ^5
