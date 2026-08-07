@@ -72,8 +72,8 @@ export function formatGanZhiRelation(t: any, relation: GanZhiRelation): string {
 
   // DiZhiRelation
   const kindLabel = t(`relationKind.${relation.kind}`)
-  const huifangSuffix = relation.huifangWuxing
-    ? ` ${t('metadata.huifang')}${t(`wuxing.${relation.huifangWuxing}`)}`
+  const wuxingSuffix = relation.huifangWuxing
+    ? ` · ${t(`wuxing.${relation.huifangWuxing}`)}`
     : ''
-  return `${sidesText} ${kindLabel}${huifangSuffix}`
+  return `${sidesText} ${kindLabel}${wuxingSuffix}`
 }

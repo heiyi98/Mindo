@@ -4,7 +4,7 @@
   "month": "Mois",
   "day": "Jour",
   "hour": "Heure",
-  "daymaster": "Pivot",
+  "daymaster": "Moi",
   "tiangan": {
     "Jia": "Jia",
     "Yi": "Yi",
@@ -42,7 +42,7 @@
     "ZhengGuan": "Ordre",
     "PianYin": "Autonomie",
     "ZhengYin": "Consensus",
-    "DayMaster": "Pivot",
+    "DayMaster": "Moi",
     "Unknown": ""
   },
   "switchToShishen": "Dix Dieux",
@@ -81,17 +81,11 @@
     "selfAlignment": "Cohérence de vie",
     "targeted": "Ajustements ciblés",
     "buyReading": "Générer le rapport",
-    "priceLabel": "{price} {unit}",
     "viewReading": "Voir la lecture complète",
     "mismatchTitle": "Informations de naissance modifiées",
     "mismatchDesc": "Les informations de naissance du profil diffèrent de celles utilisées lors de la génération du rapport. Regénérer le rapport ?",
     "mismatchContinue": "Continuer",
     "mismatchRegenerate": "Regénérer",
-    "errors": {
-      "insufficientBalance": "Solde insuffisant, veuillez recharger ou utiliser un code promotionnel",
-      "voucherUnavailable": "Le bon sélectionné n'est plus disponible, veuillez en choisir un autre",
-      "generic": "Échec de la génération, veuillez réessayer"
-    },
     "scenes": {
       "friends": "Amitiés",
       "work": "Travail",
@@ -109,27 +103,26 @@
     "noTouGen": "Sans enracinement",
     "touChu": "Percée",
     "notTouChu": "Non-percée",
-    "muKuLocked": "Caveau verrouillé",
-    "huifang": "vers"
+    "muKuLocked": "Caveau verrouillé"
   },
   "yinyang": {
     "Yang": "Yang",
     "Yin": "Yin"
   },
   "relationKind": {
-    "ZhenHua": "Transformation véritable",
+    "ZhenHua": "Transformation",
     "HeBan": "Union entravée",
     "ZhengHe": "Union disputée",
-    "DuHe": "Union jalouse",
-    "TianGanChong": "Choc des Tiges",
-    "SanHui": "Triple réunion",
-    "SanHe": "Triple union",
+    "DuHe": "Union guettée",
+    "TianGanChong": "Conflit",
+    "SanHui": "Réunion",
+    "SanHe": "Union",
     "BanHe": "Demi-union",
     "GongHe": "Union en attente",
-    "LiuHe": "Union des Six",
-    "LiuChong": "Choc des Six",
-    "Xing": "Punition",
-    "Hai": "Nuisance",
+    "LiuHe": "Union",
+    "LiuChong": "Conflit",
+    "Xing": "Friction",
+    "Hai": "Gêne",
     "Po": "Rupture"
   }
 }

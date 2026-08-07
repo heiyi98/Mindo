@@ -23,6 +23,18 @@ const ALL_SHISHEN = [
   'PianYin','ZhengYin',
 ];
 
+// 文字比中文单字长得多的语言（法语的"Terre""ShangGuan"这类词），固定字号
+// 会挤出格子或互相压线——不逐词各自计算字号，而是先扫一遍当前要显示的全部
+// 标签，取其中最长的那一个，反推出一个缩放比例，全部标签统一用同一个比例，
+// 保证字号整齐划一，跟BaziChartCard.tsx用的是同一套规则，全项目保持一致。
+function scaleRatioFor(maxLen: number): number {
+  if (maxLen <= 4) return 1;
+  if (maxLen <= 6) return 0.85;
+  if (maxLen <= 9) return 0.72;
+  if (maxLen <= 12) return 0.62;
+  return 0.55;
+}
+
 function getShishenWuxing(shishen: string, dayMasterElement: Wuxing): Wuxing {
   switch (shishen) {
     case 'BiJian': case 'JieCai':   return dayMasterElement;
@@ -44,6 +56,11 @@ function RadarFace({ energyData, dayMasterElement }: { energyData: Record<Wuxing
 
   const dayIdx = WUXING_ORDER.indexOf(dayMasterElement);
   const orderedWuxing = WUXING_ORDER.slice(dayIdx).concat(WUXING_ORDER.slice(0, dayIdx));
+
+  // 五个五行标签文字先算出来，取最长的那个决定这一圈标签统一用多大字号
+  const wuxingLabels = orderedWuxing.map(key => t(`wuxing.${key}`));
+  const labelMaxLen = Math.max(0, ...wuxingLabels.map(s => s.length));
+  const labelFontSize = 12 * scaleRatioFor(labelMaxLen);
 
   const points = orderedWuxing.map((key, i) => {
     const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
@@ -75,13 +92,13 @@ function RadarFace({ energyData, dayMasterElement }: { energyData: Record<Wuxing
         {points.map(p => (
           <circle key={p.key} cx={p.x} cy={p.y} r="3" fill={ELEMENT_COLORS[p.key] ?? accentColor} opacity="0.9" />
         ))}
-        {points.map(p => {
+        {points.map((p, i) => {
           const labelR = maxR + 18;
           const lx = cx + labelR * Math.cos(p.angle);
           const ly = cy + labelR * Math.sin(p.angle);
           return (
-            <text key={p.key} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="12" fill={ELEMENT_COLORS[p.key] ?? 'hsl(var(--muted-foreground))'} opacity="0.85">
-              {t(`wuxing.${p.key}`)}
+            <text key={p.key} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={labelFontSize} fill={ELEMENT_COLORS[p.key] ?? 'hsl(var(--muted-foreground))'} opacity="0.85">
+              {wuxingLabels[i]}
             </text>
           );
         })}
@@ -114,6 +131,10 @@ function ShishenFace({ shishenInfluence, dayMasterElement, dayMasterEnergy }: { 
     ...sorted.map(({ shishen, totalInfluence }) => ({ key: shishen, label: t(`shishen.${shishen}`), color: ELEMENT_COLORS[getShishenWuxing(shishen, dayMasterElement)] ?? ELEMENT_COLORS['gray'], pct: totalInfluence / maxVal, isDay: false })),
   ];
 
+  // 十一行标签（日主+十个十神）里最长的那一个，决定这一屏统一用多大字号
+  const rowLabelMaxLen = Math.max(0, ...allRows.map(r => r.label.length));
+  const rowFontSize = 11 * scaleRatioFor(rowLabelMaxLen);
+
   return (
     <div className="w-full h-full flex items-center justify-center p-2">
       <svg width="100%" height="100%" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
@@ -121,7 +142,7 @@ function ShishenFace({ shishenInfluence, dayMasterElement, dayMasterEnergy }: { 
           const cy = PAD_Y + ROW_H * i + ROW_H / 2;
           return (
             <g key={key}>
-              <text x={PAD_X + LABEL_W} y={cy} textAnchor="end" dominantBaseline="middle" fontSize="11" fontWeight={isDay ? '400' : '300'} fill={isDay ? color : 'hsl(var(--muted-foreground))'}>{label}</text>
+              <text x={PAD_X + LABEL_W} y={cy} textAnchor="end" dominantBaseline="middle" fontSize={rowFontSize} fontWeight={isDay ? '400' : '300'} fill={isDay ? color : 'hsl(var(--muted-foreground))'}>{label}</text>
               <rect x={BAR_X} y={cy - BAR_H / 2} width={BAR_W} height={BAR_H} rx={BAR_R} fill="hsl(var(--border))" />
               {pct > 0 && (
                 <rect x={BAR_X} y={cy - BAR_H / 2} width={BAR_W * pct} height={BAR_H} rx={BAR_R} fill={color} opacity={isDay ? 1 : 0.85}>
@@ -185,4 +206,3 @@ export default function WuxingRadarCard({ profileId }: { profileId: string }) {
     </div>
   );
 }
-
