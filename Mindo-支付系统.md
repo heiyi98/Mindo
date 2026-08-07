@@ -165,9 +165,11 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 **已知限制**：八字AI报告实际是多阶段Edge Function流水线（`generate-phase1`→`theme1`→`theme2`→`theme3`→`theme4`），这些Edge Function不在这个代码仓库里，本次施工看不到其真实入参约定。`reading-recovery`这个cron重试时传给`generate-themeN`的payload（`{ readingId: job.id }`）是按"这些函数现在应该以`bazi_readings.id`为准去读取自身进度"推断出来的**假设值，未经真实验证**，如果实际Edge Function期望的字段名不同，重试会静默失效（不会报错，只是不会真正推进）。建议下次touch这些Edge Function时顺手核对一遍。
 
-### `reading-recovery` cron（`/api/corn/reading-recovery`）——本次一并修了一个既有bug
+### `reading-recovery` cron（`/api/cron/reading-recovery`）——修过两个既有bug
 
 修之前这个cron查询的是`bazi_snapshots`表的`ai_reading_status`等字段，但这些字段在`bazi_snapshots`上早就是迁移后的死字段（真正状态在`bazi_readings`上），也就是说**这个cron过去实际上从未找到过真正卡住的任务**。已改为查`bazi_readings`。
+
+**2026-08-07 又发现一个更根本的bug**：这个路由文件当时物理上放在`api/corn/reading-recovery`（"corn"和"cron"拼错了一个字母），但`vercel.json`里配置的定时任务路径是`/api/cron/reading-recovery`——两者对不上，意味着**这个cron从一开始就没有被Vercel真正触发过**，上面那次"改成查`bazi_readings`"的修复虽然逻辑是对的，但从未真正跑起来过。已把文件夹改名成`api/cron/reading-recovery`跟`vercel.json`对齐。
 
 新增的"放弃阈值"逻辑：`created_at`超过30分钟仍未`done`的任务，视为彻底失败——标记`ai_reading_status='failed_permanent'`，并按`charge_type`退款（`wallet`退全部`charge_wallet_amount`；`voucher`归还凭证使用次数，若还有自付部分也一并退），用`charge_refunded_at`防止重复退款。
 
