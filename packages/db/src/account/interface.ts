@@ -2,7 +2,7 @@
 // 登录态判断走 requireApiUser（见 apps/web/src/lib/auth/requireAuth.ts），
 // 这里只收口"账户/档案表"本身的读写。
 
-import type { DbError } from '../payments/interface';
+import type { DbError } from '../shared/types';
 export type { DbError };
 
 export interface ProfileRow {

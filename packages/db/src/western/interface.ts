@@ -1,4 +1,4 @@
-import type { DbError } from '../payments/interface';
+import type { DbError } from '../shared/types';
 export type { DbError };
 
 export interface ProfileForWestern {

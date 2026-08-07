@@ -241,6 +241,8 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 
 已拆出的模块：`payments`（支付/钱包/凭证/兑换码，含`/admin`后台）、`account`（档案管理/账户安全/onboarding）、`bazi`（八字报告生成/reading-recovery）、`bigfive`（大五测算/导入）、`mindCards`（片语，21个route文件）、`western`（西洋星盘）、`social`（用户资料/关注/私信/名人库/天干内容库）。
 
+**跨模块共用的类型**（目前只有`DbError`）统一放在`packages/db/src/shared/types.ts`，各模块`interface.ts`从这里导入再`export type`一次转发出去——不要互相借用某个具体业务模块的`interface.ts`，那样会让人误以为被借用的那个模块是"基础模块"。
+
 **新增一个数据操作的步骤**：
 1. 去对应模块的 `packages/db/src/{module}/interface.ts` 加一个方法签名（入参/返回值，不写实现）
 2. 去同目录 `supabaseRepository.ts` 写这个方法的Supabase实现

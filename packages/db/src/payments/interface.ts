@@ -1,6 +1,9 @@
 // 支付系统的数据操作契约。业务逻辑（packages/payments）和路由文件只依赖这份
 // 接口，不直接感知底下是Supabase还是别的什么数据库。
 
+import type { DbError } from '../shared/types';
+export type { DbError };
+
 export type CoverageType = 'full' | 'percentage' | 'fixed_amount';
 export type RewardType = 'wallet' | 'vip' | 'voucher';
 
@@ -63,11 +66,6 @@ export interface ConsumedVoucherRow {
 export interface LegacyProduct {
   assessment_type: string;
   lemon_variant_id: string;
-}
-
-export interface DbError {
-  message: string;
-  code?: string;
 }
 
 export interface ServicePriceRow {

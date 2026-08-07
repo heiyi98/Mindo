@@ -3,7 +3,7 @@
 // behaviorCandidates.ts）内部结构已经良好（多步查询强耦合、拆分收益低），
 // 继续持有 mindCardsAdminClient 不变，不在这次拆分范围内。
 
-import type { DbError } from '../payments/interface';
+import type { DbError } from '../shared/types';
 export type { DbError };
 
 export interface MindCardRow {
