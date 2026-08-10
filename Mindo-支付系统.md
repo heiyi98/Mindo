@@ -63,6 +63,16 @@ bazi_readings（在原表基础上新增）
   charge_wallet_amount: 实际扣了多少虚拟币（wallet全额或voucher的自付部分）
   charge_voucher_id: 用了哪张凭证（若有）
   charge_refunded_at: 已退款/已归还凭证的标记，防止cron重复退款
+  deleted_at: 软删除标记，非空即视为"已删除"，见「软删除与档案隔离」一节
+  retry_count: 技术性失败的累计重试次数
+  content_policy_retry_count: 内容政策拦截的累计重试次数，跟retry_count分开计数
+  first_attempt_at / last_attempt_at: 判断45分钟总超时 / 距上次尝试的重试间隔
+  alert_status: 非空代表卡在需要管理员介入的问题上，取值同system_alerts.alert_type
+
+system_alerts（新表，见「重试引擎与失败分类」一节）
+  id, reading_id → bazi_readings(id) ON DELETE SET NULL
+  alert_type: 'api_key_invalid' / 'data_missing' / 'content_policy_exceeded'
+  message, created_at, resolved_at
 ```
 
 RLS：`wallets`/`wallet_transactions`/`service_coverage_vouchers`三张表开了RLS，策略是单条`user_id = auth.uid()`，是兜底用的——正常读写都走后端接口的service role client（`apps/web/src/lib/payments/adminClient.ts`），在接口代码里做权限判断，不依赖RLS，这条策略只在万一漏了权限判断或误用了客户端类型时起作用。`service_prices`/`wallet_topup_tiers`/`wallet_topup_tier_prices`/`redemption_codes`/`redemption_code_batches`不涉及个人数据，未加RLS。
@@ -163,17 +173,55 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 **2026-08-06 · 充值套餐页面"新增"没反应**：用只读诊断脚本发现根因是PostgREST（Supabase接口层）的表结构缓存没跟上——建表SQL在数据库里确实执行成功了，但接口层还没感知到新表存在，报"找不到这张表"，而页面当时又没做任何失败提示，表现就是"点了没反应"。跑`NOTIFY pgrst, 'reload schema';`可以手动触发刷新。这一类问题以后新建表后如果后台页面查不到数据，先怀疑这个，不要先怀疑代码逻辑。顺带把`/admin/rates`所有操作都补上了失败提示。
 
-**已知限制**：八字AI报告实际是多阶段Edge Function流水线（`generate-phase1`→`theme1`→`theme2`→`theme3`→`theme4`），这些Edge Function不在这个代码仓库里，本次施工看不到其真实入参约定。`reading-recovery`这个cron重试时传给`generate-themeN`的payload（`{ readingId: job.id }`）是按"这些函数现在应该以`bazi_readings.id`为准去读取自身进度"推断出来的**假设值，未经真实验证**，如果实际Edge Function期望的字段名不同，重试会静默失效（不会报错，只是不会真正推进）。建议下次touch这些Edge Function时顺手核对一遍。
+**2026-08-10 更新**：八字AI报告的5个Edge Function（`generate-phase1`/`theme1`/`theme2`/`theme3`/`theme4`）已用`supabase functions download`拉进本仓库（`supabase/functions/`），不再是"看不到真实代码"的黑盒，以后touch这部分直接在仓库里改、`supabase functions deploy`部署即可，不用再去Supabase控制台改。这次同时验证了`reading-recovery`重试时传给`generate-themeN`的payload字段名确实是`{ readingId, locale }`，之前"未经真实验证"的疑虑已解除。
 
-### `reading-recovery` cron（`/api/cron/reading-recovery`）——修过两个既有bug
+### `reading-recovery` cron（`/api/cron/reading-recovery`）——修过两个既有bug（历史记录）
 
 修之前这个cron查询的是`bazi_snapshots`表的`ai_reading_status`等字段，但这些字段在`bazi_snapshots`上早就是迁移后的死字段（真正状态在`bazi_readings`上），也就是说**这个cron过去实际上从未找到过真正卡住的任务**。已改为查`bazi_readings`。
 
 **2026-08-07 又发现一个更根本的bug**：这个路由文件当时物理上放在`api/corn/reading-recovery`（"corn"和"cron"拼错了一个字母），但`vercel.json`里配置的定时任务路径是`/api/cron/reading-recovery`——两者对不上，意味着**这个cron从一开始就没有被Vercel真正触发过**，上面那次"改成查`bazi_readings`"的修复虽然逻辑是对的，但从未真正跑起来过。已把文件夹改名成`api/cron/reading-recovery`跟`vercel.json`对齐。
 
-新增的"放弃阈值"逻辑：`created_at`超过30分钟仍未`done`的任务，视为彻底失败——标记`ai_reading_status='failed_permanent'`，并按`charge_type`退款（`wallet`退全部`charge_wallet_amount`；`voucher`归还凭证使用次数，若还有自付部分也一并退），用`charge_refunded_at`防止重复退款。
+**2026-08-10 重试引擎重构**：这个cron的具体设计（扫描条件/放弃阈值/退款逻辑）已被下面「重试引擎与失败分类」一节取代，30分钟放弃阈值改成了45分钟+次数上限双重判断，触发频率从Vercel每天一次改成了Supabase pg_cron每2分钟一次。
 
-## 五、`/admin` 后台管理面板
+## 五、重试引擎与失败分类
+
+八字AI报告生成是`generate-phase1`→`theme1`→`theme2`→`theme3`→`theme4`五段Edge Function接力，每段都调一次Gemini。`ai_reading_status`按阶段推进（`generating`→`phase1`→`theme1`→`theme2`→`theme3`→`theme4`→`done`），这几个中间值是Edge Function自己写的，不是本次新加的。
+
+**2026-08-10之前的问题**：每个Edge Function内部自己对Gemini调用做多次等待重试（最长约90秒），且`fetch`没有超时保护。偶发的"连接卡死不响应"会让函数在内部无限等待，最终被Supabase平台强制终止，不留任何日志、也不触发任何失败处理逻辑。
+
+**现在的设计**：单次调用只尝试一次（`supabase/functions/_shared/generationError.ts`的`callGeminiOnce`），Gemini的`fetch`加了40秒`AbortController`超时。失败后不再简单标记`failed_xxx`，改成按三种情况分类（`handleGenerationFailure`，5个Edge Function共用）：
+
+1. **内容政策拦截**（Gemini返回内容安全/policy相关拒绝）：`content_policy_retry_count += 1`。小于5次：不改`ai_reading_status`（停在当前阶段），等定时任务下一轮重新触发。达到5次：写入`system_alerts`（`alert_type='content_policy_exceeded'`），设置`bazi_readings.alert_status`，不退款、不通知用户，继续保持骨架屏，等管理员在`/admin/alerts`处理
+2. **API密钥失效/配额耗尽**（401/403，或错误信息含quota/key）：立即写`system_alerts`（`alert_type='api_key_invalid'`），设置`alert_status`，不计入`retry_count`，定时任务继续按正常间隔重试（万一是临时配额限制）
+3. **传入数据缺失/损坏**（`draft`/前置主题字段读不到）：立即写`system_alerts`（`alert_type='data_missing'`），设置`alert_status`，不计入`retry_count`，定时任务继续重试
+4. **其余技术性失败**（超时/503/429/返回内容为空/JSON解析失败/输出结构不对等）：`retry_count += 1`，不设置`alert_status`，属于正常重试范畴
+
+三种需要管理员介入的情况都会调用`notifyAdminAlert`（`supabase/functions/_shared/alerts.ts`）——**目前只打日志，不真正发邮件**，邮件服务（如Resend）接入后只需要改这一个函数的内部实现，调用方不用动。
+
+**`reading-recovery`定时任务**（`/api/cron/reading-recovery`，由Supabase pg_cron每2分钟触发，见下方）扫描条件：`deleted_at IS NULL AND ai_reading_status NOT IN ('done') AND ai_reading_status NOT LIKE 'failed%' AND last_attempt_at < now() - interval '2 minutes'`。对每条记录：
+
+- `alert_status`非空：不做次数判断，直接按`ai_reading_status`重新触发对应的Edge Function（`theme1~4`直接映射`generate-themeN`，`generating`/`phase1`都从`generate-phase1`开始，它自己会判断`draft`是否已存在，是幂等的），触发成功后清空`alert_status`、把`system_alerts`里对应记录标记`resolved_at`
+- `alert_status`为空：`retry_count >= 10` 或 `距first_attempt_at超过45分钟`，才算"万不得已"——按`charge_type`退款（`wallet`退全部`charge_wallet_amount`；`voucher`归还凭证使用次数，若还有自付部分也一并退），标记`ai_reading_status='failed_permanent'`，**同时自动软删除**（`deleted_at=now()`，一次DB更新完成，见下一节），不用管理员介入，这是设计内允许发生的正常兜底情况
+
+**Supabase pg_cron触发**（迁移文件`supabase/migrations/20260810000100_reading_recovery_pg_cron.sql`）：Vercel Hobby套餐的定时任务只支持一天一次，做不到2分钟级别，改用Supabase项目自己的`pg_cron`+`pg_net`扩展，每2分钟对`https://mindo-web.vercel.app/api/cron/reading-recovery`发一次HTTP POST（带`CRON_SECRET`）。**`CRON_SECRET`没有出现在迁移文件里**——存在Supabase Vault（`vault.create_secret`，密钥名`bazi_reading_recovery_cron_secret`），迁移文件只按名字引用，避免明文密钥进git历史。`vercel.json`里原有的一天一次条目保留作为兜底，不冲突。
+
+`/admin/alerts`（`apps/web/src/app/admin/alerts/page.tsx`）——读取`system_alerts`里`resolved_at`为空的记录，按`created_at`倒序展示`alert_type`/`reading_id`（链接到`/admin/readings/[id]`诊断详情页）/`message`/发生时间，"标记已处理"按钮设`resolved_at=now()`。**标记已处理不会让卡住的记录自动恢复重试**，那依然是`reading-recovery`定时任务在做的事，标记已处理只是关掉这条警报本身。
+
+## 六、软删除与档案隔离
+
+**问题**：查询"这个档案当前报告"的地方（`getLatestReadingSummary`，按`profile_id`取最新一条），之前不过滤任何"这条记录是不是已经作废"的条件——一次生成失败但已经产出部分主题的报告，会被永久当成"这个档案现在的报告"，档案再也走不到重新生成的入口。另外，真正触发扣款+生成的`/api/ai/reading`此前完全没有服务端校验，只靠前端隐藏"生成"按钮防误触，理论上可以绕过前端对同一个档案重复扣费生成。
+
+**修复**：
+
+1. `bazi_readings.deleted_at`非空即视为"已删除"——报告是付费凭证，不物理清除，只打标记。删除后这条记录：不再出现在"已购报告"列表（`GET /api/account/assets`）、不再被`getLatestReadingSummary`当成"当前报告"、直接访问`?readingId=`也会跳转回未生成状态（`reading/page.tsx`的查询也加了`deleted_at IS NULL`过滤）
+2. `/api/ai/reading`（POST）在扣款前新增服务端校验：该`profile_id`若已有未软删除的报告（不论生成中还是已完成），直接返回409拒绝，堵住绕过前端重复扣费的路径
+3. 新增`DELETE /api/ai/reading/[id]`，用户可在报告页TopBar和"已购报告"列表手动删除自己的报告，删除后档案立即恢复成可重新生成的状态
+4. **走到"重试次数/时间双双超限，判定彻底失败"这一步的记录，不需要用户手动删除**——系统在完成退款的同时自动软删除（见上一节`markReadingFailedPermanent`），档案立即恢复
+5. "出生信息已修改→重新生成"这个已有流程，因为第2点新加的服务端校验会拒绝对已有报告的档案重复生成，改成先`DELETE`旧报告再触发生成，不是直接生成
+
+**页面渲染**：`BaziReadingView.tsx`不再用本地`generating`状态，完全由`ai_reading_status`驱动——空值→价格/生成按钮；`'done'`→完整报告；其余非空值（不管卡在`phase1`还是`theme1~4`哪一段）→骨架屏，已经到手的主题正常渲染，没到的部分用灰色矩形块占位（`BaziReadingSkeleton.tsx`，纯CSS，`hsl(var(--muted))`系变量跟随明暗主题，不含文案）。不会出现面向用户的失败态文案——失败到底的记录会被自动退款+软删除，页面直接查不到，回到"还没有报告"分支。
+
+## 七、`/admin` 后台管理面板
 
 不带locale前缀，权限判断在`apps/web/src/proxy.ts`（Next.js 16的中间件文件，项目里叫`proxy.ts`不是`middleware.ts`）——匹配`/admin`或`/api/admin`开头的请求，检查当前登录用户email是否在`ADMIN_EMAILS`环境变量白名单里，不在则页面302回首页、接口返回401。每个`/api/admin/*`接口内部也用`requireAdminUser()`（`src/lib/admin/requireAdmin.ts`）再判断一次，双重保险。
 
@@ -187,14 +235,16 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 - `/admin/prices` — `service_prices`增删改，项目用下拉选（来源`ADMIN_SERVICE_TYPES`），不再手打`service_type`
 - `/admin/rates` — 充值套餐管理，`wallet_topup_tiers`增删档位（虚拟币数量/排序/是否上架）+ 每个档位下`wallet_topup_tier_prices`的多货币定价（增删改）
 - `/admin/users` — 用户账本只读查询（按邮箱查，余额/VIP状态/持有的凭证列表，不再显示`vip_tier`）
+- `/admin/alerts` — 八字报告重试引擎的警报列表，见「重试引擎与失败分类」一节
+- `/admin/readings/[id]` — 单条`bazi_readings`记录的诊断详情（状态/重试计数/扣退款情况等只读展示），从`/admin/alerts`的`reading_id`链接跳转过来，不单独在导航里出现
 
-对应接口都在`apps/web/src/app/api/admin/`下，统一用`paymentsAdminClient`（service role），不依赖RLS。`/admin/tiers`、`/admin/tiers/[id]`、`/admin/tiers/[id]/prices`、`/admin/tiers/[id]/prices/[currencyCode]`是充值套餐对应的接口。
+对应接口都在`apps/web/src/app/api/admin/`下，统一用`paymentsAdminClient`（service role）或`baziRepositoryAdmin`（八字相关），不依赖RLS。`/admin/tiers`、`/admin/tiers/[id]`、`/admin/tiers/[id]/prices`、`/admin/tiers/[id]/prices/[currencyCode]`是充值套餐对应的接口。
 
 任何后台页面要展示或选择"服务类型"，一律用下拉，选项和显示文字来自`apps/web/src/config/adminServiceTypes.ts`的`ADMIN_SERVICE_TYPES`（组合`assessments.ts`的`ASSESSMENTS`列表和`messages/zh/assessments/index.json`的中文名，只列`isAvailable`的模块），界面上不会出现`bazi_report`这类原始字符串。以后新增测算模块上线后，这几个下拉自动跟着多一项，不需要在各个后台页面里分别手动维护。
 
 后台中文文案里的"虚拟币"三个字统一从`apps/web/src/config/payments.ts`的`WALLET_UNIT_LABEL`引用，不允许各页面自己写一份。
 
-## 六、前端接入点
+## 八、前端接入点
 
 - 个人主页（`/dashboard/profile`）新增"输入兑换码"入口（弹窗），调`POST /api/payments/redeem`
 - 八字报告生成页（`BaziReadingView.tsx`）的"生成报告"/"出生信息不符→重新生成"两处按钮上方，接入`VoucherSelector`组件（`components/payments/VoucherSelector.tsx`，自治组件，自己按`service_type`拉取当前用户可用凭证），选中的`voucherId`会带进`/api/ai/reading`请求体
@@ -204,7 +254,7 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 - `/dashboard/profile`账户信息条：用户名颜色读`vip_expires_at > now()`，是则金色（新增CSS变量`--vip-gold`，`globals.css`里浅/深色模式各定义了一份），否则默认颜色，不显示"会员/非会员"这几个字；`@handle`下方新增一行纯文字余额展示（`payment.balanceLabel`翻译键，读`GET /api/payments/assets`的`balance`字段，兑换码兑换成功后会重新拉取刷新）
 - 前端所有next-intl可见文案里的"虚拟币"统一读`payment.walletUnit`这个翻译键，组件里通过`useTranslations('payment')`拿到这个词，再当参数`{unit}`传进其他翻译字符串里插值（如`voucher.fixedAmount`/`assets.wallet.balance`），不允许某条翻译字符串里直接写死这个词——以后要改名字，只改`payment.walletUnit`这一条，全项目跟着变。目前`walletUnit`已加到en/zh/zh-Hant/fr四个已有`payment`命名空间的语言
 
-## 七、资产页展示（`/dashboard/profile/assets`）
+## 九、资产页展示（`/dashboard/profile/assets`）
 
 原页面只有"已购报告"一个列表。现在页面顶部加了标签切换（复用片语模块的标签交互样式）：
 
@@ -223,15 +273,17 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 个人主页（`/dashboard/profile`）的"输入兑换码"入口维持不变，两处入口调的是同一个后端接口，可以理解为对同一个功能的两个入口，不是重复建设。
 
-## 八、待办
+## 十、待办
 
 - [ ] Lemon Squeezy的`/api/payments/checkout`、`/api/payments/webhook`当前会直接报错（依赖表已删），用户决定暂时保留、以后再单独决定去留
-- [ ] `reading-recovery`重试时给`generate-themeN`传的payload字段名是推断出来的，未核对过真实Edge Function代码
 - [ ] `service_prices`里`bazi_report`的价格是不是已经是真实价格了，去`/admin/prices`确认一下（排查过程中发现被改成了5，不确定是不是有意调的测试值）
+- [ ] `notifyAdminAlert`（`supabase/functions/_shared/alerts.ts`）目前只打日志，没有真正接入邮件服务，管理员需要主动去`/admin/alerts`看才知道有警报
+- [ ] 2026-08-10施工时发现生产域名`mindo-web.vercel.app`当前返回`DEPLOYMENT_NOT_FOUND`（用pg_net手动触发cron实测确认），也就是说这个域名下目前没有正常的Vercel部署——pg_cron/Edge Function/数据库这几块都已经就位并验证过，但只要这个部署问题不解决，`reading-recovery`就没有真正能打到的目标，需要单独确认Vercel那边的部署状态
+- [ ] 本次重试引擎重构（三分类失败处理/骨架屏/软删除）的完整端到端流程——真实发起生成、中途刷新页面确认骨架屏、故意改错API key触发告警、删除报告确认档案恢复——受限于当时没有可用的线上部署，只做到了代码审查+类型检查+Edge Function部署后的启动检查（确认能正常响应请求），没有跑一次真实的生成流程。建议部署恢复后找机会走一遍这几个场景
 - [ ] 充值套餐（`wallet_topup_tiers`/`wallet_topup_tier_prices`）目前只有后台维护界面，还没有真实支付渠道能触发充值——现阶段只能靠兑换码入账，也还没有前台充值页面（本轮要求只做对后台，不需要另建前台充值页）
 - [ ] `payment`翻译命名空间目前只有en/zh/zh-Hant/fr四种语言完整，de/es/ja/ko/it缺失（含`voucher`/`redeem`/`walletUnit`），这是延续已有的缺口，不是本次新引入的
 - [ ] 新增的`assets`翻译模块目录目前只有en/zh两种语言，其余7种待补齐（按施工说明文档的要求，不阻塞本次完成）
 - [ ] VIP的`percentage`/`fixed_amount`覆盖类型逻辑仍未实现（等VIP购买流程真的存在了再接），资产页兑换券列表遇到这类记录目前只是按现有规则原样展示，不做特殊处理
 - [ ] `redemption_codes.status`的`'expired'`目前只在`/admin/batches/[id]`详情页做展示层现算，数据库里过期未用的码仍然是`'unused'`，没有定时任务把它真正写成`'expired'`——如果以后有报表/导出需要直接信任数据库里的`status`字段，需要另外补一个定时任务
-- [ ] 排查过程中顺带发现：`messages/{locale}/bazi/index.json`的`reading`这个嵌套对象（八字AI报告页几乎所有文案，tab名/章节标题/生成按钮/出生信息不符提示等）**只有zh和fr两种语言有**，en/zh-Hant/es/ja/ko/it/de这7种语言完全没有这个对象，报告页对这些语言的用户来说文案基本是缺失状态——这是本次施工之前就存在的缺口，不是本次引入的，但影响面比较大，建议找机会单独补齐。本次新增的`reading.priceLabel`键，只加到了已有该对象的zh/fr，另外补加到了en（新建了`reading`对象只放这一个键，没有顺带补齐其余缺失的键）
+- [ ] 排查过程中顺带发现：`messages/{locale}/bazi/index.json`的`reading`这个嵌套对象（八字AI报告页几乎所有文案，tab名/章节标题/生成按钮/出生信息不符提示等）**只有zh和fr两种语言有**，en/zh-Hant/es/ja/ko/it/de这7种语言完全没有这个对象，报告页对这些语言的用户来说文案基本是缺失状态——这是本次施工之前就存在的缺口，不是本次引入的，但影响面比较大，建议找机会单独补齐。本次新增的`reading.priceLabel`键，只加到了已有该对象的zh/fr，另外补加到了en（新建了`reading`对象只放这一个键，没有顺带补齐其余缺失的键）；2026-08-10这次新增的`reading.delete`/`reading.deleteConfirm`（报告删除按钮/确认文案）同样只加到了zh/fr，延续同一个缺口，没有借机会扩大范围补齐其余7种语言
 - [ ] Supabase新建表之后，PostgREST的表结构缓存不会立刻感知到，直接通过接口查/写新表会报"找不到这张表"（`PGRST205`）——踩过一次坑，以后新建表后如果代码报"表不存在"但SQL Editor里看这张表明明存在，先去SQL Editor跑`NOTIFY pgrst, 'reload schema';`，不要先怀疑代码逻辑
