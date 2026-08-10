@@ -75,25 +75,44 @@ export function createSupabaseBaziRepository(
       return { data: data as { id: string } | null, error: toDbError(error) };
     },
 
-    async getStuckReadings(cutoffIso) {
+    async getStuckReadings(staleBeforeIso) {
       const { data } = await adminClient
         .from('bazi_readings')
         .select(
-          'id, user_id, calculation_result, locale, ai_reading_status, ai_reading_draft, ai_reading_theme1, ai_reading_theme2, ai_reading_theme3, ai_reading_theme4, created_at, charge_type, charge_wallet_amount, charge_voucher_id, charge_refunded_at'
+          'id, user_id, calculation_result, locale, ai_reading_status, retry_count, content_policy_retry_count, first_attempt_at, last_attempt_at, alert_status, charge_type, charge_wallet_amount, charge_voucher_id, charge_refunded_at'
         )
+        .is('deleted_at', null)
         .not('ai_reading_status', 'is', null)
         .neq('ai_reading_status', 'done')
-        .neq('ai_reading_status', 'failed_permanent')
-        .lt('created_at', cutoffIso)
+        .not('ai_reading_status', 'like', 'failed%')
+        .lt('last_attempt_at', staleBeforeIso)
         .limit(10);
       return (data ?? []) as StuckReadingRow[];
     },
 
     async markReadingFailedPermanent(readingId) {
+      const nowIso = new Date().toISOString();
       await adminClient
         .from('bazi_readings')
-        .update({ ai_reading_status: 'failed_permanent', charge_refunded_at: new Date().toISOString() })
+        .update({ ai_reading_status: 'failed_permanent', charge_refunded_at: nowIso, deleted_at: nowIso })
         .eq('id', readingId);
+    },
+
+    async clearAlertStatus(readingId) {
+      await adminClient.from('bazi_readings').update({ alert_status: null }).eq('id', readingId);
+      await adminClient
+        .from('system_alerts')
+        .update({ resolved_at: new Date().toISOString() })
+        .eq('reading_id', readingId)
+        .is('resolved_at', null);
+    },
+
+    async deleteReading(readingId, userId) {
+      await adminClient
+        .from('bazi_readings')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', readingId)
+        .eq('user_id', userId);
     },
 
     async getSnapshotForDashboard(profileId) {
@@ -154,6 +173,7 @@ export function createSupabaseBaziRepository(
         .from('bazi_readings')
         .select('id, ai_reading_theme1, ai_reading_status')
         .eq('profile_id', profileId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

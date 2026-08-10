@@ -27,6 +27,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '快照不存在' }, { status: 404 });
     }
 
+    // 档案隔离：这个档案如果已经有一份未软删除的报告（不论生成中还是已完成），
+    // 直接拒绝，防止前端按钮被绕过后对同一个档案重复扣费生成。
+    // 只有 deleted_at 非空（用户手动删除，或系统失败退款后自动软删除）的旧记录
+    // 不算数，档案才算重新回到可生成状态——这个判断口径必须和"档案当前报告"
+    // 的其他查询（getLatestReadingSummary）保持一致。
+    if (snapshot.profile_id) {
+      const existingReading = await baziRepo.getLatestReadingSummary(snapshot.profile_id);
+      if (existingReading) {
+        return NextResponse.json({ error: '这个档案已经有报告了' }, { status: 409 });
+      }
+    }
+
     // 读取档案出生信息（生成时快照）
     const profile = snapshot.profile_id ? await baziRepo.getProfileBirthInfo(snapshot.profile_id) : null;
 

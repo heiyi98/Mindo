@@ -41,13 +41,12 @@ export interface StuckReadingRow {
   user_id: string;
   calculation_result: unknown;
   locale: string;
-  ai_reading_status: string | null;
-  ai_reading_draft: unknown;
-  ai_reading_theme1: unknown;
-  ai_reading_theme2: unknown;
-  ai_reading_theme3: unknown;
-  ai_reading_theme4: unknown;
-  created_at: string;
+  ai_reading_status: string;
+  retry_count: number;
+  content_policy_retry_count: number;
+  first_attempt_at: string;
+  last_attempt_at: string;
+  alert_status: string | null;
   charge_type: 'wallet' | 'voucher' | null;
   charge_wallet_amount: number;
   charge_voucher_id: string | null;
@@ -81,8 +80,14 @@ export interface BaziRepository {
   getOwnedSnapshot(snapshotId: string, userId: string): Promise<BaziSnapshotForReading | null>;
   getProfileBirthInfo(profileId: string): Promise<ProfileBirthInfo | null>;
   createReading(input: CreateReadingInput): Promise<{ data: { id: string } | null; error: DbError | null }>;
-  getStuckReadings(cutoffIso: string): Promise<StuckReadingRow[]>;
+  // staleBeforeIso：last_attempt_at早于这个时间点，才算"卡住"，避免正在处理中的记录被重复触发
+  getStuckReadings(staleBeforeIso: string): Promise<StuckReadingRow[]>;
+  // 退款+终态失败+自动软删除一次性完成，让档案立即恢复成可重新生成的状态
   markReadingFailedPermanent(readingId: string): Promise<void>;
+  // 清空alert_status（重新触发前）+ 把该reading关联的未处理system_alerts一并标记resolved
+  clearAlertStatus(readingId: string): Promise<void>;
+  // 用户手动删除报告：软删除，仅限本人
+  deleteReading(readingId: string, userId: string): Promise<void>;
 
   // dashboard/fortune-daily/assessments-status 共用
   getSnapshotForDashboard(profileId: string): Promise<SnapshotForDashboard | null>;
