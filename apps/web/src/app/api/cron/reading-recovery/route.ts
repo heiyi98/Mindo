@@ -5,15 +5,50 @@ import { baziRepositoryAdmin } from '@/lib/bazi/adminClient';
 import { refundWallet } from '@mindo/payments';
 import type { StuckReadingRow } from '@mindo/db';
 
-// Vercel Cron Job - 每5分钟扫描卡住的报告任务
+// 每2分钟扫描一次（由Supabase pg_cron触发，不是Vercel自带的cron——Vercel Hobby
+// 套餐的定时任务只支持一天一次，做不到2分钟级别，见Mindo-支付系统.md）。
 //
-// 真正的生成状态存在 bazi_readings 上（ai_reading_status/ai_reading_draft/
-// ai_reading_theme1-4），bazi_snapshots 上同名字段是迁移前的死字段——这里改
-// 成查 bazi_readings，此前这个cron实际上从未真正找到过卡住的任务。
-//
-// 超过30分钟还没完成的任务视为彻底失败：标记 failed_permanent，
-// 并把当初扣的虚拟币/凭证使用次数退还（charge_refunded_at 防止重复退款）。
-const GIVE_UP_AFTER_MS = 30 * 60 * 1000;
+// 三分类失败处理（Edge Function那边）+ 这里的重试/放弃两条路径，具体设计见
+// Mindo-支付系统.md「重试引擎与失败分类」一节：
+// - alert_status非空（卡在需要管理员介入的问题上）：不做次数判断，直接重触发，
+//   触发成功后清空alert_status、解决对应的system_alerts记录
+// - alert_status为空（普通技术性失败/内容政策失败，在正常重试范围内）：
+//   retry_count>=10 或 距首次尝试超过45分钟 才算"万不得已"，触发退款+
+//   标记failed_permanent+自动软删除；否则重新触发当前所在阶段
+const RETRY_COUNT_LIMIT = 10;
+const GIVE_UP_AFTER_MS = 45 * 60 * 1000;
+const STALE_AFTER_MS = 2 * 60 * 1000;
+
+function targetFunctionForStatus(status: string): string {
+  if (status === 'theme1' || status === 'theme2' || status === 'theme3' || status === 'theme4') {
+    return `generate-${status}`;
+  }
+  // 'generating'（刚扣款建档，还没跑过一次phase1）和 'phase1'
+  // （phase1跑过但没成功写出draft）都从phase1重新开始——generate-phase1
+  // 自己会检查draft是否已存在，存在就直接跳去触发theme1，是幂等的
+  return 'generate-phase1';
+}
+
+async function retriggerReading(job: StuckReadingRow, supabaseUrl: string, serviceRoleKey: string) {
+  const targetFunction = targetFunctionForStatus(job.ai_reading_status);
+  const body =
+    targetFunction === 'generate-phase1'
+      ? JSON.stringify({
+          readingId: job.id,
+          dataSheet: preparePhase1Input(job.calculation_result as any),
+          locale: job.locale,
+        })
+      : JSON.stringify({ readingId: job.id, locale: job.locale });
+
+  await fetch(`${supabaseUrl}/functions/v1/${targetFunction}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${serviceRoleKey}`,
+    },
+    body,
+  });
+}
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -21,13 +56,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // cron是服务端到服务端触发（Vercel带CRON_SECRET调用），没有真实用户session，
-  // 用session client查/改bazi_readings在RLS收紧成"仅owner可SELECT"之后会永远
-  // 查到空结果（auth.uid()是null，匹配不上任何user_id）——baziRepositoryAdmin
-  // 内部全程走service role，不受RLS限制
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-  const stuckJobs = await baziRepositoryAdmin.getStuckReadings(fiveMinutesAgo);
+  // cron是服务端到服务端触发，没有真实用户session，baziRepositoryAdmin内部
+  // 全程走service role，不受RLS限制
+  const staleBeforeIso = new Date(Date.now() - STALE_AFTER_MS).toISOString();
+  const stuckJobs = await baziRepositoryAdmin.getStuckReadings(staleBeforeIso);
 
   if (stuckJobs.length === 0) {
     return NextResponse.json({ message: '无卡住任务' });
@@ -38,9 +70,17 @@ export async function GET(request: Request) {
 
   const results = await Promise.allSettled(
     stuckJobs.map(async (job: StuckReadingRow) => {
-      const elapsed = Date.now() - new Date(job.created_at).getTime();
+      if (job.alert_status) {
+        await retriggerReading(job, supabaseUrl, serviceRoleKey);
+        await baziRepositoryAdmin.clearAlertStatus(job.id);
+        console.log(`[Cron] ${job.id} 卡在管理员警报（${job.alert_status}），已重新触发`);
+        return { id: job.id, action: 'retried_after_alert' };
+      }
 
-      if (elapsed > GIVE_UP_AFTER_MS) {
+      const exceededRetryCount = job.retry_count >= RETRY_COUNT_LIMIT;
+      const exceededTotalTime = Date.now() - new Date(job.first_attempt_at).getTime() > GIVE_UP_AFTER_MS;
+
+      if (exceededRetryCount || exceededTotalTime) {
         if (job.charge_refunded_at) return { id: job.id, action: 'already_refunded' };
 
         if (job.charge_type === 'wallet' && job.charge_wallet_amount > 0) {
@@ -54,39 +94,15 @@ export async function GET(request: Request) {
           }
         }
 
+        // 退款+标记失败+软删除一次性完成，档案立即恢复成可重新生成的状态
         await baziRepositoryAdmin.markReadingFailedPermanent(job.id);
 
-        console.log(`[Cron] ${job.id} 超过30分钟未完成，已放弃并退款`);
+        console.log(`[Cron] ${job.id} 重试${job.retry_count}次或超过45分钟仍未完成，已放弃并退款`);
         return { id: job.id, action: 'refunded' };
       }
 
-      // 根据已完成的阶段决定从哪里继续
-      let targetFunction = 'generate-phase1';
-      if (job.ai_reading_theme3) targetFunction = 'generate-theme4';
-      else if (job.ai_reading_theme2) targetFunction = 'generate-theme3';
-      else if (job.ai_reading_theme1) targetFunction = 'generate-theme2';
-      else if (job.ai_reading_draft) targetFunction = 'generate-theme1';
-
-      console.log(`[Cron] 重新触发 ${job.id}，从 ${targetFunction} 继续`);
-
-      const body =
-        targetFunction === 'generate-phase1'
-          ? JSON.stringify({
-              readingId: job.id,
-              dataSheet: preparePhase1Input(job.calculation_result as any),
-              locale: job.locale,
-            })
-          : JSON.stringify({ readingId: job.id });
-
-      await fetch(`${supabaseUrl}/functions/v1/${targetFunction}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceRoleKey}`,
-        },
-        body,
-      });
-
+      await retriggerReading(job, supabaseUrl, serviceRoleKey);
+      console.log(`[Cron] 重新触发 ${job.id}，从 ${job.ai_reading_status} 继续`);
       return { id: job.id, action: 'retried' };
     })
   );
