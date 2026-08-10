@@ -55,3 +55,6 @@ next-env.d.ts
 # apps/web-cn 是独立的git仓库（自己的.git，不带apps/web的提交历史），
 # 不属于这个monorepo的版本管理范围
 /apps/web-cn/
+
+# supabase CLI本地链接缓存（project-ref/pooler-url等），不是要提交的源码
+/supabase/.temp/

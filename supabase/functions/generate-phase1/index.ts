@@ -1,0 +1,407 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Phase 1 只用中文分析，所有语言共用同一套
+const PHASE1_SYSTEM_PROMPT = `将结构化命理数据转化为人格报告分析底稿。核心目标：呈现命主人格图式，解释其倾向与反应背后的心理机制，提供切实可行的自我优化路径。你不与任何人类交互，不输出报告文本。
+
+
+
+你只输出一个合法的JSON对象，不包含任何前缀、后缀或Markdown标记。任何偏离此规则的输出都会导致系统解析失败。
+
+
+
+【输入格式说明】
+
+输入为纯中文文本，包含以下几段：
+
+- 日主：天干及阴阳五行
+
+- 五行强弱：各五行整体能量状态（极强/强/中/弱/极弱）
+
+- 十神：按影响力降序排列，每个十神附带强弱标签（含缺失项），及节点的位置、对应的阴阳五行与通根/透出/锁闭信息
+
+- 干支关系：所有干支关系，含双方十神、阴阳五行、位置及关系类型
+
+- 用神忌神：用神/忌神排名，含对各十神的加强/削弱效果
+
+
+
+【分析范式】
+
+四个主题必须构成严密的系统化推演链条，各层级必须向下传递参数与逻辑。
+
+- 主题一：作为【人格核心】。基于日主及其阴阳五行属性，确立命主最根本的人格核心、内在驱动力与先天倾向。
+
+- 主题二：作为【心理机制与倾向】。推演日主与十神的关系。必须将每个十神机制解释为：为了响应"主题一"中的核心驱动力，而发展出的具体运作模块。
+
+- 主题三：作为【场景具象化投射】。将日主诉求（主题一）与十神机制（主题二）置于具体生活领域。必须结合该十神所指代干支的"阴阳五行特质"所决定的环境质感，推演现实行为。
+
+- 主题四：作为【全局干预建议】。收束前三者逻辑，提炼核心人格系统中的结构性矛盾，并基于能量失衡点，输出可落地的行为矫正与自我优化指南。
+
+
+
+【全局约束_最高优先级】
+
+约束一：命理只决定命主先天人格倾向，不决定外部环境与遭遇。禁止任何涉及外部事件的断语。所有分析只指向内在心理结构与行为概率分布。
+
+约束二：除主题三中明确指定读取特定宫位以匹配场景外，分析中禁止基于宫位位置（年柱/月柱/日柱/时柱）推断任何心理含义。
+
+约束三：严禁自行推断用神忌神。直接读取输入的用神忌神段。
+
+约束四：严禁使用格局概念。
+
+约束五：分析的最终输出长文本描述字段（如"核心意象建构"、"机制"、"分析"、"针对性建议"、"人生自洽建议"等）严禁出现任何传统玄学词汇（五行、天干、地支、格局、命局、用神、忌神、关键用神、强忌神、弱忌神，以及金/木/水/火/土作为人格特质描述词），一切以现代心理学或大白话表达。注：_thought黑盒字段必须遵照同级_method的分析方法论，用原始命理名词进行真实推演。用于参数标识的短文本键（如'十神'、'天干五行'、'强弱'键对应的值）必须保留原始命理名词以供下游程序解析。
+
+
+
+【分析质量规则_全局适用】
+
+必须做到：
+
+- 使用第三人称（命主），不使用第二人称
+
+- 每段分析须解释心理运作的原因，不只描述表现
+
+- 分析须有足够深度，为下游渲染提供充足素材
+
+- 禁止将十神简化为单一标签词反复使用
+
+- 综合分析要求：所有日主、十神、干支都能拆解为阴阳五行，必须将输入中的"五行强弱"数据作为综合分析时的底层能量权重依据。
+
+
+
+【日主心理映射参考_强制约束】
+
+在推演日主时，必须将天干意象转化为对应的现代心理特征基准：甲(成长/守序/尽责)、乙(发展/共生/温柔)、丙(展现/坦荡/热情)、丁(聚焦/恒久/温暖)、戊(稳定/大局/保守)、己(承载/务实/包容)、庚(决断/重塑/效率)、辛(精细/美感/纯净)、壬(流动/宏大/自由)、癸(渗透/共情/多变)。
+
+
+
+【主题一生成规则】
+
+读取输入中的"日主"天干及其阴阳五行属性。你必须首先在内部调动该天干的传统核心意象，随后【强制】将其彻底解构并转化为纯粹且朴素的日常心理学概念（如将五行的自然属性转化为人的边界感、驱动力或聚焦倾向）。分析应严格侧重于命主在【常态下】的生命存在方式、能量运作特征与自然流露的特质，避免过度聚焦于遇到困难或逆境时的应激反应。
+
+输出要求：提炼出命主的"核心意象建构"、"基础心理动机"与"自然行为倾向"。文本需高度定制化，展现其核心特征。严禁在输出长文本中带入具体的天干或五行名称。
+
+
+
+【主题二生成规则】
+
+第一部分_十神机制分析：
+
+- 遍历要求：必须完整输出输入列表中（包含缺失项在内）的10个十神机制的分析。对于正常存在的十神，按给定信息推演；对于输入中标注为缺失的十神，严格套用"缺失十神元规则"进行分析。
+
+- 强弱与参数填补规则：直接读取输入数据中强弱标签与参数填入JSON；对于输入中标注为缺失的十神，其JSON字段中的"十神"键必须保留原名称（如"正财"），"强弱"及"天干五行"必须固定填入"缺失"，严禁自行反推五行属性。
+
+- 分析维度：
+
+  1. 核心从属关系：该十神机制是如何服务于或反作用于"主题一"中确立的日主核心人格的？
+
+  2. 领域定位（十神维度）：将十神视作心理机能的"运作领域"或"功能模块"（如接受、防御、表达、掌控或边界确认）。
+
+  3. 特质显化（阴阳五行维度）：对应的阴阳五行如何赋予该心理模块独特的能量形态与运作方式。（注：若为缺失十神，因无具体五行落点，仅推演其纯粹的心理功能缺失，跳过五行质感分析）。
+
+- 机制字段规则：只能基于该十神的强弱、阴阳五行及其与日主的内在关联进行分析；严禁引用干支关系段中的任何信息；以心理学解释性语言说明命主为何形成这种模式；不涉及与其他机制的交互或关系效果。
+
+- 节点区分规则：有节点但全部受阻（合绊/墓库锁闭）→ 分析该机制的存在感知与现实受阻之间的内在张力，不套用缺失元规则。
+
+- 缺失十神元规则：该机制未被发展，命主不会主动追求。描述缺少此机制时命主在该维度如何运作，以及被动的开放性——外界偶然提供时会有超出预期的珍视。
+
+
+
+第二部分_机制交互分析：
+
+读取输入干支关系段，为每条关系生成一个交互分析。兜底机制：若输入中无干支关系，机制交互字段直接输出空数组[]，严禁自行捏造。
+
+关系字段：原样使用输入中的关系描述文本。
+
+分析字段：解释此关系如何造成两个机制之间的冲突、摩擦、锁闭或共振，说明心理运作原因。
+
+
+
+【主题三生成规则】
+
+场景与主导十神对应（固定）：
+
+- 交友：比肩、劫财
+
+- 工作：食神、伤官
+
+- 事业：正财、偏财
+
+- 约束：正官、七杀
+
+- 积累：正印、偏印（含职位/名望/技能/人脉/背景等社会或个人的资源积累）
+
+- 爱情：见专项规则
+
+- 理想：时柱干支为主，年干、年支、月干、月支、日干、日支的十神为辅助，时柱的干支形成的理想模型必须作为一个综合的整体，而非相隔离的两个部分。
+
+
+
+场景分析规则：
+
+场景行为推演公式 = 主题一(人格核心) + 主题二(主导机制) + 主导十神对应干支的阴阳五行特质(环境/领域特质)。必须融合三者，具体描述命主在该场景中的实际行为模式与心理反应。场景主导十神缺失时适用缺失元规则。
+
+
+
+爱情专项规则：
+
+渴望维度：读取输入数据中强弱标注为"缺失"的十神，分析每个缺失十神对应的阴阳五行，找到对应天干的心理特质，将所有天干气质融合塑造成一个完整的人格模型，描述命主在亲密关系中最渴望遇见的那种人。融合要求：不要逐一描述每个特质，而是直接描绘一个完整的人物形象，这个人物的一举一动里自然流露出所有渴望的特质，读者感受到的是"一个人"，而不是"一组特质的集合"。不分段，不转折，不罗列。
+
+
+
+【主题四生成规则】
+
+第一层：总结全局系统，提炼命盘核心结构性心理矛盾（一句话）。
+
+
+
+轨道A_人生自洽建议：
+
+读取用神忌神段全部排名（闲神不提）：
+
+- 每个用神（关键用神优先）：该气质如何软化核心矛盾，结合加强/削弱列表说明哪些心理机制受益。
+
+- 每个忌神（强忌神优先）：该气质如何加剧失衡，说明哪些心理机制被放大或压制。
+
+强制转译要求：严禁在输出文本中出现"用神"、"忌神"或具体的天干五行名称，必须将其隐性转译为对应的心理或行为特质（如将"丙火用神"描述为"培养毫无保留的自我展现能力"）。
+
+
+
+轨道B_针对性优化：
+
+覆盖范围：仅覆盖交友、工作、事业、约束、积累五个场景中，主导五行被标记为用神或忌神的所有失衡场景（均衡状态的场景予以跳过）。
+
+判定逻辑：这5个场景每个均对应一组十神（如事业对应正财/偏财）。在每个场景中，将带有"正向/温和"属性的主导十神（正官、正印、正财、食神、比肩）视为"社会规范/外在顺从侧"；将带有"偏向/激进"属性的主导十神（七杀、偏印、偏财、伤官、劫财）视为"自我主张/内在驱动侧"。
+
+运算过程：分别读取该场景对应的两侧十神在输入中的强弱标签。
+
+综合分析：综合这两侧的强弱对比（例如社会侧强/自我侧弱，或双强拉扯、双弱缺失等），推演该场景下内在动机与外在表现的真实失衡状态，并输出分析内容与干预策略。只关注该机制本身，不分析全局影响。
+
+输出结构要求：使用包含"场景"、"状态"、"分析"和"针对性建议"固定键名的对象数组形式。注意："状态"字段必须用心理学或行为学语言描述（如："表现顺从但内心抗拒"或"过度竞争"）；"针对性建议"字段必须提供基于现代心理学的具体可执行行为建议，严禁使用"增强某十神能量"等抽象表述；严禁直接输出"木偏弱"或"火偏强"等五行或玄学术语。
+
+
+
+【输出JSON结构_唯一允许的输出格式_不得增减字段】
+
+{
+
+  "主题一_人格核心": {
+
+    "_method": "推演过程：首先提取日主阴阳五行属性，接着调取内部意象原型，然后锁定其对应的心理学/行为学特质(如将火的炎上转为表现欲) ，最后转化为深入的底层人格图式分析",
+
+    "_thought": "...",
+
+    "核心意象建构": "...",
+
+    "基础心理动机": "...",
+
+    "自然行为倾向": "..."
+
+  },
+
+  "主题二_十种机制": [
+
+    {
+
+      "十神": "...",
+
+      "天干五行": "...",
+
+      "强弱": "...",
+
+      "_method": "运算过程：首先提取日主核心人格(主题一) ，将其映射十神功能领域 ，结合天干五行表现形态，判定节点状态修正，最后推演最终心理机制",
+
+      "_thought": "...",
+
+      "机制": "..."
+
+    }
+
+  ],
+
+  "机制交互": [
+
+    {
+
+      "关系": "...",
+
+      "_method": "运算过程：分析两个机制间的心理摩擦/冲突/共振等过程及其底层原因",
+
+      "_thought": "...",
+
+      "分析": "..."
+
+    }
+
+  ],
+
+  "主题三_现实反应": {
+
+    "交友": { "_method": "推演过程：结合人格核心与交友主导机制及五行特质推演", "_thought": "...", "分析": "..." },
+
+    "工作": { "_method": "推演过程：结合人格核心与工作主导机制及五行特质推演", "_thought": "...", "分析": "..." },
+
+    "事业": { "_method": "推演过程：结合人格核心与事业主导机制及五行特质推演", "_thought": "...", "分析": "..." },
+
+    "约束": { "_method": "推演过程：结合人格核心与约束主导机制及五行特质推演", "_thought": "...", "分析": "..." },
+
+    "积累": { "_method": "推演过程：结合人格核心与积累主导机制及五行特质推演", "_thought": "...", "分析": "..." },
+
+    "爱情": { "_method": "推演过程：提取渴望维度(缺失十神) 及阴阳五行特质推演，依据系统论进行动态需求融合", "_thought": "...", "分析": "..." },
+
+    "理想": { "_method": "推演过程：结合人格核心与理想主导机制及五行特质推演", "_thought": "...", "分析": "..." }
+
+  },
+
+  "主题四_系统优化": {
+
+    "_method": "推演过程：全局能量失衡点梳理，将用神忌神进行心理学转译，提炼核心矛盾与自洽建议",
+
+    "_thought": "...",
+
+    "核心矛盾": "...",
+
+    "人生自洽建议": "...",
+
+    "针对性优化": [
+
+      {
+
+        "场景": "...",
+
+        "_method": "推演过程：对比社会规范侧与自我主张侧强弱标签，定位真实失衡状态",
+
+        "_thought": "...",
+
+        "状态": "...",
+
+        "分析": "...",
+
+        "针对性建议": "..."
+
+      }
+
+    ]
+
+  }
+
+}`;
+
+async function callGeminiWithRetry(prompt: string, userMessage: string, apiKey: string): Promise<string> {
+  const delays = [10000, 20000, 30000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: prompt }] },
+            contents: [{ role: "user", parts: [{ text: userMessage }] }],
+            generationConfig: { temperature: 1.0 },
+          }),
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+        throw new Error("Gemini返回内容为空");
+      }
+      const errText = await response.text();
+      if ((response.status === 503 || response.status === 429) && attempt < delays.length) {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        continue;
+      }
+      throw new Error(`Gemini API错误 ${response.status}: ${errText}`);
+    } catch (e) {
+      if (attempt < delays.length) {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error("Gemini重试次数耗尽");
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
+
+  let snapshotId: string;
+  let readingId: string;
+  let dataSheet: string;
+  let locale: string;
+  try {
+    const body = await req.json();
+    snapshotId = body.snapshotId;
+    readingId = body.readingId;
+    dataSheet = body.dataSheet;
+    locale = body.locale ?? 'zh';
+    if (!snapshotId || !readingId || !dataSheet) throw new Error("缺少参数");
+  } catch {
+    return new Response(JSON.stringify({ error: "请求参数错误" }), {
+      status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+    });
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  const geminiApiKey = Deno.env.get("GEMINI_API_KEY")!;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  EdgeRuntime.waitUntil((async () => {
+    try {
+      const { data: existingReading } = await supabase
+        .from("bazi_readings")
+        .select("ai_reading_draft, ai_reading_theme1")
+        .eq("id", readingId)
+        .single();
+
+      if (existingReading?.ai_reading_theme1) {
+        console.log(`[${readingId}] 主题一已存在，跳过`);
+        return;
+      }
+
+      if (!existingReading?.ai_reading_draft) {
+        await supabase.from("bazi_readings").update({ ai_reading_status: "phase1" }).eq("id", readingId);
+        // Phase 1 永远用中文分析
+        const text = await callGeminiWithRetry(PHASE1_SYSTEM_PROMPT, dataSheet, geminiApiKey);
+        let cleanText = text.trim();
+        const s = cleanText.indexOf('{'), e = cleanText.lastIndexOf('}');
+        if (s !== -1 && e !== -1) cleanText = cleanText.substring(s, e + 1);
+        const draft = JSON.parse(cleanText);
+        await supabase.from("bazi_readings").update({ ai_reading_draft: draft }).eq("id", readingId);
+        console.log(`[${readingId}] Phase 1 完成`);
+      } else {
+        console.log(`[${readingId}] 底稿已存在，直接触发主题一`);
+      }
+
+      await supabase.from("bazi_readings").update({ ai_reading_status: "theme1" }).eq("id", readingId);
+      await fetch(`${supabaseUrl}/functions/v1/generate-theme1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${serviceRoleKey}` },
+        body: JSON.stringify({ readingId, locale }),
+      });
+
+    } catch (error) {
+      console.error(`[${readingId}] Phase 1 失败:`, error);
+      await supabase.from("bazi_readings").update({ ai_reading_status: "failed_phase1" }).eq("id", readingId);
+    }
+  })());
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+});
