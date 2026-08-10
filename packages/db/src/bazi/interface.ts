@@ -86,8 +86,8 @@ export interface BaziRepository {
   markReadingFailedPermanent(readingId: string): Promise<void>;
   // 清空alert_status（重新触发前）+ 把该reading关联的未处理system_alerts一并标记resolved
   clearAlertStatus(readingId: string): Promise<void>;
-  // 用户手动删除报告：软删除，仅限本人
-  deleteReading(readingId: string, userId: string): Promise<void>;
+  // 用户手动删除报告：软删除，仅限本人。返回null代表这条记录不存在或不属于该用户
+  deleteReading(readingId: string, userId: string): Promise<{ id: string } | null>;
 
   // dashboard/fortune-daily/assessments-status 共用
   getSnapshotForDashboard(profileId: string): Promise<SnapshotForDashboard | null>;

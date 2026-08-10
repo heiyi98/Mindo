@@ -215,6 +215,8 @@
       "title": "我的資產",
       "empty": "暫無已購報告。",
       "basedOn": "基於",
+      "delete": "刪除",
+      "deleteConfirm": "刪除這份報告？此操作無法撤銷。",
       "types": {
         "bazi": "四柱命盤解讀",
         "ziwei": "紫微斗數解讀",

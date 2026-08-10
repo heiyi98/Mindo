@@ -231,6 +231,8 @@
       "title": "Mes ressources",
       "empty": "Aucun rapport acheté pour l'instant.",
       "basedOn": "Basé sur",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer ce rapport ? Cette action est irréversible.",
       "types": {
         "bazi": "Lecture du schéma BaZi",
         "ziwei": "Lecture Ziwei Dou Shu",

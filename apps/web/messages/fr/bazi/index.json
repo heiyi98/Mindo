@@ -86,6 +86,8 @@
     "mismatchDesc": "Les informations de naissance du profil diffèrent de celles utilisées lors de la génération du rapport. Regénérer le rapport ?",
     "mismatchContinue": "Continuer",
     "mismatchRegenerate": "Regénérer",
+    "delete": "Supprimer le rapport",
+    "deleteConfirm": "Supprimer ce rapport ? Cette action est irréversible ; le profil pourra ensuite en générer un nouveau.",
     "scenes": {
       "friends": "Amitiés",
       "work": "Travail",

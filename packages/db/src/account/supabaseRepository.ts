@@ -151,6 +151,7 @@ export function createSupabaseAccountRepository(
         .from('bazi_readings')
         .select('id, profile_id, profile_display_name, birth_date, birth_place_name, ai_reading_status, created_at, calculation_result')
         .eq('user_id', userId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       return (data ?? []) as BaziAssetRow[];
     },

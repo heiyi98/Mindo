@@ -4,10 +4,11 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
-import { Sparkles, ChevronLeft, Share2, Download } from 'lucide-react'
+import { Sparkles, ChevronLeft, Share2, Download, Trash2 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { BaziOverviewChart, BaziShishenChart, BaziInteractionChart } from './BaziReadingChart'
+import { Theme1Skeleton, MultiBlockSkeleton, Theme4Skeleton } from './BaziReadingSkeleton'
 import { usePdfExport } from '@/hooks/usePdfExport'
 import { SHISHEN_ZH_TO_KEY, SCENE_ZH_TO_KEY, formatRelationLine, formatGanZhiRelation } from '@/lib/bazi/relationsFormat'
 import type { ShishenRelations, ShishenNodeRelation, GanZhiRelation } from '@/lib/bazi/reportRelations'
@@ -18,6 +19,7 @@ interface ThemeData {
   ai_reading_theme2: any | null
   ai_reading_theme3: any | null
   ai_reading_theme4: any | null
+  ai_reading_status: string | null
 }
 
 interface Props {
@@ -56,7 +58,8 @@ export default function BaziReadingView({
   const router = useRouter()
   const { resolvedTheme } = useTheme()
   const [data, setData] = useState<ThemeData>(initialData)
-  const [generating, setGenerating] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [showMismatch, setShowMismatch] = useState(birthMismatch)
@@ -71,9 +74,12 @@ export default function BaziReadingView({
 
   const { exportPdf } = usePdfExport(locale)
 
-  const hasAnyTheme =
-    !!data.ai_reading_theme1 || !!data.ai_reading_theme2 ||
-    !!data.ai_reading_theme3 || !!data.ai_reading_theme4
+  // 状态驱动渲染：空值=从没生成过；'done'=完整报告；其余非空值（generating/phase1/
+  // theme1~4）=正在生成中，不管卡在哪一段都显示骨架屏，已到手的主题正常渲染。
+  // 不会再出现failed_xxx——失败到底的记录会被系统自动退款+软删除，
+  // 页面查不到这条记录，直接回到"还没有报告"这一支，不需要在这里特殊处理。
+  const hasStarted = !!data.ai_reading_status
+  const isDone = data.ai_reading_status === 'done'
 
   const dayStemZH = (() => {
     if (!calculationResult) return ''
@@ -168,7 +174,7 @@ export default function BaziReadingView({
   }, [readingId])
 
   const handleGenerate = async () => {
-    setGenerating(true)
+    setSubmitting(true)
     setShowMismatch(false)
     setGenerateError(null)
     try {
@@ -190,11 +196,35 @@ export default function BaziReadingView({
         voucher_unavailable: t('reading.errors.voucherUnavailable'),
       }
       setGenerateError(errorMap[d.code] ?? d.error ?? t('reading.errors.generic'))
-      setGenerating(false)
+      setSubmitting(false)
     } catch (err) {
       console.error(err)
       setGenerateError(t('reading.errors.generic'))
-      setGenerating(false)
+      setSubmitting(false)
+    }
+  }
+
+  // 出生信息变更后的"重新生成"：档案隔离机制现在会拒绝对已有报告的档案重复生成，
+  // 所以这里必须先删除这条已经过时的旧报告，再走一次普通的生成流程。
+  const handleMismatchRegenerate = async () => {
+    if (readingId) {
+      await fetch(`/api/ai/reading/${readingId}`, { method: 'DELETE' }).catch(() => {})
+    }
+    await handleGenerate()
+  }
+
+  const handleDelete = async () => {
+    if (!readingId) return
+    if (!window.confirm(t('reading.deleteConfirm'))) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/ai/reading/${readingId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('delete failed')
+      router.push('/dashboard/assessments/bazi')
+    } catch (err) {
+      console.error(err)
+      setGenerateError(t('reading.errors.generic'))
+      setDeleting(false)
     }
   }
 
@@ -232,43 +262,52 @@ export default function BaziReadingView({
         <ChevronLeft size={20} />
       </button>
       <div className="flex items-center gap-2">
+        {readingId && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-label={t('reading.delete')}
+            className="flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
         <ThemeToggle />
       </div>
     </div>
   )
 
-  if (!hasAnyTheme) {
+  if (!hasStarted) {
     return (
       <>
         <TopBar />
         <div className="max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col items-center gap-6">
           <Sparkles size={32} className="text-muted-foreground" />
           <p className="text-sm text-muted-foreground text-center">
-            {generating ? t('reading.generating') : t('reading.noReading')}
+            {t('reading.noReading')}
           </p>
-          {!generating && price !== null && (
+          {price !== null && (
             <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
               {t('reading.priceLabel', { price, unit: tPayment('walletUnit') })}
             </p>
           )}
-          {!generating && (
-            <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-              <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
-              <button
-                onClick={handleGenerate}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light"
-                style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
-              >
-                <Sparkles size={14} />
-                {t('reading.buyReading')}
-              </button>
-              {generateError && (
-                <p className="text-xs text-center" style={{ color: 'hsl(var(--destructive))' }}>
-                  {generateError}
-                </p>
-              )}
-            </div>
-          )}
+          <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+            <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
+            <button
+              onClick={handleGenerate}
+              disabled={submitting}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light disabled:opacity-50"
+              style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              <Sparkles size={14} />
+              {submitting ? tCommon('loading') : t('reading.buyReading')}
+            </button>
+            {generateError && (
+              <p className="text-xs text-center" style={{ color: 'hsl(var(--destructive))' }}>
+                {generateError}
+              </p>
+            )}
+          </div>
         </div>
       </>
     )
@@ -298,8 +337,9 @@ export default function BaziReadingView({
                 {t('reading.mismatchContinue')}
               </button>
               <button
-                onClick={handleGenerate}
-                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                onClick={handleMismatchRegenerate}
+                disabled={submitting}
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
                 style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
               >
                 {t('reading.mismatchRegenerate')}
@@ -311,7 +351,7 @@ export default function BaziReadingView({
 
       <div className="max-w-2xl mx-auto px-4 pt-20 pb-16">
 
-        {hasAnyTheme && (
+        {isDone && (
           <div className="fixed right-6 top-16 z-40">
             <div className="relative">
               <button
@@ -390,30 +430,28 @@ export default function BaziReadingView({
           })()}
         </div>
 
-        {data.ai_reading_theme1 && (
-          <section>
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <h2 className="font-medium tracking-widest" style={{ fontSize: '28px' }}>{t('reading.sectionTitle1')}</h2>
-                {dayStemZH && (
-                  <p className="text-xs text-muted-foreground mt-1">{t('daymaster')}：{dayStemZH}</p>
-                )}
-              </div>
-              {calculationResult && (
-                <div className="flex-shrink-0">
-                  <BaziOverviewChart calculationResult={calculationResult} />
-                </div>
+        <section>
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <h2 className="font-medium tracking-widest" style={{ fontSize: '28px' }}>{t('reading.sectionTitle1')}</h2>
+              {dayStemZH && (
+                <p className="text-xs text-muted-foreground mt-1">{t('daymaster')}：{dayStemZH}</p>
               )}
             </div>
-            <Theme1 data={data.ai_reading_theme1} />
-          </section>
-        )}
+            {calculationResult && (
+              <div className="flex-shrink-0">
+                <BaziOverviewChart calculationResult={calculationResult} />
+              </div>
+            )}
+          </div>
+          {data.ai_reading_theme1 ? <Theme1 data={data.ai_reading_theme1} /> : <Theme1Skeleton />}
+        </section>
 
         <SectionGap />
 
-        {data.ai_reading_theme2 && (
-          <section>
-            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle2')}</h2>
+        <section>
+          <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle2')}</h2>
+          {data.ai_reading_theme2 ? (
             <Theme2
               data={data.ai_reading_theme2}
               shishenMetadata={shishenMetadata}
@@ -421,33 +459,24 @@ export default function BaziReadingView({
               calculationResult={calculationResult}
               getShishenInfo={getShishenInfo}
             />
-          </section>
-        )}
+          ) : <MultiBlockSkeleton blocks={3} />}
+        </section>
 
         <SectionGap />
 
-        {data.ai_reading_theme3 && (
-          <section>
-            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle3')}</h2>
-            <Theme3 data={data.ai_reading_theme3} />
-          </section>
-        )}
+        <section>
+          <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle3')}</h2>
+          {data.ai_reading_theme3 ? <Theme3 data={data.ai_reading_theme3} /> : <MultiBlockSkeleton blocks={3} />}
+        </section>
 
         <SectionGap />
 
-        {data.ai_reading_theme4 && (
-          <section>
-            <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle4')}</h2>
-            <Theme4 data={data.ai_reading_theme4} />
-          </section>
-        )}
+        <section>
+          <h2 className="font-medium tracking-widest mb-8" style={{ fontSize: '28px' }}>{t('reading.sectionTitle4')}</h2>
+          {data.ai_reading_theme4 ? <Theme4 data={data.ai_reading_theme4} /> : <Theme4Skeleton />}
+        </section>
 
-        {generating && (
-          <p className="text-sm text-muted-foreground text-center mt-8">
-            {t('reading.generating')}
-          </p>
-        )}
-        {!generating && generateError && (
+        {generateError && (
           <p className="text-sm text-center mt-8" style={{ color: 'hsl(var(--destructive))' }}>
             {generateError}
           </p>

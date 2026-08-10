@@ -49,6 +49,7 @@ export default async function BaziReadingPage({ params, searchParams }: Props) {
           ai_reading_theme2: null,
           ai_reading_theme3: null,
           ai_reading_theme4: null,
+          ai_reading_status: null,
         }}
       />
     )
@@ -56,11 +57,15 @@ export default async function BaziReadingPage({ params, searchParams }: Props) {
 
   // 读取报告——calculation_result 是报告自留的命盘快照，生成那一刻就钉死了，
   // 之后渲染图表只读这一份，不再依赖 bazi_snapshots/profiles 是否还存在。
+  // deleted_at 非空代表已经软删除（用户手动删除，或系统失败退款后自动软删除）——
+  // 一旦软删除，这条记录对用户来说就该完全消失，直接当成"这个reading不存在"处理，
+  // 不能让骨架屏永远转下去（软删除的记录不会再有任何Edge Function继续写它）。
   const { data: reading } = await supabase
     .from('bazi_readings')
     .select('id, profile_id, birth_date, birth_time, birth_lat, birth_lng, ai_reading_theme1, ai_reading_theme2, ai_reading_theme3, ai_reading_theme4, ai_reading_status, calculation_result')
     .eq('id', readingId)
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (!reading) redirect(`/${locale}/dashboard/assessments/bazi`)
@@ -118,6 +123,7 @@ export default async function BaziReadingPage({ params, searchParams }: Props) {
         ai_reading_theme2: reading.ai_reading_theme2,
         ai_reading_theme3: reading.ai_reading_theme3,
         ai_reading_theme4: reading.ai_reading_theme4,
+        ai_reading_status: reading.ai_reading_status,
       }}
     />
   )

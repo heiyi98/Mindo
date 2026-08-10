@@ -108,11 +108,15 @@ export function createSupabaseBaziRepository(
     },
 
     async deleteReading(readingId, userId) {
-      await adminClient
+      const { data } = await adminClient
         .from('bazi_readings')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', readingId)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .select('id')
+        .maybeSingle();
+      return data as { id: string } | null;
     },
 
     async getSnapshotForDashboard(profileId) {

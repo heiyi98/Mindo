@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
-import { FileText } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { FileText, Trash2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PendingAssetsTab from '@/components/payments/PendingAssetsTab';
 
 interface Asset {
@@ -25,6 +25,7 @@ export default function AssetsPage() {
   const t = useTranslations('account.assets');
   const tAssets = useTranslations('assets');
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('purchased');
   const { data, isLoading: loading } = useQuery({
     queryKey: ['account-assets'],
@@ -38,6 +39,23 @@ export default function AssetsPage() {
 
   const handleAssetClick = (asset: Asset) => {
     router.push(`/dashboard/assessments/bazi/reading?readingId=${asset.id}`);
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/ai/reading/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete reading');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['account-assets'] });
+    },
+  });
+
+  const handleDeleteClick = (e: React.MouseEvent, asset: Asset) => {
+    e.stopPropagation();
+    if (window.confirm(t('deleteConfirm'))) {
+      deleteMutation.mutate(asset.id);
+    }
   };
 
   return (
@@ -135,11 +153,25 @@ export default function AssetsPage() {
                   </div>
                 )}
               </div>
-              <div
-                className="text-xs flex-shrink-0 mt-0.5"
-                style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
-              >
-                {new Date(asset.created_at).toLocaleDateString()}
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <div
+                  className="text-xs mt-0.5"
+                  style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
+                >
+                  {new Date(asset.created_at).toLocaleDateString()}
+                </div>
+                {asset.type === 'bazi' && (
+                  <button
+                    type="button"
+                    aria-label={t('delete')}
+                    onClick={(e) => handleDeleteClick(e, asset)}
+                    disabled={deleteMutation.isPending}
+                    className="p-1 rounded-lg hover:opacity-70 transition-opacity disabled:opacity-40"
+                    style={{ color: 'hsl(var(--muted-foreground) / 0.5)' }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

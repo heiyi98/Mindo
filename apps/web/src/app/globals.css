@@ -126,3 +126,25 @@
     animation: none !important;
   }
 }
+
+/* 八字报告生成中的骨架屏——横向光泽扫过，颜色跟随明暗主题（引用--muted变量，不写死颜色） */
+@keyframes skeletonShimmer {
+  0% { background-position: -150% 0; }
+  100% { background-position: 150% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.15) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+}

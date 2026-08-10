@@ -220,6 +220,8 @@
       "title": "My Assets",
       "empty": "No purchased reports yet.",
       "basedOn": "Based on",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this report? This cannot be undone.",
       "types": {
         "bazi": "Four Pillars Reading",
         "ziwei": "Purple Star Astrology",
