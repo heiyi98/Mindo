@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { callGeminiOnce, handleGenerationFailure } from "../_shared/generationError.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -293,45 +294,6 @@ const PHASE1_SYSTEM_PROMPT = `将结构化命理数据转化为人格报告分�
 
 }`;
 
-async function callGeminiWithRetry(prompt: string, userMessage: string, apiKey: string): Promise<string> {
-  const delays = [10000, 20000, 30000];
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: prompt }] },
-            contents: [{ role: "user", parts: [{ text: userMessage }] }],
-            generationConfig: { temperature: 1.0 },
-          }),
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-        throw new Error("Gemini返回内容为空");
-      }
-      const errText = await response.text();
-      if ((response.status === 503 || response.status === 429) && attempt < delays.length) {
-        await new Promise(r => setTimeout(r, delays[attempt]));
-        continue;
-      }
-      throw new Error(`Gemini API错误 ${response.status}: ${errText}`);
-    } catch (e) {
-      if (attempt < delays.length) {
-        await new Promise(r => setTimeout(r, delays[attempt]));
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new Error("Gemini重试次数耗尽");
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
@@ -375,9 +337,11 @@ Deno.serve(async (req) => {
       }
 
       if (!existingReading?.ai_reading_draft) {
-        await supabase.from("bazi_readings").update({ ai_reading_status: "phase1" }).eq("id", readingId);
-        // Phase 1 永远用中文分析
-        const text = await callGeminiWithRetry(PHASE1_SYSTEM_PROMPT, dataSheet, geminiApiKey);
+        await supabase.from("bazi_readings")
+          .update({ ai_reading_status: "phase1", last_attempt_at: new Date().toISOString() })
+          .eq("id", readingId);
+        // Phase 1 永远用中文分析，只尝试一次，失败交给分类处理+定时任务重试
+        const text = await callGeminiOnce(PHASE1_SYSTEM_PROMPT, dataSheet, geminiApiKey);
         let cleanText = text.trim();
         const s = cleanText.indexOf('{'), e = cleanText.lastIndexOf('}');
         if (s !== -1 && e !== -1) cleanText = cleanText.substring(s, e + 1);
@@ -396,8 +360,7 @@ Deno.serve(async (req) => {
       });
 
     } catch (error) {
-      console.error(`[${readingId}] Phase 1 失败:`, error);
-      await supabase.from("bazi_readings").update({ ai_reading_status: "failed_phase1" }).eq("id", readingId);
+      await handleGenerationFailure(supabase, readingId, "Phase 1", error);
     }
   })());
 

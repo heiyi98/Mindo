@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { callGeminiOnce, DataMissingError, handleGenerationFailure } from "../_shared/generationError.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -88,45 +89,6 @@ function getPrompt(locale: string): string {
   return PROMPT_ZH;
 }
 
-async function callGemini(prompt: string, userMessage: string, apiKey: string): Promise<string> {
-  const delays = [10000, 20000, 30000];
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: prompt }] },
-            contents: [{ role: "user", parts: [{ text: userMessage }] }],
-            generationConfig: { temperature: 1.0 },
-          }),
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-        throw new Error("Gemini returned empty content");
-      }
-      const errText = await response.text();
-      if ((response.status === 503 || response.status === 429) && attempt < delays.length) {
-        await new Promise(r => setTimeout(r, delays[attempt]));
-        continue;
-      }
-      throw new Error(`Gemini API error ${response.status}: ${errText}`);
-    } catch (e) {
-      if (attempt < delays.length) {
-        await new Promise(r => setTimeout(r, delays[attempt]));
-        continue;
-      }
-      throw e;
-    }
-  }
-  throw new Error("Gemini max retries exceeded");
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
@@ -159,14 +121,18 @@ Deno.serve(async (req) => {
         return;
       }
 
-      if (!existing?.ai_reading_draft) throw new Error("Draft missing");
-      if (!existing?.ai_reading_theme1) throw new Error("Theme 1 missing");
-      if (!existing?.ai_reading_theme2) throw new Error("Theme 2 missing");
-      if (!existing?.ai_reading_theme3) throw new Error("Theme 3 missing");
+      if (!existing?.ai_reading_draft) throw new DataMissingError("Draft missing");
+      if (!existing?.ai_reading_theme1) throw new DataMissingError("Theme 1 missing");
+      if (!existing?.ai_reading_theme2) throw new DataMissingError("Theme 2 missing");
+      if (!existing?.ai_reading_theme3) throw new DataMissingError("Theme 3 missing");
+
+      await supabase.from("bazi_readings")
+        .update({ last_attempt_at: new Date().toISOString() })
+        .eq("id", readingId);
 
       const prompt = getPrompt(locale);
       const userMessage = `Full draft JSON:\n${JSON.stringify(existing.ai_reading_draft)}\n\nRendered Theme 1:\n${JSON.stringify(existing.ai_reading_theme1)}\n\nRendered Theme 2:\n${JSON.stringify(existing.ai_reading_theme2)}\n\nRendered Theme 3:\n${JSON.stringify(existing.ai_reading_theme3)}\n\nInstruction: Render Theme 4 only. Return JSON only.`;
-      const text = await callGemini(prompt, userMessage, geminiApiKey);
+      const text = await callGeminiOnce(prompt, userMessage, geminiApiKey);
 
       let cleanText = text.trim();
       const s = cleanText.indexOf("{"), e = cleanText.lastIndexOf("}");
@@ -186,8 +152,7 @@ Deno.serve(async (req) => {
       await supabase.from("bazi_readings").update({ ai_reading_theme4: result, ai_reading_status: "done" }).eq("id", readingId);
       console.log(`[${readingId}] Theme 4 done. Report complete.`);
     } catch (error) {
-      console.error(`[${readingId}] Theme 4 failed:`, error);
-      await supabase.from("bazi_readings").update({ ai_reading_status: "failed_theme4" }).eq("id", readingId);
+      await handleGenerationFailure(supabase, readingId, "Theme 4", error);
     }
   })());
 
