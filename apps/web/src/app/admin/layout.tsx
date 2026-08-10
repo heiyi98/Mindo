@@ -6,6 +6,7 @@ const NAV = [
   { href: '/admin/prices', label: '价目表' },
   { href: '/admin/rates', label: '充值套餐' },
   { href: '/admin/users', label: '用户账本查询' },
+  { href: '/admin/alerts', label: '重试警报' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

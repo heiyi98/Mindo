@@ -7,8 +7,10 @@ import type {
   LatestReadingSummary,
   LifeTimelineRow,
   ProfileBirthInfo,
+  ReadingDiagnostics,
   SnapshotForDashboard,
   StuckReadingRow,
+  SystemAlertRow,
 } from './interface';
 
 function toDbError(error: { message: string; code?: string } | null): DbError | null {
@@ -182,6 +184,33 @@ export function createSupabaseBaziRepository(
         .limit(1)
         .maybeSingle();
       return data as LatestReadingSummary | null;
+    },
+
+    async listUnresolvedAlerts() {
+      const { data } = await adminClient
+        .from('system_alerts')
+        .select('id, reading_id, alert_type, message, created_at')
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as SystemAlertRow[];
+    },
+
+    async resolveAlert(alertId) {
+      await adminClient
+        .from('system_alerts')
+        .update({ resolved_at: new Date().toISOString() })
+        .eq('id', alertId);
+    },
+
+    async getReadingDiagnostics(readingId) {
+      const { data } = await adminClient
+        .from('bazi_readings')
+        .select(
+          'id, user_id, profile_id, ai_reading_status, retry_count, content_policy_retry_count, first_attempt_at, last_attempt_at, alert_status, charge_type, charge_wallet_amount, charge_voucher_id, charge_refunded_at, deleted_at, created_at'
+        )
+        .eq('id', readingId)
+        .maybeSingle();
+      return data as ReadingDiagnostics | null;
     },
   };
 }

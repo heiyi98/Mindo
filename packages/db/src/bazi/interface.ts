@@ -70,6 +70,32 @@ export interface LatestReadingSummary {
   ai_reading_status: string | null;
 }
 
+export interface SystemAlertRow {
+  id: string;
+  reading_id: string | null;
+  alert_type: string;
+  message: string | null;
+  created_at: string;
+}
+
+export interface ReadingDiagnostics {
+  id: string;
+  user_id: string;
+  profile_id: string | null;
+  ai_reading_status: string | null;
+  retry_count: number;
+  content_policy_retry_count: number;
+  first_attempt_at: string;
+  last_attempt_at: string;
+  alert_status: string | null;
+  charge_type: 'wallet' | 'voucher' | null;
+  charge_wallet_amount: number;
+  charge_voucher_id: string | null;
+  charge_refunded_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+}
+
 /**
  * 八字报告生成链路的数据操作契约。扣款/退款/凭证核销不在这里重复定义——
  * 直接复用 PaymentsRepository（见 @mindo/db 的 payments 部分）和
@@ -100,4 +126,9 @@ export interface BaziRepository {
     profileId: string; userId: string; baselineImbalance: number; baselineEnergies: unknown; years: unknown;
   }): Promise<void>;
   getLatestReadingSummary(profileId: string): Promise<LatestReadingSummary | null>;
+
+  // /admin/alerts 后台警报列表
+  listUnresolvedAlerts(): Promise<SystemAlertRow[]>;
+  resolveAlert(alertId: string): Promise<void>;
+  getReadingDiagnostics(readingId: string): Promise<ReadingDiagnostics | null>;
 }
