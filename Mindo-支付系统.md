@@ -175,6 +175,15 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 **2026-08-10 更新**：八字AI报告的5个Edge Function（`generate-phase1`/`theme1`/`theme2`/`theme3`/`theme4`）已用`supabase functions download`拉进本仓库（`supabase/functions/`），不再是"看不到真实代码"的黑盒，以后touch这部分直接在仓库里改、`supabase functions deploy`部署即可，不用再去Supabase控制台改。这次同时验证了`reading-recovery`重试时传给`generate-themeN`的payload字段名确实是`{ readingId, locale }`，之前"未经真实验证"的疑虑已解除。
 
+**2026-08-11 · 真实资金损失事故排查**：用户报告两处线上问题，用`supabase db query --linked`直连生产库诊断（`cron.job`/`cron.job_run_details`/`net._http_response`这几张表记录了pg_cron的实际执行历史和每次HTTP调用的真实响应，比看代码逻辑更可靠，以后排查cron相关问题应该优先查这几张表）：
+
+1. **定时重试从上线起就没有真正跑起来过**：`net._http_response`显示`bazi-reading-recovery`这个cron一直在按2分钟一次正常触发，但每次都收到Vercel返回的`404 DEPLOYMENT_NOT_FOUND`——8月11日Vercel项目别名从`mindo-web.vercel.app`改成`mindo-gold.vercel.app`（见CLAUDE.md"关键教训"）之后，cron的`command`里硬编码的URL没跟着改，一直打向已经不存在部署的旧域名。另外顺带发现即使域名对了也会因为cron用`net.http_post`而`/api/cron/reading-recovery/route.ts`只导出GET handler（405）而失败，这个bug从上线起就存在、因为域名问题从未被真实流量触发过所以没暴露。两个问题一起用`supabase/migrations/20260811000100_fix_reading_recovery_cron_url.sql`修掉（`ALTER JOB`改成`mindo-gold.vercel.app` + `net.http_get`），修复后`net._http_response`连续多次返回200，cron正常工作
+2. **手动删除接口能绕过退款逻辑**：`DELETE /api/ai/reading/[id]`（用户报告页/资产页点"删除报告"触发）此前对任意状态的报告都直接软删除，没有判断报告是否已经生成完成（`ai_reading_status='done'`）。报告卡在生成中时如果用户手动点了删除，`deleted_at`会被设置但完全不会触发`refundWallet`/`restoreVoucherUse`，退款只有走`reading-recovery`定时任务判定彻底失败时才会发生——这是两条完全独立的代码路径，不是同一次原子操作里出了错。已修复：`deleteReading`现在先查`ai_reading_status`，非`done`直接返回`'not_done'`让接口回409，报告页/资产页的删除按钮同步只在`done`状态显示，把"删除"这个动作彻底限制在"已经不涉及任何在途扣款"的状态
+3. **实际核实结果**：`wallet_transactions`/`service_coverage_vouchers`直查确认——用户损失的1张凭证`e3873516-...`（被两次生成占用又释放，`remaining_uses`已恢复）和60虚拟币（`wallet_transactions`里能看到完整的`ai_generation`扣款和`refund`补回配对，`balance_after`前后一致）在这次排查发起前就已经被系统自身的重试引擎（走的是真实的`refundWallet`/`markReadingFailedPermanent`函数，不是手工改数字）正确退回，全库扫描`deleted_at IS NOT NULL AND charge_type IS NOT NULL AND charge_refunded_at IS NULL`确认没有其余记录存在同样问题
+4. **Gemini调用超时40秒→100秒**：`generationError.ts`的`callGeminiOnce`只有一处超时常量，5个Edge Function共用，不是分散在各文件各写一份。Supabase免费版Edge Function总时长上限150秒，40秒对正常但耗时较长的请求偏保守，容易把"还没失败只是慢"的请求提前打成超时失败，改成100秒，留约50秒给读取数据/解析/写库
+
+以上代码改动+迁移文件已提交并推送到GitHub（`58a5f62`），Vercel已完成新部署且`mindo-gold.vercel.app`别名已指向新部署，Edge Function改动也已通过`supabase functions deploy`确认线上生效（5个函数`updated_at`一致，下载下来的代码确认是100秒版本）。
+
 ### `reading-recovery` cron（`/api/cron/reading-recovery`）——修过两个既有bug（历史记录）
 
 修之前这个cron查询的是`bazi_snapshots`表的`ai_reading_status`等字段，但这些字段在`bazi_snapshots`上早就是迁移后的死字段（真正状态在`bazi_readings`上），也就是说**这个cron过去实际上从未找到过真正卡住的任务**。已改为查`bazi_readings`。
@@ -278,8 +287,7 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 - [ ] Lemon Squeezy的`/api/payments/checkout`、`/api/payments/webhook`当前会直接报错（依赖表已删），用户决定暂时保留、以后再单独决定去留
 - [ ] `service_prices`里`bazi_report`的价格是不是已经是真实价格了，去`/admin/prices`确认一下（排查过程中发现被改成了5，不确定是不是有意调的测试值）
 - [ ] `notifyAdminAlert`（`supabase/functions/_shared/alerts.ts`）目前只打日志，没有真正接入邮件服务，管理员需要主动去`/admin/alerts`看才知道有警报
-- [ ] 2026-08-10施工时发现生产域名`mindo-web.vercel.app`当前返回`DEPLOYMENT_NOT_FOUND`（用pg_net手动触发cron实测确认），也就是说这个域名下目前没有正常的Vercel部署——pg_cron/Edge Function/数据库这几块都已经就位并验证过，但只要这个部署问题不解决，`reading-recovery`就没有真正能打到的目标，需要单独确认Vercel那边的部署状态
-- [ ] 本次重试引擎重构（三分类失败处理/骨架屏/软删除）的完整端到端流程——真实发起生成、中途刷新页面确认骨架屏、故意改错API key触发告警、删除报告确认档案恢复——受限于当时没有可用的线上部署，只做到了代码审查+类型检查+Edge Function部署后的启动检查（确认能正常响应请求），没有跑一次真实的生成流程。建议部署恢复后找机会走一遍这几个场景
+- [ ] 本次重试引擎重构（三分类失败处理/骨架屏/软删除）的完整端到端流程——真实发起生成、中途刷新页面确认骨架屏、故意改错API key触发告警——仍未做过真实的正向生成流程测试，只验证过失败/退款分支（见下方2026-08-11排查记录）。建议找机会走一遍正向生成场景
 - [ ] 充值套餐（`wallet_topup_tiers`/`wallet_topup_tier_prices`）目前只有后台维护界面，还没有真实支付渠道能触发充值——现阶段只能靠兑换码入账，也还没有前台充值页面（本轮要求只做对后台，不需要另建前台充值页）
 - [ ] `payment`翻译命名空间目前只有en/zh/zh-Hant/fr四种语言完整，de/es/ja/ko/it缺失（含`voucher`/`redeem`/`walletUnit`），这是延续已有的缺口，不是本次新引入的
 - [ ] 新增的`assets`翻译模块目录目前只有en/zh两种语言，其余7种待补齐（按施工说明文档的要求，不阻塞本次完成）
