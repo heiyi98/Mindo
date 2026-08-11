@@ -313,10 +313,10 @@
     "readingUnlocked": "AI Reading Unlocked",
     "loading": "Loading...",
     "voucher": {
-      "none": "Don't use a voucher, pay with wallet balance",
-      "full": "Free voucher ({issuer})",
-      "percentage": "{issuer} · {value}% off",
-      "fixedAmount": "{issuer} · {value} {unit} off"
+      "coverageFull": "Full coverage",
+      "coveragePercentage": "{value}% off",
+      "coverageFixedAmount": "{value} {unit} off",
+      "remainingUses": "{count} left"
     },
     "redeem": {
       "entry": "Redeem Code",

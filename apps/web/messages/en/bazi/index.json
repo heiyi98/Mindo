@@ -44,6 +44,15 @@
   },
   "reading": {
     "priceLabel": "{price} {unit}",
+    "generatingBanner": "This usually takes 3–15 minutes. Feel free to leave — come back later and it'll be ready.",
+    "confirmModal": {
+      "title": "Generate this reading?",
+      "eta": "This usually takes 3–15 minutes. Come back later and it'll be ready.",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "started": "Generation has started. Come back later and it'll be ready.",
+      "ok": "OK"
+    },
     "errors": {
       "insufficientBalance": "Insufficient balance. Please top up or use a redemption code.",
       "voucherUnavailable": "The selected voucher is no longer available. Please choose another.",

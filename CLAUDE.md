@@ -351,5 +351,6 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - [ ] 阶段二数据库访问层拆分时，`[locale]/dashboard/assessments/bazi/reading/page.tsx` 和 `[locale]/page.tsx`（落地页）这两个服务端页面里的`supabase.auth.getUser()`没有跟着收口进`requireApiUser()`——它们各自有自定义的重定向逻辑（前者未登录跳`/auth/login`而不是`requireAuth()`默认的`/`；后者要在有session时额外判断有没有档案再决定跳仪表盘还是onboarding），强行统一会改变现有行为，故意留下没动
 - [ ] 中国版数据库实现（阿里云）：`packages/db`里每个模块的`aliyunRepository.ts`还没写，等阿里云那边的连接信息定下来再实现，实现完只需要改`apps/web-cn`各模块的`lib/{module}/adminClient.ts`指向新工厂函数，不用碰接口定义和业务代码
 - [ ] 邮件通知服务尚未接入，`notifyAdminAlert`（`supabase/functions/_shared/alerts.ts`）目前只打日志，管理员需要主动去`/admin/alerts`查看重试引擎的警报，详见 `Mindo-支付系统.md`
+- [ ] 八字报告弹窗式生成流程里"生成完成后回来看就有了"这类文案，刻意没有承诺"会主动通知你"（站内消息中心还没做）——消息中心做出来后要回来把这几处文案换成真正的通知承诺，详见 `Mindo-支付系统.md` 第十节
 - [ ] 2026-08-10施工时发现生产域名`mindo-web.vercel.app`当前返回`DEPLOYMENT_NOT_FOUND`（无正常部署），八字重试引擎相关的cron/Edge Function虽已就位并验证过网络链路，但要等这个部署问题解决才能真正跑起来，且完整端到端流程（真实生成/骨架屏/告警/删除报告）当时未能实测，详见 `Mindo-支付系统.md`
 - [ ] `apps/web-cn`是独立git仓库，本次八字重试引擎重构（Edge Function/route.ts/packages/db/BaziReadingView.tsx等）只改了`apps/web`这一侧，`apps/web-cn`如果需要保持同步，需要另外手动同步过去

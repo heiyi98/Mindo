@@ -13,6 +13,7 @@ import { usePdfExport } from '@/hooks/usePdfExport'
 import { SHISHEN_ZH_TO_KEY, SCENE_ZH_TO_KEY, formatRelationLine, formatGanZhiRelation } from '@/lib/bazi/relationsFormat'
 import type { ShishenRelations, ShishenNodeRelation, GanZhiRelation } from '@/lib/bazi/reportRelations'
 import VoucherSelector from '@/components/payments/VoucherSelector'
+import VoucherCard, { type Voucher } from '@/components/payments/VoucherCard'
 
 interface ThemeData {
   ai_reading_theme1: any | null
@@ -58,15 +59,29 @@ export default function BaziReadingView({
   const router = useRouter()
   const { resolvedTheme } = useTheme()
   const [data, setData] = useState<ThemeData>(initialData)
+  // 弹窗式生成流程成功后不用router.push触发整页刷新，改成本地状态更新
+  // readingId——初始值仍然来自服务端传入的prop，往后这个组件自己接管
+  const [localReadingId, setLocalReadingId] = useState<string | null>(readingId)
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [showMismatch, setShowMismatch] = useState(birthMismatch)
   const [voucherId, setVoucherId] = useState<string | null>(null)
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null)
   const [price, setPrice] = useState<number | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
+  // 生成确认弹窗：null=不显示；confirm=确认页；loading=请求中；
+  // success=已提交但还没关闭弹窗；error=失败提示
+  const [modalStage, setModalStage] = useState<'confirm' | 'loading' | 'success' | 'error' | null>(null)
+  const [modalErrorText, setModalErrorText] = useState<string | null>(null)
+  const [pendingReadingId, setPendingReadingId] = useState<string | null>(null)
   const tPayment = useTranslations('payment')
+
+  const handleVoucherChange = (voucher: Voucher | null) => {
+    setSelectedVoucher(voucher)
+    setVoucherId(voucher?.id ?? null)
+  }
 
   const overviewRef = useRef<HTMLDivElement>(null)
   const shishenRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -150,33 +165,32 @@ export default function BaziReadingView({
 
   useEffect(() => {
     // 还没生成过报告时readingId是null，没有行可订阅，不建立realtime连接
-    if (!readingId) return
+    if (!localReadingId) return
     const supabase = createClient()
     const channel = supabase
-      .channel(`reading-${readingId}`)
+      .channel(`reading-${localReadingId}`)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public',
-        table: 'bazi_readings', filter: `id=eq.${readingId}`,
+        table: 'bazi_readings', filter: `id=eq.${localReadingId}`,
       }, (payload) => {
         setData(prev => ({ ...prev, ...payload.new }))
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [readingId])
+  }, [localReadingId])
 
   useEffect(() => {
     // 只有还没生成过报告时才需要展示价格
-    if (readingId) return
+    if (localReadingId) return
     fetch('/api/payments/price?service_type=bazi_report')
       .then(r => r.json())
       .then(d => { if (typeof d.price === 'number') setPrice(d.price) })
       .catch(() => {})
-  }, [readingId])
+  }, [localReadingId])
 
-  const handleGenerate = async () => {
-    setSubmitting(true)
-    setShowMismatch(false)
-    setGenerateError(null)
+  // 只负责发起生成请求本身，不做任何页面/弹窗状态变更——由各个调用方
+  // （确认弹窗流程 / 出生信息不符重新生成）各自决定拿到结果后怎么办
+  const submitGenerate = async (): Promise<{ readingId: string } | { errorMessage: string }> => {
     try {
       const res = await fetch('/api/ai/reading', {
         method: 'POST',
@@ -184,41 +198,85 @@ export default function BaziReadingView({
         body: JSON.stringify({ snapshotId, locale, voucherId }),
       })
       const d = await res.json()
-      if (res.ok && d.readingId) {
-        router.push(`/dashboard/assessments/bazi/reading?readingId=${d.readingId}`)
-        return
-      }
+      if (res.ok && d.readingId) return { readingId: d.readingId }
       // 非2xx（余额不足/凭证不可用/价格未配置/建记录失败等）都要落到这里给出提示，
-      // 不能什么都不做——之前只判断了d.readingId存在与否，失败时页面会一直停在
-      // "生成中"，什么反馈都没有
+      // 不能什么都不做
       const errorMap: Record<string, string> = {
         insufficient_balance: t('reading.errors.insufficientBalance'),
         voucher_unavailable: t('reading.errors.voucherUnavailable'),
       }
-      setGenerateError(errorMap[d.code] ?? d.error ?? t('reading.errors.generic'))
-      setSubmitting(false)
+      return { errorMessage: errorMap[d.code] ?? d.error ?? t('reading.errors.generic') }
     } catch (err) {
       console.error(err)
-      setGenerateError(t('reading.errors.generic'))
-      setSubmitting(false)
+      return { errorMessage: t('reading.errors.generic') }
     }
+  }
+
+  // 点"生成报告"按钮：打开确认弹窗，还没真正发起请求
+  const openGenerateConfirm = () => {
+    setGenerateError(null)
+    setModalErrorText(null)
+    setModalStage('confirm')
+  }
+
+  // 弹窗里点"确认生成"：弹窗切换成加载态，请求结束后切到成功/失败态，
+  // 弹窗本身在这一步不关闭
+  const performGenerate = async () => {
+    setModalStage('loading')
+    const result = await submitGenerate()
+    if ('readingId' in result) {
+      setPendingReadingId(result.readingId)
+      setModalStage('success')
+    } else {
+      setModalErrorText(result.errorMessage)
+      setModalStage('error')
+    }
+  }
+
+  // 成功提示弹窗点"好的"：这一步才真正把readingId/生成状态写进页面本地状态，
+  // 触发状态驱动骨架屏——不用router.push，不整页刷新
+  const closeSuccessModal = () => {
+    if (pendingReadingId) {
+      setLocalReadingId(pendingReadingId)
+      setData(prev => ({ ...prev, ai_reading_status: 'generating' }))
+    }
+    setPendingReadingId(null)
+    setModalStage(null)
+  }
+
+  const closeConfirmModal = () => setModalStage(null)
+
+  const closeErrorModal = () => {
+    setModalStage(null)
+    setModalErrorText(null)
   }
 
   // 出生信息变更后的"重新生成"：档案隔离机制现在会拒绝对已有报告的档案重复生成，
-  // 所以这里必须先删除这条已经过时的旧报告，再走一次普通的生成流程。
+  // 所以这里必须先删除这条已经过时的旧报告，再走一次普通的生成流程。这里点"重新生成"
+  // 本身就是确认动作，不需要再叠一层确认弹窗。
   const handleMismatchRegenerate = async () => {
-    if (readingId) {
-      await fetch(`/api/ai/reading/${readingId}`, { method: 'DELETE' }).catch(() => {})
+    setSubmitting(true)
+    if (localReadingId) {
+      await fetch(`/api/ai/reading/${localReadingId}`, { method: 'DELETE' }).catch(() => {})
     }
-    await handleGenerate()
+    const result = await submitGenerate()
+    if ('readingId' in result) {
+      setLocalReadingId(result.readingId)
+      setData(prev => ({ ...prev, ai_reading_status: 'generating' }))
+      setShowMismatch(false)
+      setSubmitting(false)
+    } else {
+      setGenerateError(result.errorMessage)
+      setSubmitting(false)
+    }
   }
 
   const handleDelete = async () => {
-    if (!readingId) return
+    if (!localReadingId) return
     if (!window.confirm(t('reading.deleteConfirm'))) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/ai/reading/${readingId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/ai/reading/${localReadingId}`, { method: 'DELETE' })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.code === 'reading_not_done' ? 'not_done' : 'delete failed')
@@ -269,7 +327,7 @@ export default function BaziReadingView({
         <ChevronLeft size={20} />
       </button>
       <div className="flex items-center gap-2">
-        {readingId && isDone && (
+        {localReadingId && isDone && (
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -288,6 +346,17 @@ export default function BaziReadingView({
     return (
       <>
         <TopBar />
+        <GenerateConfirmModal
+          stage={modalStage}
+          errorText={modalErrorText}
+          price={price}
+          unit={tPayment('walletUnit')}
+          voucher={selectedVoucher}
+          onCancel={closeConfirmModal}
+          onConfirm={performGenerate}
+          onCloseSuccess={closeSuccessModal}
+          onCloseError={closeErrorModal}
+        />
         <div className="max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col items-center gap-6">
           <Sparkles size={32} className="text-muted-foreground" />
           <p className="text-sm text-muted-foreground text-center">
@@ -299,15 +368,14 @@ export default function BaziReadingView({
             </p>
           )}
           <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-            <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
+            <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={handleVoucherChange} />
             <button
-              onClick={handleGenerate}
-              disabled={submitting}
+              onClick={openGenerateConfirm}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-light disabled:opacity-50"
               style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
             >
               <Sparkles size={14} />
-              {submitting ? tCommon('loading') : t('reading.buyReading')}
+              {t('reading.buyReading')}
             </button>
             {generateError && (
               <p className="text-xs text-center" style={{ color: 'hsl(var(--destructive))' }}>
@@ -324,6 +392,17 @@ export default function BaziReadingView({
     <>
       <TopBar />
 
+      {!isDone && (
+        <div className="fixed top-14 left-0 right-0 z-40 flex justify-center px-4">
+          <p
+            className="text-xs px-3 py-1.5 rounded-full text-center"
+            style={{ color: 'hsl(var(--muted-foreground))', background: 'hsl(var(--background) / 0.92)' }}
+          >
+            {t('reading.generatingBanner')}
+          </p>
+        </div>
+      )}
+
       {showMismatch && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: 'rgba(0,0,0,0.4)' }}>
@@ -334,7 +413,7 @@ export default function BaziReadingView({
               {t('reading.mismatchDesc')}
             </p>
             <div className="mb-3">
-              <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={setVoucherId} />
+              <VoucherSelector serviceType="bazi_report" value={voucherId} onChange={handleVoucherChange} />
             </div>
             <div className="flex gap-3">
               <button
@@ -490,6 +569,105 @@ export default function BaziReadingView({
         )}
       </div>
     </>
+  )
+}
+
+function GenerateConfirmModal({
+  stage, errorText, price, unit, voucher, onCancel, onConfirm, onCloseSuccess, onCloseError,
+}: {
+  stage: 'confirm' | 'loading' | 'success' | 'error' | null
+  errorText: string | null
+  price: number | null
+  unit: string
+  voucher: Voucher | null
+  onCancel: () => void
+  onConfirm: () => void
+  onCloseSuccess: () => void
+  onCloseError: () => void
+}) {
+  const t = useTranslations('bazi')
+  const tCommon = useTranslations('common')
+
+  if (!stage) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.4)' }}>
+      <div className="rounded-2xl p-6 max-w-sm w-full shadow-xl"
+        style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}>
+
+        {stage === 'confirm' && (
+          <>
+            <p className="text-sm font-medium text-foreground mb-4">{t('reading.confirmModal.title')}</p>
+            {voucher ? (
+              <div className="mb-4">
+                <VoucherCard voucher={voucher} showServiceName={false} />
+              </div>
+            ) : price !== null ? (
+              <p className="text-sm mb-4" style={{ color: 'hsl(var(--foreground))' }}>
+                {t('reading.priceLabel', { price, unit })}
+              </p>
+            ) : null}
+            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
+              {t('reading.confirmModal.eta')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={onCancel}
+                className="flex-1 py-2 rounded-xl text-sm border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {t('reading.confirmModal.cancel')}
+              </button>
+              <button
+                onClick={onConfirm}
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+              >
+                {t('reading.confirmModal.confirm')}
+              </button>
+            </div>
+          </>
+        )}
+
+        {stage === 'loading' && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div
+              className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: 'hsl(var(--foreground) / 0.3)' }}
+            />
+            <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>
+          </div>
+        )}
+
+        {stage === 'success' && (
+          <>
+            <p className="text-sm text-foreground mb-6 leading-relaxed">{t('reading.confirmModal.started')}</p>
+            <button
+              onClick={onCloseSuccess}
+              className="w-full py-2 rounded-xl text-sm font-medium transition-colors"
+              style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              {t('reading.confirmModal.ok')}
+            </button>
+          </>
+        )}
+
+        {stage === 'error' && (
+          <>
+            <p className="text-sm mb-6 leading-relaxed" style={{ color: 'hsl(var(--destructive))' }}>
+              {errorText ?? t('reading.errors.generic')}
+            </p>
+            <button
+              onClick={onCloseError}
+              className="w-full py-2 rounded-xl text-sm font-medium transition-colors"
+              style={{ background: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              {t('reading.confirmModal.ok')}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 

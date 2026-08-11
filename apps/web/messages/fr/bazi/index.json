@@ -88,6 +88,16 @@
     "mismatchRegenerate": "Regénérer",
     "delete": "Supprimer le rapport",
     "deleteConfirm": "Supprimer ce rapport ? Cette action est irréversible ; le profil pourra ensuite en générer un nouveau.",
+    "priceLabel": "{price} {unit}",
+    "generatingBanner": "Cela prend généralement 3 à 15 minutes. Vous pouvez quitter la page — revenez plus tard, ce sera prêt.",
+    "confirmModal": {
+      "title": "Générer ce rapport ?",
+      "eta": "Cela prend généralement 3 à 15 minutes. Revenez plus tard, ce sera prêt.",
+      "cancel": "Annuler",
+      "confirm": "Confirmer",
+      "started": "La génération a commencé. Revenez plus tard, ce sera prêt.",
+      "ok": "OK"
+    },
     "errors": {
       "insufficientBalance": "Solde insuffisant. Veuillez recharger ou utiliser un code de réduction.",
       "voucherUnavailable": "Le bon sélectionné n'est plus disponible. Veuillez en choisir un autre.",

@@ -325,10 +325,10 @@
     "loading": "加载中...",
     "viewReading": "查看完整解读",
     "voucher": {
-      "none": "不使用凭证，直接用{unit}支付",
-      "full": "免费凭证（{issuer}）",
-      "percentage": "{issuer} · {value}% 折扣",
-      "fixedAmount": "{issuer} · 抵扣{value}{unit}"
+      "coverageFull": "全额抵扣",
+      "coveragePercentage": "{value}% 折扣",
+      "coverageFixedAmount": "抵扣 {value} {unit}",
+      "remainingUses": "剩余 {count} 次"
     },
     "redeem": {
       "entry": "输入兑换码",

@@ -12,10 +12,6 @@
   },
   "vouchers": {
     "title": "兑换券",
-    "empty": "暂无兑换券",
-    "coverageFull": "全额抵扣",
-    "coveragePercentage": "{value}% 折扣",
-    "coverageFixedAmount": "抵扣 {value} {unit}",
-    "remainingUses": "剩余 {count} 次"
+    "empty": "暂无兑换券"
   }
 }

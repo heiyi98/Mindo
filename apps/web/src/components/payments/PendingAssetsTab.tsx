@@ -3,16 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ticket } from 'lucide-react';
-import { getAssessmentByServiceType } from '@/config/assessments';
-
-interface Voucher {
-  id: string;
-  service_type: string;
-  coverage_type: 'full' | 'percentage' | 'fixed_amount';
-  coverage_value: number;
-  remaining_uses: number;
-}
+import VoucherCard, { type Voucher } from './VoucherCard';
 
 interface AssetsData {
   balance: number;
@@ -22,7 +13,6 @@ interface AssetsData {
 
 export default function PendingAssetsTab() {
   const t = useTranslations('assets');
-  const tAssessments = useTranslations('assessments');
   const tRedeem = useTranslations('payment.redeem');
   const tPayment = useTranslations('payment');
   const unit = tPayment('walletUnit');
@@ -69,12 +59,6 @@ export default function PendingAssetsTab() {
     } finally {
       setRedeeming(false);
     }
-  };
-
-  const describeCoverage = (v: Voucher) => {
-    if (v.coverage_type === 'full') return t('vouchers.coverageFull');
-    if (v.coverage_type === 'percentage') return t('vouchers.coveragePercentage', { value: v.coverage_value });
-    return t('vouchers.coverageFixedAmount', { value: v.coverage_value, unit });
   };
 
   if (isLoading) {
@@ -131,26 +115,9 @@ export default function PendingAssetsTab() {
           </p>
         ) : (
           <div className="space-y-2">
-            {vouchers.map((v) => {
-              const assessment = getAssessmentByServiceType(v.service_type);
-              return (
-                <div
-                  key={v.id}
-                  className="rounded-2xl p-4 flex items-center gap-3"
-                  style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                >
-                  <Ticket size={16} style={{ color: 'hsl(var(--muted-foreground))' }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-light" style={{ color: 'hsl(var(--foreground))' }}>
-                      {assessment ? tAssessments(`${assessment.id}.name`) : v.service_type}
-                    </p>
-                    <p className="text-xs font-light" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                      {describeCoverage(v)} · {t('vouchers.remainingUses', { count: v.remaining_uses })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            {vouchers.map((v) => (
+              <VoucherCard key={v.id} voucher={v} />
+            ))}
           </div>
         )}
       </div>

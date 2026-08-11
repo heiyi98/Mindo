@@ -12,10 +12,6 @@
   },
   "vouchers": {
     "title": "Vouchers",
-    "empty": "No vouchers yet",
-    "coverageFull": "Full coverage",
-    "coveragePercentage": "{value}% off",
-    "coverageFixedAmount": "{value} {unit} off",
-    "remainingUses": "{count} left"
+    "empty": "No vouchers yet"
   }
 }

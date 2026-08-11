@@ -308,10 +308,10 @@
     "readingUnlocked": "AI解读已解锁",
     "loading": "加载中...",
     "voucher": {
-      "none": "不使用憑證，直接用{unit}支付",
-      "full": "免費憑證（{issuer}）",
-      "percentage": "{issuer} · {value}% 折扣",
-      "fixedAmount": "{issuer} · 抵扣{value}{unit}"
+      "coverageFull": "全額抵扣",
+      "coveragePercentage": "{value}% 折扣",
+      "coverageFixedAmount": "抵扣 {value} {unit}",
+      "remainingUses": "剩餘 {count} 次"
     },
     "redeem": {
       "entry": "輸入兌換碼",

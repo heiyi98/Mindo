@@ -325,10 +325,10 @@
     "loading": "Chargement...",
     "viewReading": "Voir la lecture complète",
     "voucher": {
-      "none": "Ne pas utiliser de bon, payer avec le solde du portefeuille",
-      "full": "Bon gratuit ({issuer})",
-      "percentage": "{issuer} · {value}% de réduction",
-      "fixedAmount": "{issuer} · {value} {unit} de réduction"
+      "coverageFull": "Couverture totale",
+      "coveragePercentage": "{value}% de réduction",
+      "coverageFixedAmount": "{value} {unit} de réduction",
+      "remainingUses": "{count} restant(s)"
     },
     "redeem": {
       "entry": "Utiliser un code",

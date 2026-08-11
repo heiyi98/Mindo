@@ -256,12 +256,12 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 ## 八、前端接入点
 
 - 个人主页（`/dashboard/profile`）新增"输入兑换码"入口（弹窗），调`POST /api/payments/redeem`
-- 八字报告生成页（`BaziReadingView.tsx`）的"生成报告"/"出生信息不符→重新生成"两处按钮上方，接入`VoucherSelector`组件（`components/payments/VoucherSelector.tsx`，自治组件，自己按`service_type`拉取当前用户可用凭证），选中的`voucherId`会带进`/api/ai/reading`请求体
+- 八字报告生成页（`BaziReadingView.tsx`）的"生成报告"/"出生信息不符→重新生成"两处场景，接入`VoucherSelector`组件（`components/payments/VoucherSelector.tsx`，自治组件，自己按`service_type`拉取当前用户可用凭证），选中的`voucherId`会带进`/api/ai/reading`请求体。`VoucherSelector`内部渲染成可点击选中的卡片（复用`components/payments/VoucherCard.tsx`），不是下拉菜单，详见第十一节
 - `GET /api/payments/vouchers?service_type=xxx`——查询当前用户在某个service_type上还能用的凭证列表
 - 仪表盘上的`BaziReadingCard`**只负责免费跳转到报告页**，不触发任何扣款/凭证核销（详见第四节的设计缺陷修正记录）——之前这里直接调过`/api/ai/reading`，已经去掉
 - `GET /api/payments/price?service_type=xxx`——报告页展示价格用，session登录即可调，内部用`paymentsAdminClient`查`service_prices`
 - `/dashboard/profile`账户信息条：用户名颜色读`vip_expires_at > now()`，是则金色（新增CSS变量`--vip-gold`，`globals.css`里浅/深色模式各定义了一份），否则默认颜色，不显示"会员/非会员"这几个字；`@handle`下方新增一行纯文字余额展示（`payment.balanceLabel`翻译键，读`GET /api/payments/assets`的`balance`字段，兑换码兑换成功后会重新拉取刷新）
-- 前端所有next-intl可见文案里的"虚拟币"统一读`payment.walletUnit`这个翻译键，组件里通过`useTranslations('payment')`拿到这个词，再当参数`{unit}`传进其他翻译字符串里插值（如`voucher.fixedAmount`/`assets.wallet.balance`），不允许某条翻译字符串里直接写死这个词——以后要改名字，只改`payment.walletUnit`这一条，全项目跟着变。目前`walletUnit`已加到en/zh/zh-Hant/fr四个已有`payment`命名空间的语言
+- 前端所有next-intl可见文案里的"虚拟币"统一读`payment.walletUnit`这个翻译键，组件里通过`useTranslations('payment')`拿到这个词，再当参数`{unit}`传进其他翻译字符串里插值（如`voucher.coverageFixedAmount`/`assets.wallet.balance`），不允许某条翻译字符串里直接写死这个词——以后要改名字，只改`payment.walletUnit`这一条，全项目跟着变。目前`walletUnit`已加到en/zh/zh-Hant/fr四个已有`payment`命名空间的语言
 
 ## 九、资产页展示（`/dashboard/profile/assets`）
 
@@ -282,7 +282,44 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 个人主页（`/dashboard/profile`）的"输入兑换码"入口维持不变，两处入口调的是同一个后端接口，可以理解为对同一个功能的两个入口，不是重复建设。
 
-## 十、待办
+## 十、兑换券卡片组件 + 报告页弹窗式生成流程 + 骨架屏提示条
+
+体验层补充施工（不涉及资金安全逻辑改动，扣款/核销/退款的后端逻辑跟第四、五节描述的完全一样，这次只改前端交互）。
+
+### 兑换券卡片组件抽取
+
+`components/payments/VoucherCard.tsx`：新增的纯展示组件，`voucher`+可选的`onClick`/`selected`/`showServiceName`几个prop。`onClick`存在时渲染成可点击选中的卡片（边框高亮表示选中态），不存在时是资产页那种纯展示卡片——**这是资产页"待消费资产"标签和报告页兑换券选择这两处唯一的卡片实现**，样式改动以后只用改这一个文件。
+
+- `PendingAssetsTab.tsx`（资产页）：原来内联写的卡片JSX已删除，改成 `<VoucherCard voucher={v} />`（不传onClick/selected，纯展示，`showServiceName`保持默认true——资产页要看清楚是哪个测算模块的凭证）
+- `VoucherSelector.tsx`（报告页，见下）：不再是`<select>`下拉菜单，改成渲染一列`<VoucherCard voucher={v} selected={...} onClick={...} showServiceName={false} />`（`showServiceName=false`——报告页的service_type就是页面本身的上下文，卡片上不用再重复显示"八字报告"这几个字）。`onChange`的函数签名从`(voucherId: string | null) => void`改成`(voucher: Voucher | null) => void`，把完整的凭证对象交给调用方（报告页要在确认弹窗里展示选中凭证的详情，光有id不够）。再次点击已选中的卡片会取消选择（`voucherId`回到`null`，即改回虚拟币支付），卡片列表里没有单独的"不使用凭证"选项
+- 翻译键跟着合并：删掉了`payment.voucher.none/full/percentage/fixedAmount`（连issuer信息都不显示了，这几个key的措辞已经不适用），改成`payment.voucher.coverageFull/coveragePercentage/coverageFixedAmount/remainingUses`——这组新key同时也是原来`assets.vouchers.coverageFull`等几个key的搬家目的地（`assets/index.json`里对应几个key已删除，`assets.vouchers`现在只剩`title`/`empty`两个跟凭证展示无关的key）。`payment.voucher`覆盖en/zh/zh-Hant/fr四个语言（沿用`payment`命名空间原有的语言覆盖范围，没有扩大也没有缩小）
+
+### 报告页：弹窗式生成确认流程
+
+`BaziReadingView.tsx`点"生成报告"按钮（虚拟币或选中某张兑换券卡片，走的是同一个按钮）不再直接发起请求，而是先弹出确认弹窗，状态机（`modalStage: 'confirm' | 'loading' | 'success' | 'error' | null`，同一个弹窗组件`GenerateConfirmModal`内部按这个状态切换展示内容，不是四个不同弹窗）：
+
+```
+confirm（弹窗内容：价格或选中的兑换券卡片 + "预计3-15分钟"提示 + [取消][确认生成]）
+  → 点确认生成 → loading（转圈）
+    → 请求成功 → success（"已经开始生成，回来看就有了" + [好的]）
+      → 点好的 → 关闭弹窗，这一刻才真正把readingId/ai_reading_status写进组件本地状态，
+                  触发状态驱动骨架屏重新渲染——不用router.push，不整页刷新/重新拉取数据
+    → 请求失败 → error（错误文案，复用原有的insufficient_balance/voucher_unavailable/
+                通用错误映射逻辑） + [好的]
+      → 点好的 → 关闭弹窗，页面停留在原来的价格/兑换券选择界面，不做任何状态变更
+```
+
+组件内部新增`localReadingId`状态（初始值来自`readingId` prop，之后组件自己接管），Realtime订阅和价格查询这两个原本依赖`readingId` prop的`useEffect`都改成依赖`localReadingId`。
+
+"出生信息不符→重新生成"（`showMismatch`弹窗）这条既有流程**没有**叠加这套确认弹窗——点"重新生成"这个动作本身就是确认（那个弹窗已经在问"要不要重新生成"了），再套一层确认弹窗是重复。但这条路径也顺带改成了跟主流程一致的本地状态更新（不再是旧`handleGenerate`内部的`router.push`），两条路径现在共用同一个不做任何副作用的`submitGenerate()`函数（只管发请求拿结果，不管拿到结果之后弹窗/页面状态怎么变），各自决定成功后怎么处理。
+
+### 骨架屏顶部悬浮提示条
+
+报告处于生成中状态（`hasStarted && !isDone`）时，页面顶部（`fixed top-14`，TopBar下方）悬浮一条小字提示，内容是`reading.generatingBanner`翻译键（"预计需要3-15分钟，可以先离开，回来看就有了"）。持续显示不自动消失，轻量样式（`text-xs`+`muted-foreground`色，浅色半透明背景`hsl(var(--background)/0.92)`保证在骨架屏灰色块上还能看清字），允许压住下面骨架屏内容的一部分。
+
+**技术债（待补）**：无论是弹窗里的"已经开始生成"文案，还是这条悬浮提示条，都刻意没有承诺"完成后我们会通知你"——这次没有做站内消息中心，写这句话会是个兑现不了的承诺。等消息中心做出来之后，把这两处文案换成真正的通知承诺（弹窗成功态`reading.confirmModal.started`、悬浮条`reading.generatingBanner`这两个翻译键，届时en/zh/fr三个语言都要一起改）。
+
+## 十一、待办
 
 - [ ] Lemon Squeezy的`/api/payments/checkout`、`/api/payments/webhook`当前会直接报错（依赖表已删），用户决定暂时保留、以后再单独决定去留
 - [ ] `service_prices`里`bazi_report`的价格是不是已经是真实价格了，去`/admin/prices`确认一下（排查过程中发现被改成了5，不确定是不是有意调的测试值）
@@ -293,5 +330,7 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 - [ ] 新增的`assets`翻译模块目录目前只有en/zh两种语言，其余7种待补齐（按施工说明文档的要求，不阻塞本次完成）
 - [ ] VIP的`percentage`/`fixed_amount`覆盖类型逻辑仍未实现（等VIP购买流程真的存在了再接），资产页兑换券列表遇到这类记录目前只是按现有规则原样展示，不做特殊处理
 - [ ] `redemption_codes.status`的`'expired'`目前只在`/admin/batches/[id]`详情页做展示层现算，数据库里过期未用的码仍然是`'unused'`，没有定时任务把它真正写成`'expired'`——如果以后有报表/导出需要直接信任数据库里的`status`字段，需要另外补一个定时任务
-- [ ] 排查过程中顺带发现：`messages/{locale}/bazi/index.json`的`reading`这个嵌套对象（八字AI报告页几乎所有文案，tab名/章节标题/生成按钮/出生信息不符提示等）**只有zh和fr两种语言有**，en/zh-Hant/es/ja/ko/it/de这7种语言完全没有这个对象，报告页对这些语言的用户来说文案基本是缺失状态——这是本次施工之前就存在的缺口，不是本次引入的，但影响面比较大，建议找机会单独补齐。本次新增的`reading.priceLabel`键，只加到了已有该对象的zh/fr，另外补加到了en（新建了`reading`对象只放这一个键，没有顺带补齐其余缺失的键）；2026-08-10这次新增的`reading.delete`/`reading.deleteConfirm`（报告删除按钮/确认文案）同样只加到了zh/fr，延续同一个缺口，没有借机会扩大范围补齐其余7种语言
+- [ ] 排查过程中顺带发现：`messages/{locale}/bazi/index.json`的`reading`这个嵌套对象（八字AI报告页几乎所有文案，tab名/章节标题/生成按钮/出生信息不符提示等）**只有zh、fr、en三种语言有**（en只有`priceLabel`/`generatingBanner`/`confirmModal`/`errors`这几个跟支付/生成流程相关的键，tab名/章节标题等大部分内容仍然缺失），zh-Hant/es/ja/ko/it/de这6种语言完全没有这个对象，报告页对这些语言的用户来说文案基本是缺失状态——这是本次施工之前就存在的缺口，不是本次引入的，但影响面比较大，建议找机会单独补齐。`reading.priceLabel`此前只有en有、zh和fr漏了（导致这两个语言的用户在报告页看到的是键名本身而不是价格文案），本次已经补上；弹窗式生成流程新增的`confirmModal`/`generatingBanner`延续同一个"只做zh/en/fr"的范围，没有借机会扩大到其余6种语言
+- [ ] 弹窗式生成流程+骨架屏提示条+兑换券卡片化这次只做到类型检查通过、全部相关路由在dev server编译无报错，没有用真实登录账号走一遍完整交互（确认弹窗四个状态切换/骨架屏悬浮条实际展示效果/卡片选中态样式），建议找机会用测试账号实测一遍
+- [ ] "生成完成后回来看就有了"这类文案（弹窗成功态`reading.confirmModal.started`、骨架屏悬浮条`reading.generatingBanner`）刻意没有承诺"会主动通知你"，因为站内消息中心还没做——等消息中心做出来后要回来把这两处文案换成真正的通知承诺，见第十节
 - [ ] Supabase新建表之后，PostgREST的表结构缓存不会立刻感知到，直接通过接口查/写新表会报"找不到这张表"（`PGRST205`）——踩过一次坑，以后新建表后如果代码报"表不存在"但SQL Editor里看这张表明明存在，先去SQL Editor跑`NOTIFY pgrst, 'reload schema';`，不要先怀疑代码逻辑

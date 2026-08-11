@@ -1,30 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-
-interface Voucher {
-  id: string;
-  coverage_type: 'full' | 'percentage' | 'fixed_amount';
-  coverage_value: number;
-  remaining_uses: number;
-  issuer_label: string | null;
-}
+import VoucherCard, { type Voucher } from './VoucherCard';
 
 interface VoucherSelectorProps {
   serviceType: string;
   value: string | null;
-  onChange: (voucherId: string | null) => void;
+  onChange: (voucher: Voucher | null) => void;
 }
 
 /**
- * 服务覆盖凭证选择器：自治组件，自己按serviceType拉取当前用户可用的凭证列表。
- * 没有可用凭证时不渲染任何内容（不占位）。
+ * 服务覆盖凭证选择器：自治组件，自己按serviceType拉取当前用户可用的凭证列表，
+ * 渲染成可点击选中的卡片（复用VoucherCard，跟资产页样式一致）。
+ * 没有可用凭证时不渲染任何内容（不占位）。再次点击已选中的卡片取消选择。
  */
 export default function VoucherSelector({ serviceType, value, onChange }: VoucherSelectorProps) {
-  const t = useTranslations('payment.voucher');
-  const tPayment = useTranslations('payment');
-  const unit = tPayment('walletUnit');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -48,30 +38,17 @@ export default function VoucherSelector({ serviceType, value, onChange }: Vouche
 
   if (!loaded || vouchers.length === 0) return null;
 
-  const describe = (v: Voucher) => {
-    const issuer = v.issuer_label ?? '';
-    if (v.coverage_type === 'full') return t('full', { issuer });
-    if (v.coverage_type === 'percentage') return t('percentage', { value: v.coverage_value, issuer });
-    return t('fixedAmount', { value: v.coverage_value, issuer, unit });
-  };
-
   return (
-    <select
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value || null)}
-      className="text-sm rounded-xl px-3 py-2 w-full"
-      style={{
-        background: 'hsl(var(--card))',
-        border: '1px solid hsl(var(--border))',
-        color: 'hsl(var(--foreground))',
-      }}
-    >
-      <option value="">{t('none', { unit })}</option>
+    <div className="flex flex-col gap-2 w-full">
       {vouchers.map((v) => (
-        <option key={v.id} value={v.id}>
-          {describe(v)}
-        </option>
+        <VoucherCard
+          key={v.id}
+          voucher={v}
+          showServiceName={false}
+          selected={value === v.id}
+          onClick={() => onChange(value === v.id ? null : v)}
+        />
       ))}
-    </select>
+    </div>
   );
 }
