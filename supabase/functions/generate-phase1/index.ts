@@ -323,13 +323,18 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+  console.log(`[${readingId}] 收到请求，准备启动后台处理`);
+
   EdgeRuntime.waitUntil((async () => {
+    console.log(`[${readingId}] 开始执行`);
     try {
-      const { data: existingReading } = await supabase
+      console.log(`[${readingId}] 查询现有draft/theme1...`);
+      const { data: existingReading, error: selectError } = await supabase
         .from("bazi_readings")
         .select("ai_reading_draft, ai_reading_theme1")
         .eq("id", readingId)
         .single();
+      console.log(`[${readingId}] 查询返回：hasDraft=${!!existingReading?.ai_reading_draft} hasTheme1=${!!existingReading?.ai_reading_theme1} selectError=${selectError?.message ?? "无"}`);
 
       if (existingReading?.ai_reading_theme1) {
         console.log(`[${readingId}] 主题一已存在，跳过`);
@@ -337,29 +342,37 @@ Deno.serve(async (req) => {
       }
 
       if (!existingReading?.ai_reading_draft) {
-        await supabase.from("bazi_readings")
+        console.log(`[${readingId}] 准备写入last_attempt_at...`);
+        const { error: markError } = await supabase.from("bazi_readings")
           .update({ ai_reading_status: "phase1", last_attempt_at: new Date().toISOString() })
           .eq("id", readingId);
+        console.log(`[${readingId}] last_attempt_at写入${markError ? "失败：" + markError.message : "成功"}`);
         // Phase 1 永远用中文分析，只尝试一次，失败交给分类处理+定时任务重试
+        console.log(`[${readingId}] 即将调用Gemini，dataSheet长度=${dataSheet.length}字符`);
         const text = await callGeminiOnce(PHASE1_SYSTEM_PROMPT, dataSheet, geminiApiKey);
+        console.log(`[${readingId}] Gemini调用返回，文本长度=${text.length}字符`);
         let cleanText = text.trim();
         const s = cleanText.indexOf('{'), e = cleanText.lastIndexOf('}');
         if (s !== -1 && e !== -1) cleanText = cleanText.substring(s, e + 1);
         const draft = JSON.parse(cleanText);
+        console.log(`[${readingId}] JSON解析成功，准备写入draft...`);
         await supabase.from("bazi_readings").update({ ai_reading_draft: draft }).eq("id", readingId);
         console.log(`[${readingId}] Phase 1 完成`);
       } else {
         console.log(`[${readingId}] 底稿已存在，直接触发主题一`);
       }
 
+      console.log(`[${readingId}] 准备触发generate-theme1...`);
       await supabase.from("bazi_readings").update({ ai_reading_status: "theme1" }).eq("id", readingId);
       await fetch(`${supabaseUrl}/functions/v1/generate-theme1`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${serviceRoleKey}` },
         body: JSON.stringify({ readingId, locale }),
       });
+      console.log(`[${readingId}] 已触发generate-theme1，本次执行结束`);
 
     } catch (error) {
+      console.log(`[${readingId}] 捕获到异常，进入handleGenerationFailure`);
       await handleGenerationFailure(supabase, readingId, "Phase 1", error);
     }
   })());
