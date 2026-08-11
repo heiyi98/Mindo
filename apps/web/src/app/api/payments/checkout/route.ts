@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     const email = await paymentsRepository.getUserEmail(user.id);
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-web.vercel.app';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-gold.vercel.app';
 
     const checkout = await createCheckout(
       process.env.LEMONSQUEEZY_STORE_ID!,

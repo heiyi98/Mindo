@@ -11,7 +11,7 @@
 ## 代码托管与部署
 - **GitHub**：github.com/heiyi98/Mindo（公开仓库）
 - **Vercel**：连接GitHub，push main自动部署
-  - 生产URL：https://mindo-web.vercel.app
+  - 生产URL：https://mindo-gold.vercel.app（2026-08-11之前是mindo-web.vercel.app，项目删除重建后Vercel分配的别名变了）
   - 重要：git commit必须用heiyi98账号，否则Vercel拒绝部署（blocked）
   - 本地测试：cd E:\destinos\apps\web && pnpm dev
   - 推送：git add . && git commit -m "..." && git push

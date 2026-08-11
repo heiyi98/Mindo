@@ -4,7 +4,7 @@
 
 全球化赛博玄学Web App，集命理测算、心理测量、社区论坛、社交匹配、周边商城于一体。
 
-- 生产环境URL：https://mindo-web.vercel.app
+- 生产环境URL：https://mindo-gold.vercel.app（2026-08-11之前是mindo-web.vercel.app，Vercel项目删除重建后别名变了，见下方"关键教训"）
 - GitHub仓库：https://github.com/heiyi98/Mindo
 - 本地路径：E:\destinos
 

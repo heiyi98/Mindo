@@ -219,11 +219,18 @@ export default function BaziReadingView({
     setDeleting(true)
     try {
       const res = await fetch(`/api/ai/reading/${readingId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('delete failed')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.code === 'reading_not_done' ? 'not_done' : 'delete failed')
+      }
       router.push('/dashboard/assessments/bazi')
     } catch (err) {
       console.error(err)
-      setGenerateError(t('reading.errors.generic'))
+      setGenerateError(
+        err instanceof Error && err.message === 'not_done'
+          ? t('reading.errors.notDone')
+          : t('reading.errors.generic')
+      )
       setDeleting(false)
     }
   }
@@ -262,7 +269,7 @@ export default function BaziReadingView({
         <ChevronLeft size={20} />
       </button>
       <div className="flex items-center gap-2">
-        {readingId && (
+        {readingId && isDone && (
           <button
             onClick={handleDelete}
             disabled={deleting}

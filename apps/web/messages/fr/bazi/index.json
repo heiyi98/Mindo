@@ -88,6 +88,12 @@
     "mismatchRegenerate": "Regénérer",
     "delete": "Supprimer le rapport",
     "deleteConfirm": "Supprimer ce rapport ? Cette action est irréversible ; le profil pourra ensuite en générer un nouveau.",
+    "errors": {
+      "insufficientBalance": "Solde insuffisant. Veuillez recharger ou utiliser un code de réduction.",
+      "voucherUnavailable": "Le bon sélectionné n'est plus disponible. Veuillez en choisir un autre.",
+      "generic": "Échec de la génération. Veuillez réessayer.",
+      "notDone": "Le rapport est encore en cours de génération, impossible de le supprimer pour l'instant. En cas de blocage prolongé, le remboursement sera automatique."
+    },
     "scenes": {
       "friends": "Amitiés",
       "work": "Travail",

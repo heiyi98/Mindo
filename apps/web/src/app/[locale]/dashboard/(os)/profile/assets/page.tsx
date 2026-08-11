@@ -160,7 +160,7 @@ export default function AssetsPage() {
                 >
                   {new Date(asset.created_at).toLocaleDateString()}
                 </div>
-                {asset.type === 'bazi' && (
+                {asset.type === 'bazi' && asset.ai_reading_status === 'done' && (
                   <button
                     type="button"
                     aria-label={t('delete')}

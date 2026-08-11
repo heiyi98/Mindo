@@ -92,6 +92,12 @@
     "mismatchRegenerate": "重新生成",
     "delete": "删除报告",
     "deleteConfirm": "删除这份报告？此操作无法撤销，删除后这个档案可以重新生成。",
+    "errors": {
+      "insufficientBalance": "虚拟币余额不足，请先充值或使用兑换码。",
+      "voucherUnavailable": "选中的兑换券已不可用，请换一张。",
+      "generic": "生成失败，请重试。",
+      "notDone": "报告仍在生成中，暂时无法删除。如果长时间卡住，系统会自动退款。"
+    },
     "scenes": {
       "friends": "交友",
       "work": "工作",

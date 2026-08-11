@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { codexSourceLoader } from '@/lib/source';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-web.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://mindo-gold.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = [];

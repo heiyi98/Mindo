@@ -47,7 +47,8 @@
     "errors": {
       "insufficientBalance": "Insufficient balance. Please top up or use a redemption code.",
       "voucherUnavailable": "The selected voucher is no longer available. Please choose another.",
-      "generic": "Generation failed. Please try again."
+      "generic": "Generation failed. Please try again.",
+      "notDone": "This reading is still being generated and can't be deleted yet. If it stays stuck too long, it will be refunded automatically."
     }
   }
 }

@@ -58,3 +58,6 @@ next-env.d.ts
 
 # supabase CLI本地链接缓存（project-ref/pooler-url等），不是要提交的源码
 /supabase/.temp/
+
+.vercel
+.env*

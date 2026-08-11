@@ -25,7 +25,8 @@ export async function callGeminiOnce(
   apiKey: string,
 ): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 40000);
+  // Supabase免费版Edge Function总执行时长上限150秒，留约50秒给读取数据/解析/写库等其余步骤
+  const timeout = setTimeout(() => controller.abort(), 100000);
   let response: Response;
   try {
     response = await fetch(
@@ -43,7 +44,7 @@ export async function callGeminiOnce(
     );
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") {
-      throw new GeminiCallError("technical", "Gemini调用超时（40秒）");
+      throw new GeminiCallError("technical", "Gemini调用超时（100秒）");
     }
     throw new GeminiCallError("technical", e instanceof Error ? e.message : String(e));
   } finally {
