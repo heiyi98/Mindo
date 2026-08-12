@@ -83,6 +83,19 @@ export default function BaziReadingView({
     setVoucherId(voucher?.id ?? null)
   }
 
+  // 生成成功后本地状态切到骨架屏的同时，地址栏也要跟着从?snapshotId=换成
+  // ?readingId=——否则地址栏一直停在旧的snapshotId地址，用户这时候刷新页面，
+  // page.tsx（服务端组件）会用地址栏这个旧地址重新判断，读不到readingId，
+  // 就会跳回"还没有报告"的付费页，即使数据库里报告其实已经在正常生成。
+  // 用history.replaceState直接改地址栏，不走router.replace/push——那些会
+  // 触发Next.js重新请求这个页面的服务端数据，跟"不整页刷新"的目标矛盾。
+  const syncReadingIdToUrl = (newReadingId: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('snapshotId')
+    url.searchParams.set('readingId', newReadingId)
+    window.history.replaceState(null, '', url.toString())
+  }
+
   const overviewRef = useRef<HTMLDivElement>(null)
   const shishenRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const interactionRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -239,6 +252,7 @@ export default function BaziReadingView({
     if (pendingReadingId) {
       setLocalReadingId(pendingReadingId)
       setData(prev => ({ ...prev, ai_reading_status: 'generating' }))
+      syncReadingIdToUrl(pendingReadingId)
     }
     setPendingReadingId(null)
     setModalStage(null)
@@ -263,6 +277,7 @@ export default function BaziReadingView({
     if ('readingId' in result) {
       setLocalReadingId(result.readingId)
       setData(prev => ({ ...prev, ai_reading_status: 'generating' }))
+      syncReadingIdToUrl(result.readingId)
       setShowMismatch(false)
       setSubmitting(false)
     } else {
