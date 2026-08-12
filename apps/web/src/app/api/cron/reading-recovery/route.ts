@@ -40,7 +40,7 @@ async function retriggerReading(job: StuckReadingRow, supabaseUrl: string, servi
         })
       : JSON.stringify({ readingId: job.id, locale: job.locale });
 
-  await fetch(`${supabaseUrl}/functions/v1/${targetFunction}`, {
+  const res = await fetch(`${supabaseUrl}/functions/v1/${targetFunction}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -48,6 +48,16 @@ async function retriggerReading(job: StuckReadingRow, supabaseUrl: string, servi
     },
     body,
   });
+  // Edge Function在真正开始处理前就参数校验失败（比如payload缺字段）时会返回非2xx，
+  // 但这一步本身不代表"重试失败"——它只是没能把请求交给generate-*函数的业务逻辑，
+  // 跟Gemini调用失败/技术性失败是两回事，不在这里更新retry_count或alert_status。
+  // 只打日志，避免这类问题（2026-08-11排查过一次：cron因为payload缺少
+  // snapshotId导致generate-phase1的重试请求每次都被参数校验拒绝，但cron自己
+  // 完全没检查返回状态码，一直误以为重试成功）再次发生时又要花很久才能发现。
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => '');
+    console.error(`[Cron] ${job.id} 重新触发${targetFunction}返回非2xx：status=${res.status} body=${bodyText.slice(0, 500)}`);
+  }
 }
 
 export async function GET(request: Request) {

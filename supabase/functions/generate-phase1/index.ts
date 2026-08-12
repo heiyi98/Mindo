@@ -298,17 +298,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
 
-  let snapshotId: string;
   let readingId: string;
   let dataSheet: string;
   let locale: string;
   try {
     const body = await req.json();
-    snapshotId = body.snapshotId;
     readingId = body.readingId;
     dataSheet = body.dataSheet;
     locale = body.locale ?? 'zh';
-    if (!snapshotId || !readingId || !dataSheet) throw new Error("缺少参数");
+    if (!readingId || !dataSheet) throw new Error("缺少参数");
   } catch {
     return new Response(JSON.stringify({ error: "请求参数错误" }), {
       status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
