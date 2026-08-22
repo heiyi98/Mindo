@@ -1,32 +1,4 @@
 {
-  "search": {
-    "placeholder": "Cerca nel codex…",
-    "loading": "Ricerca…",
-    "empty": "Nessun risultato"
-  },
-  "notFound": "Questa voce non esiste ancora.",
-  "home": {
-    "graph": {
-      "baziLabel": "Bazi"
-    },
-    "cards": {
-      "bazi": {
-        "title": "Bazi (Quattro Pilastri)",
-        "description": "Testo introduttivo provvisorio — contenuto in arrivo.",
-        "cta": "Entra"
-      }
-    }
-  },
-  "topicNav": {
-    "home": "Home",
-    "directory": "Elenco voci",
-    "search": "Cerca"
-  },
-  "citations": {
-    "showAll": "Mostra citazioni",
-    "hideAll": "Nascondi citazioni"
-  },
-  "directory": {
-    "title": "Elenco delle voci"
-  }
+  "home": "Codex",
+  "referencesTitle": "Riferimenti"
 }

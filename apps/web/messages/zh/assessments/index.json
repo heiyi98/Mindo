@@ -11,5 +11,10 @@
   "enneagram": { "name": "九型人格", "desc": "九种人格类型系统" },
   "liuyao": { "name": "六爻", "desc": "六爻纳甲占卜系统" },
   "tarot": { "name": "塔罗", "desc": "塔罗牌洞察与反思" },
-  "geomancy": { "name": "地占", "desc": "基于地气能量的占卜系统" }
+  "geomancy": { "name": "地占", "desc": "基于地气能量的占卜系统" },
+  "pro": {
+    "constitutionEntry": "先天体质",
+    "hubTitle": "PRO 工具",
+    "constitutionDesc": "面向持证中医师的先天禀赋辅助参考工具"
+  }
 }

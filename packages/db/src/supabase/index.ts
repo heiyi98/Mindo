@@ -8,3 +8,5 @@ export { createSupabaseBigfiveRepository } from '../bigfive/supabaseRepository';
 export { createSupabaseMindCardsRepository } from '../mindCards/supabaseRepository';
 export { createSupabaseWesternRepository } from '../western/supabaseRepository';
 export { createSupabaseSocialRepository } from '../social/supabaseRepository';
+export { createSupabaseCodexRepository } from '../codex/supabaseRepository';
+export { createSupabaseAdminRepository } from '../admin/supabaseRepository';

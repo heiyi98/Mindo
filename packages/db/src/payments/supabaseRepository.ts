@@ -6,6 +6,7 @@ import type {
   DbError,
   LegacyProduct,
   PaymentsRepository,
+  ProTransactionType,
   RedeemedCodeRow,
   RedemptionCodeBatchSummary,
   RedemptionCodeDiagnostic,
@@ -64,6 +65,25 @@ export function createSupabasePaymentsRepository(client: SupabaseClient): Paymen
         .eq('id', userId)
         .maybeSingle();
       return { data: data as { vip_expires_at: string | null } | null, error: toDbError(error) };
+    },
+
+    async extendProRaw(userId, days, type, actorId) {
+      const { data, error } = await client.rpc('extend_pro', {
+        p_user_id: userId,
+        p_days: days,
+        p_type: type,
+        p_actor_id: actorId,
+      });
+      return { data: data as string | null, error: toDbError(error) };
+    },
+
+    async getUserProExpiry(userId) {
+      const { data, error } = await client
+        .from('users')
+        .select('pro_expires_at')
+        .eq('id', userId)
+        .maybeSingle();
+      return { data: data as { pro_expires_at: string | null } | null, error: toDbError(error) };
     },
 
     async listVouchers(userId, serviceType) {
@@ -337,7 +357,7 @@ export function createSupabasePaymentsRepository(client: SupabaseClient): Paymen
     async findUserByEmail(email) {
       const { data, error } = await client
         .from('users')
-        .select('id, email, handle, vip_expires_at')
+        .select('id, email, handle, vip_expires_at, pro_expires_at')
         .eq('email', email)
         .maybeSingle();
       return { data: data as AdminUserLookup | null, error: toDbError(error) };

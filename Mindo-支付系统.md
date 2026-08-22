@@ -11,6 +11,8 @@
 
 现阶段唯一入账渠道是兑换码，Stripe/微信支付/支付宝暂未接入。Lemon Squeezy（`/api/payments/checkout`、`/api/payments/webhook`）**明确保留但已跑不通**（依赖的`products`/`purchases`表已删除）——这是用户本次施工时的明确决定，不是遗漏，以后要不要接入真实支付渠道再单独决定。
 
+**Pro账号模式**（2026-08-21新增，与以上四类资产平行、彼此不影响判断逻辑）单独见本文档「十二、Pro账号模式」一节。**注意区分**：`users.vip_tier`这个死字段的历史取值里恰好也有一个字符串`'pro'`，那是VIP等级的旧枚举值（全项目代码已不读取，见上方第2点），跟这里的Pro账号模式是两个完全不相关的东西，只是碰巧字面重名。
+
 ## 二、数据库表结构（以实际执行的SQL为准）
 
 ```
@@ -232,9 +234,11 @@ CREATE POLICY "bazi_readings: owner select only" ON public.bazi_readings
 
 ## 七、`/admin` 后台管理面板
 
-不带locale前缀，权限判断在`apps/web/src/proxy.ts`（Next.js 16的中间件文件，项目里叫`proxy.ts`不是`middleware.ts`）——匹配`/admin`或`/api/admin`开头的请求，检查当前登录用户email是否在`ADMIN_EMAILS`环境变量白名单里，不在则页面302回首页、接口返回401。每个`/api/admin/*`接口内部也用`requireAdminUser()`（`src/lib/admin/requireAdmin.ts`）再判断一次，双重保险。
+**鉴权机制（2026-08-14起，全站后台统一）**：不带locale前缀，走独立的后台人员账号体系（`public.admin`表，跟`public.users`彻底分开，不是内容库专属——内容库/兑换码批次/直接发放/价目表/充值套餐/用户账本查询/重试警报全部后台功能共用这一套，不再有"内容库一套、支付后台另一套"两套并存的登录方式）。详细设计（表结构、登录页、建账号脚本、两层权限判断）见`Mindo-内容库.md`十二、十三节——那边是这套机制最早落地的地方，这里不重复展开。
 
-`.env.local`已加：`ADMIN_EMAILS=heijieheiyi@gmail.com`（多个邮箱用英文逗号分隔，需要的话自己去改这个值）。
+分三层拦截：`proxy.ts`（中间件层，只负责刷新session、放行到应用层，不做"是不是后台人员"判断）→ `/admin/(protected)/layout.tsx`（页面层，`requireStaffAccount()`判断是不是`public.admin`里的人，不是则跳转`/admin/login`；这层用route group跟`/admin/login`本身分开，避免未登录时redirect死循环）→ 每个`/api/admin/*`接口内部也用`requireStaffAccount()`再判断一次，双重保险。内容库（`/admin/codex`）在这三层之上还有自己的`requireCodexAdmin()`做"能管哪些分类"的范围判断，其他后台页面没有这一层（没有分类权限颗粒度这个概念）。
+
+登录页`/admin/login`，纯账号+密码（不接magic link/验证码/第三方OAuth），账号只能靠`apps/web/scripts/create-admin-account.mjs`脚本手动创建，不接公开注册。**这套机制曾经短暂改回`ADMIN_EMAILS`环境变量白名单（2026-08-13当天），当天又改了回来**——`.env.local`里的`ADMIN_EMAILS`这个键目前没有任何代码在读，是历史遗留，没有删除这个环境变量本身，纯粹是代码不再引用。
 
 页面（纯内部工具，不接入next-intl多语言，符合原方案要求）：
 
@@ -334,3 +338,58 @@ confirm（弹窗内容：价格或选中的兑换券卡片 + "预计3-15分钟"�
 - [ ] 弹窗式生成流程+骨架屏提示条+兑换券卡片化这次只做到类型检查通过、全部相关路由在dev server编译无报错，没有用真实登录账号走一遍完整交互（确认弹窗四个状态切换/骨架屏悬浮条实际展示效果/卡片选中态样式），建议找机会用测试账号实测一遍
 - [ ] "生成完成后回来看就有了"这类文案（弹窗成功态`reading.confirmModal.started`、骨架屏悬浮条`reading.generatingBanner`）刻意没有承诺"会主动通知你"，因为站内消息中心还没做——等消息中心做出来后要回来把这两处文案换成真正的通知承诺，见第十节
 - [ ] Supabase新建表之后，PostgREST的表结构缓存不会立刻感知到，直接通过接口查/写新表会报"找不到这张表"（`PGRST205`）——踩过一次坑，以后新建表后如果代码报"表不存在"但SQL Editor里看这张表明明存在，先去SQL Editor跑`NOTIFY pgrst, 'reload schema';`，不要先怀疑代码逻辑
+
+## 十二、Pro账号模式
+
+2026-08-21新增，为「先天体质」模块（面向持证中医师的辅助工具，详见`Mindo-先天体质.md`）铺垫的账号权限层。与VIP完全解耦，两套字段互不影响判断逻辑，架构上是VIP的同构复刻。
+
+### 12.1 数据库
+
+```
+users.pro_expires_at        新增字段，与vip_expires_at同结构，
+                             判断逻辑同VIP：pro_expires_at > now()视为有效
+
+pro_transactions            新增表，结构对齐vip_transactions：
+                             id, user_id, days_delta, expires_at_after, type, actor_id
+                             type枚举：'redeem'/'admin_grant'/'admin_revoke'
+                             （比vip_transactions少一个'voucher_full'——Pro目前没有
+                             凭证触发续期的路径，只有兑换码直接reward_type='pro'和
+                             管理员直接发放两种入账方式）
+
+extend_pro()                 新增数据库函数，逻辑对齐extend_vip：
+                              GREATEST(当前pro_expires_at, now()) + days
+```
+
+迁移文件：`supabase/migrations/20260821000000_pro_account_mode.sql`。`redemption_code_batches.reward_type`是`text`列（代码层`RewardType`联合类型校验，非数据库枚举/CHECK约束），加`'pro'`不需要额外SQL，已用诊断查询确认过。
+
+`pro_transactions`不开RLS给`authenticated`角色任何策略，只被service role写入，跟`vip_transactions`同等对待。
+
+### 12.2 代码层（`packages/db`/`packages/payments`）
+
+完全镜像VIP那一套，一一对应：
+
+```
+packages/db/src/payments/interface.ts      RewardType加'pro'；ProTransactionType；
+                                             PaymentsRepository加extendProRaw/getUserProExpiry
+packages/db/src/payments/supabaseRepository.ts   对应Supabase实现，RPC名extend_pro
+packages/payments/src/pro.ts                extendPro() / checkProActive()，镜像vip.ts
+packages/payments/src/redemption.ts         redeemCode()里rewardType==='pro'分支，
+                                             逻辑与'vip'分支完全一致
+```
+
+### 12.3 后台管理面板
+
+- `/admin/batches`——类型下拉加"Pro时长"，与"VIP时长"并列，字段结构（天数输入）照抄VIP分支
+- `/admin/grant`——直接发放由三选一扩展为四选一，新增"Pro天数"
+- `/admin/users`——用户账本查询展示字段新增Pro状态一行，读取/展示逻辑对齐VIP那一行
+
+### 12.4 前端接入点
+
+- `GET /api/payments/assets`返回体新增`proExpiresAt`字段，取法与`vipExpiresAt`一致
+- 测算中心页面（`[locale]/dashboard/(os)/assessments/page.tsx`）TopBar右侧新增条件渲染入口：`pro_expires_at > now()`时展示一个写着"PRO"的文字按钮（复用`payment-assets`这个TanStack Query缓存键，不额外发请求），点击跳转`/dashboard/assessments/pro`——这是一个新的Pro工具入口页（Pro Hub），视觉/卡片网格完全复用测算中心主页那一套，里面每张卡片对应一个Pro工具（目前只有先天体质一项），不是直接跳去某个具体工具
+- **不做**个人主页视觉标注（不做金色用户名类似处理），这是产品决策，仅体现为顶边栏入口的显隐——这一点跟VIP的"账户信息条用户名变金色"故意不同，不要混淆抄错
+
+### 12.5 与VIP的已知差异
+
+- Pro没有`percentage`/`fixed_amount`覆盖类型逻辑（VIP也还没实现，见十一节待办），也没有凭证触发续期的路径——目前只有兑换码和管理员直接发放两种入账方式
+- Pro没有账户信息条金色用户名这类视觉标注（VIP有），见12.4

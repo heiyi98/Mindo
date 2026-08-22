@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/admin/requireAdmin';
+import { requireStaffAccount } from '@/lib/admin/requireStaffAccount';
 import { paymentsRepository } from '@/lib/payments/adminClient';
 import { createBatch, listBatchesWithCounts } from '@mindo/payments';
 
 export async function GET() {
-  const admin = await requireAdminUser();
+  const admin = await requireStaffAccount();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const result = await listBatchesWithCounts(paymentsRepository);
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireStaffAccount();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();

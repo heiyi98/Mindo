@@ -1,32 +1,4 @@
 {
-  "search": {
-    "placeholder": "Codex durchsuchen…",
-    "loading": "Suche…",
-    "empty": "Keine Ergebnisse"
-  },
-  "notFound": "Dieser Eintrag existiert noch nicht.",
-  "home": {
-    "graph": {
-      "baziLabel": "Bazi"
-    },
-    "cards": {
-      "bazi": {
-        "title": "Bazi (Vier Säulen)",
-        "description": "Platzhaltertext — Inhalt folgt in Kürze.",
-        "cta": "Öffnen"
-      }
-    }
-  },
-  "topicNav": {
-    "home": "Startseite",
-    "directory": "Verzeichnis",
-    "search": "Suche"
-  },
-  "citations": {
-    "showAll": "Zitate anzeigen",
-    "hideAll": "Zitate ausblenden"
-  },
-  "directory": {
-    "title": "Verzeichnis der Einträge"
-  }
+  "home": "Codex",
+  "referencesTitle": "Quellen"
 }

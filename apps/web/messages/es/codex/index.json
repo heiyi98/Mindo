@@ -1,32 +1,4 @@
 {
-  "search": {
-    "placeholder": "Buscar en el codex…",
-    "loading": "Buscando…",
-    "empty": "Sin resultados"
-  },
-  "notFound": "Esta entrada aún no existe.",
-  "home": {
-    "graph": {
-      "baziLabel": "Bazi"
-    },
-    "cards": {
-      "bazi": {
-        "title": "Bazi (Cuatro Pilares)",
-        "description": "Texto de introducción provisional — contenido próximamente.",
-        "cta": "Entrar"
-      }
-    }
-  },
-  "topicNav": {
-    "home": "Inicio",
-    "directory": "Directorio",
-    "search": "Buscar"
-  },
-  "citations": {
-    "showAll": "Mostrar citas",
-    "hideAll": "Ocultar citas"
-  },
-  "directory": {
-    "title": "Directorio de entradas"
-  }
+  "home": "Codex",
+  "referencesTitle": "Referencias"
 }

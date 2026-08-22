@@ -14,14 +14,15 @@
 
 | 模块 | 文档 |
 |---|---|
-| 八字（算法/AI报告管道/PDF导出） | `Mindo-算法-八字.md` |
-| 大五人格（算法/颜色系统） | `Mindo-算法-大五.md` |
+| 八字（算法/AI报告管道/PDF导出） | `Mindo-八字.md` |
+| 大五人格（算法/颜色系统） | `Mindo-大五.md` |
 | 认证/Onboarding/账户安全 | `Mindo-认证与账户.md` |
 | 数据库全部表结构 | `Mindo-数据库.md` |
 | 片语模块 | `Mindo-片语.md` |
 | 开发环境/部署/第三方服务配置 | `Mindo-工作栈与服务.md` |
 | 内容库（Codex） | `Mindo-内容库.md` |
-| 支付系统（虚拟币/VIP/凭证/兑换码/后台管理面板） | `Mindo-支付系统.md` |
+| 支付系统（虚拟币/VIP/Pro账号/凭证/兑换码/后台管理面板） | `Mindo-支付系统.md` |
+| 先天体质（Pro工具，算法/前端） | `Mindo-先天体质.md` |
 
 西洋星盘、紫微斗数、MBTI、论坛、商城、私信——尚未拆出独立文档，做到哪个模块再建哪个模块的文档，不要提前占位建空文件。
 
@@ -33,7 +34,7 @@
 - 国际化：next-intl 4.x
 - 数据库：Supabase（PostgreSQL + RLS），项目ID `wsbskrgrkajnzzgpcfws`，表结构见 `Mindo-数据库.md`
 - 图标：lucide-react（部分模块使用自定义SVG图标）
-- 内容库（Codex）：fumadocs-core + fumadocs-mdx（不用 fumadocs-ui，UI自建），详见 `Mindo-内容库.md`
+- 内容库（Codex）：数据库驱动（Supabase表 + 自建Tiptap富文本编辑后台，UI自建），详见 `Mindo-内容库.md`
 - 部署：Vercel（国际版）/ 阿里云（中国版，待定）
 - 开发环境：Windows PowerShell 5.x，Claude Code
 
@@ -74,12 +75,12 @@ apps/web/
 │   ├── components/
 │   ├── hooks/
 │   ├── lib/
-│   │   └── source.ts               ← 内容库数据读取层（fumadocs loader），见Mindo-内容库.md
+│   │   └── codex/                  ← 内容库数据/权限/编辑器工具层（数据库驱动），见Mindo-内容库.md
 │   ├── i18n/
 │   └── config/
 ├── content/                        ← "人手写、要多语言、要版本追溯的长文本内容"统一存放层，
-│   │                                  与src/（程序代码）、public/（静态资源）平级
-│   ├── codex/                      ← 内容库词条源文件（MDX），已建成，见Mindo-内容库.md
+│   │                                  与src/（程序代码）、public/（静态资源）平级。
+│   │                                  内容库（Codex）已改为数据库驱动，不再用这一层，见Mindo-内容库.md
 │   ├── blog/                       ← 未来博客内容，尚未建（做到再建，不要提前占位）
 │   └── legal/                      ← 未来服务条款/隐私政策等法律文本，尚未建，同样需要9语言+修改留痕
 └── messages/                       ← 多语言词典，按locale/模块分目录
@@ -200,6 +201,10 @@ contexts/
 /{locale}/dashboard/assessments/western/ → 西洋星盘
 /{locale}/dashboard/assessments/bazi/reading → 八字AI报告长页（?readingId=...）
   ⚠️ 物理位置不在(os)路由组底下——故意搬出去的，避免报告页出现导航栏
+/{locale}/dashboard/assessments/pro/    → Pro工具入口页（卡片网格，视觉跟测算中心主页一致），
+  pro_expires_at未过期才能进，物理位置在(os)路由组底下
+/{locale}/dashboard/assessments/pro/constitution → 先天体质工具本体
+  ⚠️ 物理位置不在(os)路由组底下——跟bazi/reading同样的理由，独立长页面，见Mindo-先天体质.md
 /{locale}/dashboard/profile/            → 账户管理
 /{locale}/dashboard/profile/profiles/   → 档案管理（拖拽排序）
 /{locale}/dashboard/profile/assets/     → 资产管理（已购报告 + 待消费资产[虚拟币/VIP/兑换券]标签切换，见Mindo-支付系统.md）
@@ -311,14 +316,16 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - **删除一个route.ts文件后，`.next/dev/types/validator.ts`可能还残留对它的引用，报出"找不到模块"的类型错误**：这是Next.js typed-routes功能的开发缓存产物，不是真代码错误，删`.next`重启即可，不要在这个文件本身上排查
 - **`packages/payments`这类"业务函数接收一个client参数、内部直接`client.rpc()/client.from()`"的写法，是"接口+实现"两层拆分的半成品**：函数签名已经不绑死"连哪个Supabase实例"，但还绑死"是不是Supabase"。彻底拆完的标志是这个参数从`SupabaseClient`类型换成自定义的`XxxRepository`接口类型，内部改叫`repo.xxxRaw()`而不是`client.rpc()`——这次阶段二数据库访问层拆分就是把项目里所有这类半成品（payments如此，`lib/mindCards/*.ts`的部分函数也是这个模式）里，路由文件自己的直接查询这一层全部拆成了这个终态，5个片语共享业务函数因为内部多步查询耦合度高被保留为半成品，是权衡后的例外，不是遗漏
 - **`.auth.getUser()`不能不分青红皂白地全项目批量替换**：这个方法在项目里有两种性质完全不同的调用——大多数API路由里是"判断谁登录了"的重复样板（该收口成`requireApiUser()`），但`api/auth/callback`/`api/auth/confirm`里是OAuth/邮箱验证流程本身在拿到session后确认用户身份（这是认证功能的实现细节），客户端组件（`LoginForm.tsx`等）里是浏览器侧的登录状态展示（用的是browser client，不是server client，机制上就不同）。批量替换前必须先分清"这是重复的检查样板"还是"这本来就是认证这个功能自己的一部分"
+- **`'use client'`要精确标在真正需要它的组件上，不能图省事整个文件一把梭**：一个文件如果同时被"服务器端当普通函数/数据调用"和"浏览器端当UI渲染"两种场景导入，一旦给这个文件加了`'use client'`，Next.js会把它的**所有导出**都变成"客户端引用"——服务器端代码哪怕只是老老实实调用一个返回普通对象的函数（不涉及任何渲染），也会被直接拒绝报错。正确做法：把真正用到`useState`/`useEffect`等hook的那一小块拆成独立文件单独标`'use client'`，宿主文件本身不标，只是"引用"这个现成的客户端组件塞进配置/数据里（这个引用动作本身不需要hook，合法）。踩坑实例见`Mindo-内容库.md`11.7节（Keystatic的`codex-content-components.tsx`）
+- **算法文档的文字描述会跟实际代码悄悄漂移，锁定的算法参数以代码为准，不是以文档为准**：`Mindo-八字.md`写透根系数"无上限"，但`packages/core/src/bazi/energy/energy.ts`实际早就改成"按同五行天干数分配、封顶3"，文档没跟着更新。先天体质模块施工时踩到这处漂移，最终以`energy.ts`的实际代码为准——以后任何"锁定参数"类文档，遇到跟代码对不上的情况，默认怀疑文档滞后而不是代码写错，回代码源头确认
 
 ## 已完成模块（一句话+指向详情文档，细节不在本文件展开）
 
 - [x] 全部基础架构（Monorepo/路由/多语言/设计系统/导航框架）
 - [x] Supabase Auth + Onboarding流程，详见 `Mindo-认证与账户.md`
-- [x] 八字引擎/AI报告页/PDF导出，详见 `Mindo-算法-八字.md`
+- [x] 八字引擎/AI报告页/PDF导出，详见 `Mindo-八字.md`
 - [x] 通用时间引擎独立模块（packages/core/src/time/）
-- [x] 大五人格（120题/引擎/常模匹配/T分），详见 `Mindo-算法-大五.md`
+- [x] 大五人格（120题/引擎/常模匹配/T分），详见 `Mindo-大五.md`
 - [x] 西洋星盘（SVG星盘图）
 - [x] 付费系统（虚拟币/VIP/服务覆盖凭证/兑换码/`/admin`后台管理面板，取代原Lemon Squeezy买断制），详见 `Mindo-支付系统.md`
 - [x] 仪表盘6列网格（自定义拖拽/碰撞解决/布局持久化）
@@ -327,7 +334,8 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - [x] 档案管理拖拽排序、资产管理页面、账户注销真删除，详见 `Mindo-认证与账户.md`
 - [x] 片语模块（后端全套/前端全套/卡片集/留言/提醒/推荐算法/感想/合并个人主页），详见 `Mindo-片语.md`
 - [x] 片语+若干其他模块（档案/仪表盘/八字卡片/大五/西洋星盘/私信/用户主页）改造为使用 TanStack Query，含跨组件共享缓存与乐观更新重写。支付/AI报告生成链路/账户认证与安全明确排除在外，未改造
-- [x] 内容库（Codex）技术地基：fumadocs-core+fumadocs-mdx装框架、/codex路由、搜索/链接校验/sitemap/llms.txt配套功能、八字首批词条目录骨架（仅占位，未写正式内容），详见 `Mindo-内容库.md`
+- [x] 内容库（Codex）：数据库驱动架构（Supabase表+packages/db+自建Tiptap编辑后台，取代原Fumadocs文件系统+Keystatic方案），归类树/词条多语言/引用角标/站内链接/媒体块/sitemap-llms.txt/搜索均已重建，仅有八字/大五占位内容未写正式文字，详见 `Mindo-内容库.md`
+- [x] Pro账号模式（复刻VIP同构实现：`pro_expires_at`/`pro_transactions`/`extend_pro`/后台三处发放入口）+ 先天体质模块（常规版/子平版四层算法引擎`packages/core/src/bazi/constitution/`、Pro Hub卡片入口、独立长页面、AI分析指令生成），详见 `Mindo-支付系统.md`十二节 + `Mindo-先天体质.md`
 - [x] 数据库访问层拆分（`packages/db`接口定义+Supabase实现两层，详见"数据库访问层"一节）：支付/账户/八字报告/大五/片语/西洋星盘/用户关系与私信全部改造完毕，业务代码不再直接调用`supabase.from()/.rpc()`；同时把66处分散的API路由登录态检查统一收口成`requireApiUser()`
 
 ## 待完成（项目全局性的留在这里，具体模块内部的待办去对应模块文档看）
@@ -344,8 +352,9 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - [ ] 全项目扫描时顺带发现的两个疑似孤儿文件，待用户确认是否删除：`app/api/dashboard/profile/page.tsx`（位置反常，疑似档案页旧版本误放）、`components/modules/bazi/ReadingCard.tsx`（全项目无引用，疑似废弃，内部仍调用支付接口）
 - [ ] 片语：翻译功能尚未接入（方案已从Google Cloud Translation改为待定，因绑卡+自动扣费风险，见Mindo-片语.md），详细待办见该文档
 - [ ] 大五：颜色系统需要正式写入 `Mindo-算法-大五.md`（已知存在于`bigfive-constants.ts`，尚未拿到文件内容确认细节）
-- [ ] 内容库：首批词条（八字板块）正式内容撰写——本次只搭了技术地基，所有词条文件都是占位文字，详见 `Mindo-内容库.md`
-- [ ] 内容库：代码块语法高亮（Shiki）目前整体关闭，因为和 remark-math 的公式渲染冲突排查未彻底解决，详见 `Mindo-内容库.md`
+- [ ] 内容库：首批词条（八字/大五板块）正式内容撰写——数据库表和编辑后台已就绪，尚无正式撰写的词条内容，详见 `Mindo-内容库.md`
+- [ ] 内容库：首页（`/codex`）视觉设计（图谱/卡片等）尚未做，目前只有最简占位，详见 `Mindo-内容库.md` 十二节
+- [ ] 内容库：站内搜索目前只匹配标题/路径，不匹配正文全文，详见 `Mindo-内容库.md` 十二节
 - [ ] `packages/core/src/bazi/pro.ts` 里还在 `import { engine } from './engine'`，但`engine.ts`早就把导出改名成了`baziEngine`——这是阶段二施工全局type-check时顺带发现的一个已存在的类型错误，不属于这次数据库访问层拆分的范围，没有动，需要单独排查这个文件是什么时候、被谁引入的
 - [ ] `app/api/users/route.ts` 和 `app/api/users/me/route.ts` 两个文件内容完全一样（都是PATCH更新display_name/handle），疑似重复文件，待确认哪个是废弃的、可以删除
 - [ ] 阶段二数据库访问层拆分时，`[locale]/dashboard/assessments/bazi/reading/page.tsx` 和 `[locale]/page.tsx`（落地页）这两个服务端页面里的`supabase.auth.getUser()`没有跟着收口进`requireApiUser()`——它们各自有自定义的重定向逻辑（前者未登录跳`/auth/login`而不是`requireAuth()`默认的`/`；后者要在有session时额外判断有没有档案再决定跳仪表盘还是onboarding），强行统一会改变现有行为，故意留下没动

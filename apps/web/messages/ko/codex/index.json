@@ -1,32 +1,4 @@
 {
-  "search": {
-    "placeholder": "코덱스 검색…",
-    "loading": "검색 중…",
-    "empty": "결과 없음"
-  },
-  "notFound": "아직 존재하지 않는 항목입니다.",
-  "home": {
-    "graph": {
-      "baziLabel": "八字"
-    },
-    "cards": {
-      "bazi": {
-        "title": "八字",
-        "description": "임시 소개 문구입니다. 정식 콘텐츠는 준비 중입니다.",
-        "cta": "입장"
-      }
-    }
-  },
-  "topicNav": {
-    "home": "홈",
-    "directory": "항목 목록",
-    "search": "검색"
-  },
-  "citations": {
-    "showAll": "인용 표시",
-    "hideAll": "인용 숨기기"
-  },
-  "directory": {
-    "title": "항목 목록"
-  }
+  "home": "코덱스",
+  "referencesTitle": "참고 문헌"
 }

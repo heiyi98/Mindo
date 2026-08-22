@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/admin/requireAdmin';
+import { requireStaffAccount } from '@/lib/admin/requireStaffAccount';
 import { paymentsRepository } from '@/lib/payments/adminClient';
-import { creditWallet, extendVip, grantVoucher } from '@mindo/payments';
+import { creditWallet, extendVip, extendPro, grantVoucher } from '@mindo/payments';
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireStaffAccount();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
@@ -30,6 +30,12 @@ export async function POST(request: NextRequest) {
 
   if (type === 'vip') {
     const result = await extendVip(paymentsRepository, targetUserId, Number(body.days), 'admin_grant', admin.id);
+    if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ success: true, expiresAt: result.data.expiresAt });
+  }
+
+  if (type === 'pro') {
+    const result = await extendPro(paymentsRepository, targetUserId, Number(body.days), 'admin_grant', admin.id);
     if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true, expiresAt: result.data.expiresAt });
   }

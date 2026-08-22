@@ -3,6 +3,7 @@ import type { PaymentsRepository, LedgerResult, RewardType } from './types';
 import { ok, fail } from './types';
 import { creditWallet } from './wallet';
 import { extendVip } from './vip';
+import { extendPro } from './pro';
 import { grantVoucher } from './vouchers';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -19,6 +20,7 @@ export interface RedeemCodeResult {
   rewardType: RewardType;
   walletBalance?: number;
   vipExpiresAt?: string;
+  proExpiresAt?: string;
   voucherId?: string;
 }
 
@@ -70,6 +72,12 @@ export async function redeemCode(
     const result = await extendVip(repo, userId, config.days, 'redeem');
     if (!result.success) return fail(result.code, result.error);
     return ok({ rewardType, vipExpiresAt: result.data.expiresAt });
+  }
+
+  if (rewardType === 'pro') {
+    const result = await extendPro(repo, userId, config.days, 'redeem');
+    if (!result.success) return fail(result.code, result.error);
+    return ok({ rewardType, proExpiresAt: result.data.expiresAt });
   }
 
   // voucher

@@ -5,7 +5,7 @@ import type { DbError } from '../shared/types';
 export type { DbError };
 
 export type CoverageType = 'full' | 'percentage' | 'fixed_amount';
-export type RewardType = 'wallet' | 'vip' | 'voucher';
+export type RewardType = 'wallet' | 'vip' | 'voucher' | 'pro';
 
 export type WalletTransactionType =
   | 'redeem'
@@ -21,6 +21,11 @@ export type VipTransactionType =
   | 'admin_grant'
   | 'admin_revoke'
   | 'voucher_full';
+
+export type ProTransactionType =
+  | 'redeem'
+  | 'admin_grant'
+  | 'admin_revoke';
 
 export interface ServiceCoverageVoucher {
   id: string;
@@ -101,6 +106,7 @@ export interface AdminUserLookup {
   email: string;
   handle: string | null;
   vip_expires_at: string | null;
+  pro_expires_at: string | null;
 }
 
 export interface PaymentsRepository {
@@ -132,6 +138,18 @@ export interface PaymentsRepository {
   getUserVipExpiry(
     userId: string
   ): Promise<{ data: { vip_expires_at: string | null } | null; error: DbError | null }>;
+
+  // pro.ts 底层
+  extendProRaw(
+    userId: string,
+    days: number,
+    type: ProTransactionType,
+    actorId: string | null
+  ): Promise<{ data: string | null; error: DbError | null }>;
+
+  getUserProExpiry(
+    userId: string
+  ): Promise<{ data: { pro_expires_at: string | null } | null; error: DbError | null }>;
 
   // vouchers.ts 底层
   listVouchers(

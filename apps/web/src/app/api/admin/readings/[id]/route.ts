@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/admin/requireAdmin';
+import { requireStaffAccount } from '@/lib/admin/requireStaffAccount';
 import { baziRepositoryAdmin } from '@/lib/bazi/adminClient';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const admin = await requireAdminUser();
+  const admin = await requireStaffAccount();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;

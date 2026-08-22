@@ -11,5 +11,10 @@
   "enneagram": { "name": "Ennéagramme", "desc": "Un système de neuf types de personnalité" },
   "liuyao": { "name": "Liuyao", "desc": "Un système divinatoire chinois basé sur le Yi Jing" },
   "tarot": { "name": "Tarot", "desc": "Perspicacité et réflexion par les cartes de tarot" },
-  "geomancy": { "name": "Géomancie", "desc": "Un système divinatoire basé sur les énergies telluriques" }
+  "geomancy": { "name": "Géomancie", "desc": "Un système divinatoire basé sur les énergies telluriques" },
+  "pro": {
+    "constitutionEntry": "Constitution",
+    "hubTitle": "Outils PRO",
+    "constitutionDesc": "Outil de référence pour les praticiens de MTC agréés sur la constitution innée"
+  }
 }

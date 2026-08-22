@@ -1,22 +1,17 @@
-import { createFromSource } from 'fumadocs-core/search/server';
-import { codexSourceLoader } from '@/lib/source';
-import { getCodexTopicForSlug } from '@/config/codex-topics';
+import { codexRepository } from '@/lib/codex/adminClient';
 
-// 自定义 buildIndex：给每个页面按 slug 所属主题打 tag，
-// 供主题范围内的搜索框（CodexSearchBox tag=...）把搜索结果限定在本主题内。
-const server = createFromSource(codexSourceLoader, {
-  buildIndex: (page) => {
-    const topic = getCodexTopicForSlug(page.slugs);
+// 站内公开搜索：直接查数据库（标题/路径关键字匹配+status='published'过滤），
+// 不再依赖fumadocs的flexsearch索引。目前只匹配标题/slug，不匹配正文全文——
+// 正文存成Tiptap JSON，要做真正的全文检索需要另外建索引列，这次先用最简单
+// 能用的版本，全文搜索留到有真实内容量、有实际需要时再加。
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const locale = searchParams.get('locale');
+  const q = searchParams.get('q') ?? '';
+  if (!locale) return Response.json({ error: 'missing locale' }, { status: 400 });
 
-    return {
-      id: page.url,
-      title: page.data.title,
-      description: page.data.description,
-      url: page.url,
-      structuredData: page.data.structuredData,
-      tag: topic?.searchTag,
-    };
-  },
-});
+  const { data, error } = await codexRepository.searchEntries(locale, q, 30);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
 
-export const { GET } = server;
+  return Response.json({ results: data });
+}

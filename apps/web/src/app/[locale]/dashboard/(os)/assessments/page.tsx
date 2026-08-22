@@ -7,6 +7,7 @@ import { Layers, Wand2, Map as MapIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentProfile } from '@/components/os/CurrentProfileContext';
 import { useTopBar } from '@/components/os/TopBarContext';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import ProfileSwitcher from '@/components/dashboard/ProfileSwitcher';
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
 import { getWuxingColor } from '@/lib/wuxing-colors';
@@ -218,10 +219,44 @@ export default function AssessmentsPage() {
   const { currentProfile } = useCurrentProfile();
   const { setContent } = useTopBar();
 
+  const { data: assetsData } = useQuery<{ proExpiresAt: string | null }>({
+    queryKey: ['payment-assets'],
+    queryFn: async () => {
+      const res = await fetch('/api/payments/assets');
+      if (!res.ok) throw new Error('Failed to fetch assets');
+      return res.json();
+    },
+  });
+  const isProActive = !!assetsData?.proExpiresAt && new Date(assetsData.proExpiresAt).getTime() > Date.now();
+
   useEffect(() => {
-    setContent({ left: <ProfileSwitcher /> });
+    setContent({
+      left: <ProfileSwitcher />,
+      right: isProActive ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link
+            href="/dashboard/assessments/pro"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid hsl(var(--foreground) / 0.3)',
+              color: 'hsl(var(--foreground))',
+              textDecoration: 'none',
+            }}
+          >
+            PRO
+          </Link>
+          <ThemeToggle />
+        </div>
+      ) : undefined,
+    });
     return () => setContent({});
-  }, [setContent]);
+  }, [setContent, isProActive]);
 
   const statusQuery = useQuery({
     queryKey: ['assessments-status', currentProfile?.id],

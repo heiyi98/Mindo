@@ -21,6 +21,41 @@ export * from './bazi/timeline';
 export { computeFortuneImbalance, generateLifeChart, getMonthPillar, getDayPillar } from './bazi/fortune';
 export type { LinPillar, FortuneGroupEnergies, FortuneResult, MonthScore, YearScore, LifeChartData } from './bazi/fortune';
 
+// 先天体质（Pro）
+export { computeConstitution } from './bazi/constitution/index';
+export {
+  computeRegularEnergyNodes,
+  extractZiPingEnergyNodes,
+  getSanhuiImmuneWuxing,
+  buildManualBaziSnapshot,
+  computeLayerOne,
+  computeLayerTwo,
+  computeLayerThree,
+  computeLayerFour,
+  yinyangStrengthLabel,
+  averageStrengthLabel,
+  averageOfPositive,
+  fiveConstitutionLabel,
+  ORGAN_MAP,
+} from './bazi/constitution/index';
+export type {
+  ConstitutionVersion,
+  ConstitutionResult,
+  ConstitutionEnergyNode,
+  ConstitutionLayerOne,
+  ConstitutionLayerTwo,
+  ConstitutionLayerThree,
+  ConstitutionLayerFour,
+  YinYangGroupResult,
+  WuxingStaticResult,
+  YinYangWuxingStaticResult,
+  PrescriptionResult,
+  PrescriptionAdvice,
+  ManualBirthInput,
+  FiveConstitutionType,
+  StrengthLabel as ConstitutionStrengthLabel,
+} from './bazi/constitution/types';
+
 // 心理测量
 export { calculateBigFive, getQuestionCount } from './psychology/bigfive';
 export type {

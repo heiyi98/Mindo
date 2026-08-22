@@ -3,6 +3,7 @@ export type {
   RewardType,
   WalletTransactionType,
   VipTransactionType,
+  ProTransactionType,
   ServiceCoverageVoucher,
   RedemptionCodeBatchSummary as RedemptionCodeBatch,
   PaymentsRepository,
@@ -25,6 +26,10 @@ export interface WalletRewardConfig {
 }
 
 export interface VipRewardConfig {
+  days: number;
+}
+
+export interface ProRewardConfig {
   days: number;
 }
 

@@ -8,6 +8,8 @@ export * from './bigfive/interface';
 export * from './mindCards/interface';
 export * from './western/interface';
 export * from './social/interface';
+export * from './codex/interface';
+export * from './admin/interface';
 
 export interface ProfileInsert {
   user_id: string;

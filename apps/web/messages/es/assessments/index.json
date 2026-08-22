@@ -40,5 +40,10 @@
     "ziwei": { "desc": "Ancient Chinese stellar fate system" },
     "western": { "desc": "Planetary chart at your birth" },
     "bigfive": { "desc": "Five-factor personality science" }
+  },
+  "pro": {
+    "constitutionEntry": "Constitution",
+    "hubTitle": "PRO Tools",
+    "constitutionDesc": "Reference tool for licensed TCM practitioners on innate constitution"
   }
 }

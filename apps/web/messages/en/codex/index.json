@@ -1,32 +1,4 @@
 {
-  "search": {
-    "placeholder": "Search the codex...",
-    "loading": "Searching...",
-    "empty": "No results"
-  },
-  "notFound": "This entry doesn't exist yet.",
-  "home": {
-    "graph": {
-      "baziLabel": "Bazi"
-    },
-    "cards": {
-      "bazi": {
-        "title": "Bazi (Four Pillars)",
-        "description": "Placeholder introduction — full content coming soon.",
-        "cta": "Enter"
-      }
-    }
-  },
-  "topicNav": {
-    "home": "Home",
-    "directory": "Directory",
-    "search": "Search"
-  },
-  "citations": {
-    "showAll": "Show citations",
-    "hideAll": "Hide citations"
-  },
-  "directory": {
-    "title": "Entry directory"
-  }
+  "home": "Codex",
+  "referencesTitle": "References"
 }
