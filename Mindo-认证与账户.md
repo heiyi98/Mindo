@@ -44,7 +44,8 @@
 - 语言优先级（callback）：登录那一刻界面语言（`locale` 参数）→ 浏览器 Accept-Language → `users.language_preference` → 英文。
 - 以前 `handle_new_user()` 触发器 + callback/confirm 里"用 admin client 补一行"的自愈逻辑已全部被 `ensure_current_user` 取代（触发器已删）。
 - 改密码（账户安全页）/ 忘记密码（`/auth/reset-password`）改的是 **Alethego 账号**的密码，TaskApp 同时生效，页面上有提示。
-- **Alethego** 项目 Authentication → URL Configuration 的 Redirect URLs 里已加上 Mindo 的 `/api/auth/callback`（`https://mindo-gold.vercel.app` + `http://localhost:3000`，2026-10-08 用户手动配置）。以后换生产域名必须同步改这里，否则 Google 登录/邮件链接会被 Alethego 拒绝或跳回 Site URL。
+- **Alethego** 项目 Authentication → URL Configuration 的 Redirect URLs 里已加上 `https://mindo-gold.vercel.app/**` 和 `http://localhost:3000/**`（2026-10-08 用户手动配置）。**必须用 `/**` 通配写法**：Mindo 的回调地址带查询参数（`?locale=..&next=..`），只写 `/api/auth/callback` 时 Alethego 匹配不上，会退回它的 Site URL（localhost，TaskApp 在用，不能改），表现为"Google 登录后跳到 localhost 拒绝连接"。以后换生产域名必须同步改这里。
+- 改造上线后，老用户浏览器里如果还开着/缓存着改造前的页面，点 Google 登录会走旧代码（Mindo 自己的 Auth）同样跳到 localhost——强制刷新（Ctrl+Shift+R）或清站点数据即可，不是代码问题（2026-10-08 实测）。
 
 ## 四、Onboarding "先体验后注册"流程的认证保护逻辑
 
