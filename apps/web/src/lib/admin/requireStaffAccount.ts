@@ -1,4 +1,4 @@
-import { requireApiUser } from '@/lib/auth/requireAuth';
+import { createStaffServerClient } from '@/lib/supabase/server';
 import { adminAccountRepository } from './adminClient';
 import type { AdminAccount } from '@mindo/db';
 
@@ -14,7 +14,10 @@ import type { AdminAccount } from '@mindo/db';
  * 那部分留给各自模块自己的repository（如 codexRepository.getScopesForAdmin）。
  */
 export async function requireStaffAccount(): Promise<AdminAccount | null> {
-  const { user } = await requireApiUser();
+  // 管理员登录的是 Mindo 项目自己的 Supabase Auth（/admin/login），跟普通用户
+  // 的 Alethego 会话是两套cookie，这里只读管理员那一套，不能改用 requireApiUser()。
+  const staffSession = await createStaffServerClient();
+  const { data: { user } } = await staffSession.auth.getUser();
   console.log('[requireStaffAccount] session user:', user?.id, user?.email);
   if (!user) return null;
 

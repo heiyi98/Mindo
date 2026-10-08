@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getVerifiedSession } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ConstitutionView from '@/components/pro/ConstitutionView'
 
@@ -8,8 +8,7 @@ interface Props {
 
 export default async function ConstitutionPage({ params }: Props) {
   const { locale } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getVerifiedSession()
   if (!user) redirect(`/${locale}/auth/login`)
 
   const { data: userRow } = await supabase

@@ -87,9 +87,10 @@ export interface AccountRepository {
   getDashboardLayout(profileId: string, userId: string): Promise<unknown | null>;
   updateDashboardLayout(profileId: string, userId: string, layout: unknown): Promise<{ error: DbError | null }>;
 
-  // 账户安全/资产/注销
-  getAuthUserHasPassword(userId: string): Promise<boolean>;
+  // 资产/注销
   listBaziAssets(userId: string): Promise<BaziAssetRow[]>;
   deleteAllUserData(userId: string): Promise<void>;
-  deleteAuthUser(userId: string): Promise<{ error: DbError | null }>;
+  /** 删除 public.users 这一行（service role），下游表按外键 CASCADE 一起清空。
+   *  账号本身在 Alethego，Mindo 不删也删不了。 */
+  deleteMindoUser(userId: string): Promise<{ error: DbError | null }>;
 }

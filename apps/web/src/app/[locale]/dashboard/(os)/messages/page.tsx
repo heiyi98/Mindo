@@ -5,7 +5,7 @@ import { useSearchParams, useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createLoginClient } from '@/lib/supabase/client';
 import { Send, Search, X } from 'lucide-react';
 
 interface OtherUser {
@@ -195,7 +195,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     const supabase = supabaseRef.current;
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    createLoginClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setMyId(user.id);
     });
   }, []);

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getVerifiedSession } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BaziReadingView from '@/components/modules/bazi/BaziReadingView'
 import { buildShishenRelations, buildGanZhiRelations } from '@/lib/bazi/reportRelations'
@@ -11,8 +11,7 @@ interface Props {
 export default async function BaziReadingPage({ params, searchParams }: Props) {
   const { locale } = await params
   const { readingId, snapshotId } = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getVerifiedSession()
   if (!user) redirect(`/${locale}/auth/login`)
   if (!readingId && !snapshotId) redirect(`/${locale}/dashboard/assessments/bazi`)
 

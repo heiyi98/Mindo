@@ -122,6 +122,7 @@
       "emailSent": "Bestätigungs-E-Mail gesendet, bitte prüfen Sie Ihren Posteingang",
       "noEmail": "Keine E-Mail verknüpft",
       "bindEmailHint": "Wir empfehlen, eine E-Mail zu verknüpfen, um den Kontoverlust zu vermeiden",
+      "managedByAlethego": "Dein Konto wird von Alethego verwaltet und mit TaskApp geteilt. Passwortänderungen gelten für beide.",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "Verknüpft",

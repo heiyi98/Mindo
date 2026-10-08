@@ -4,7 +4,7 @@ import { useRouter, usePathname } from '@/i18n/navigation';
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Languages } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createLoginClient } from '@/lib/supabase/client';
 
 const SUPPORTED_LOCALES = [
   { code: 'en', label: 'English' },
@@ -41,7 +41,7 @@ export function LanguageSwitcher() {
     setOpen(false);
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await createLoginClient().auth.getUser();
       if (user) {
         await supabase
           .from('users')
@@ -147,7 +147,7 @@ export function LanguageSettingRow({ label }: { label: string }) {
     setOpen(false);
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await createLoginClient().auth.getUser();
       if (user) {
         await supabase
           .from('users')

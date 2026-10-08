@@ -1,20 +1,12 @@
 import { type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createLoginServerClient, verifyAccessToken } from '@/lib/supabase/server'
+import { ensureCurrentUser } from '@/lib/auth/ensureCurrentUser'
 import { redirect } from 'next/navigation'
-
-const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
 // 必须跟项目实际支持的语言列表一致（CLAUDE.md 里写的九种）
 const SUPPORTED_LOCALES = ['zh', 'zh-Hant', 'en', 'fr', 'de', 'es', 'ja', 'ko', 'it']
 
-function generateHandle(): string {
-  let suffix = ''
-  for (let i = 0; i < 6; i++) {
-    suffix += CHARS[Math.floor(Math.random() * CHARS.length)]
-  }
-  return `mindo_${suffix}`
-}
+const NEXT_WHITELIST = ['/auth/reset-password']
 
 // 简单解析 Accept-Language 请求头，取第一个能匹配上支持列表的语言。
 // 不做完整的 quality-value(q=) 权重排序，按浏览器发送的原始顺序取第一个
@@ -32,91 +24,53 @@ function pickLocaleFromAcceptLanguage(header: string | null): string | null {
   return null
 }
 
+// Alethego 的所有"带授权码跳回来"的入口都汇到这里：Google 登录、注册确认邮件、
+// 忘记密码邮件（都是 PKCE 流程，地址栏带 ?code=）。在服务器端用 Alethego 登录
+// client 兑换成会话（写进 cookie），然后：
+//   1. ensure_current_user：确保 public.users 里有这个人（第一次就建，之后只同步email）
+//   2. next 在白名单里的（重置密码）直接去 next；否则按"有没有档案"去仪表盘或 onboarding
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const explicitLocale = searchParams.get('locale')
+  const next = searchParams.get('next')
 
   if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const login = await createLoginServerClient()
+    const { data: exchanged, error } = await login.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { supabase, user } = await verifyAccessToken(login, exchanged.session?.access_token)
 
       if (user) {
-        const adminClient = createAdminClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        )
-
-        // 读取语言偏好 + handle。用 maybeSingle 而不是 single——
-        // single 在查不到行时会把 error 静默丢在解构里不处理，
-        // userData 直接变成 null，看起来跟"正常查到、只是字段是
-        // null"没有区别，等于把"这一行压根不存在"这件事悄悄吞掉了。
-        let { data: userData } = await supabase
-          .from('users')
-          .select('language_preference, handle')
-          .eq('id', user.id)
-          .maybeSingle()
-
-        // 自愈：public.users 这一行本该在注册时由 handle_new_user
-        // 这个触发器自动建好。如果这里读不到，说明这一行因为某种原因
-        // 丢失了。补一份跟 handle_new_user 完全同样的最小版本
-        // （只有 id + email），不影响正常注册时的行为。
-        if (!userData) {
-          await adminClient
-            .from('users')
-            .upsert(
-              { id: user.id, email: user.email },
-              { onConflict: 'id', ignoreDuplicates: true }
-            )
-          userData = { language_preference: null, handle: null } as any
-        }
-
         // 语言优先级：登录那一刻用户正在用的界面语言（最直接、最不会猜错）
         // → 浏览器 Accept-Language（前两者都没有时的合理兜底）
-        // → 数据库里存的偏好（历史遗留，几乎不会命中，留着兼容旧数据）
+        // → 数据库里存的偏好
         // → 英文（最终兜底）
         const validExplicitLocale =
           explicitLocale && SUPPORTED_LOCALES.includes(explicitLocale) ? explicitLocale : null
         const browserLocale = pickLocaleFromAcceptLanguage(request.headers.get('accept-language'))
 
-        const lang =
-          validExplicitLocale ||
-          browserLocale ||
-          userData?.language_preference ||
-          'en'
+        // 第一次登录时顺手把解析出来的语言存进去；老用户不覆盖已有偏好
+        const { data: userRow } = await ensureCurrentUser(
+          supabase,
+          user,
+          validExplicitLocale || browserLocale || 'en'
+        )
+        const storedLanguage = (userRow as { language_preference?: string | null } | null)?.language_preference ?? null
 
-        // 顺手把这次解析出来的语言写回去，这样以后任何走不到这段
-        // "带着当前语言登录"逻辑的路径（比如以后新增的登录方式），
-        // 至少能读到上一次真实生效过的语言，而不是永远读到 null。
-        if (!userData?.language_preference) {
-          await adminClient
-            .from('users')
-            .update({ language_preference: lang })
-            .eq('id', user.id)
+        const lang = validExplicitLocale || browserLocale || storedLanguage || 'en'
+
+        // 老用户如果偏好还是空的，写回这次真实生效的语言
+        if (userRow && !storedLanguage) {
+          await supabase.from('users').update({ language_preference: lang }).eq('id', user.id)
         }
 
-        // 如果没有 handle，自动生成唯一值
-        if (!userData?.handle) {
-          let handle = ''
-          let isUnique = false
-
-          while (!isUnique) {
-            handle = generateHandle()
-            const { data: existing } = await adminClient
-              .from('users')
-              .select('id')
-              .eq('handle', handle)
-              .maybeSingle()
-            isUnique = !existing
-          }
-
-          await adminClient
-            .from('users')
-            .update({ handle })
-            .eq('id', user.id)
+        // 只认白名单里的 next（忘记密码邮件 → 重置密码页）。其他情况（包括
+        // onboarding 带的 next=/onboarding）一律按"有没有档案"分流，跟改造前一致：
+        // 已有档案的老用户不会被送回 onboarding 重复提交。
+        if (next && NEXT_WHITELIST.includes(next)) {
+          redirect(`/${lang}${next}`)
         }
 
         // 检查是否有档案

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getVerifiedSession } from '@/lib/supabase/server';
 import { preparePhase1Input } from '@mindo/core';
 
 export async function GET(request: NextRequest) {
@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'profile_id required' }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getVerifiedSession();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: snapshot } = await supabase

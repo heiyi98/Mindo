@@ -12,7 +12,8 @@ import TeaserPage from '@/components/onboarding/teaser/TeaserPage';
 import TimezoneSelector from '@/components/onboarding/steps/TimezoneSelector';
 import { ValveConverge } from '@/components/common/ValveConverge';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createLoginClient } from '@/lib/supabase/client';
+import { ensureCurrentUser } from '@/lib/auth/ensureCurrentUser';
 import { matchTimezoneOption, type TimezoneOption } from '@/lib/timezones';
 import {
   type OnboardingState,
@@ -123,7 +124,8 @@ export default function OnboardingPage() {
       }
     } catch {}
 
-    const supabase = createClient();
+    // 登录状态属于 Alethego 身份项目，统一从登录client读
+    const loginClient = createLoginClient();
 
     if (restoredState?.birthYear) {
       // 这个标签页里确实有填过的草稿数据——sessionStorage不跨标签页
@@ -132,7 +134,7 @@ export default function OnboardingPage() {
       // 之前 teaser 页里那个"监听登录成功就自动提交"的机制随着旧页面
       // 一起被销毁了，永远不会被触发）。直接用恢复出来的资料补上这次
       // 本该发生但没发生的提交。
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      loginClient.auth.getUser().then(({ data: { user } }) => {
         if (user) {
           setResuming(true);
           saveToDatabase(restoredState!);
@@ -144,12 +146,14 @@ export default function OnboardingPage() {
       // 这个标签页里没有任何草稿数据，但可能已经是登录状态——这不是
       // "同一次尝试的延续"，因为真正在填的人一定会在这个标签页里留下
       // sessionStorage痕迹。没有痕迹却已登录，最合理的解释是共用设备场景：
-      // 上一个人的登录凭证存在localStorage里（跨标签页共享），这次是
+      // 上一个人的登录凭证存在cookie里（跨标签页共享），这次是
       // 完全不同的人开了一个新标签页碰到了它。主动登出，保证接下来
       // 是真正干净的开始，不会有人在不知情的情况下把资料填进别人账号。
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      // scope:'local' 只清掉本浏览器里 Mindo 这份会话，不吊销这个
+      // Alethego 账号在别处（比如 TaskApp）的登录。
+      loginClient.auth.getUser().then(({ data: { user } }) => {
         if (user) {
-          supabase.auth.signOut().then(() => setResuming(false));
+          loginClient.auth.signOut({ scope: 'local' }).then(() => setResuming(false));
         } else {
           setResuming(false);
         }
@@ -194,8 +198,7 @@ export default function OnboardingPage() {
     setIsSavingGender(true);
     try {
       updateState({ gender });
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await createLoginClient().auth.getUser();
 
       let baziData = null;
       try {
@@ -631,44 +634,53 @@ function LoginStep({ onSuccess }: { onSuccess: () => void }) {
   return <LoginFormWithCallback onSuccess={onSuccess} />;
 }
 
+// 嵌在 onboarding 里的登录表单，连 Alethego 身份项目，只有 Google + 邮箱密码。
+// 邮箱密码登录/注册成功后，先 ensure_current_user 建好 public.users 那一行，
+// 再调用 onSuccess 提交档案（档案表外键指向 public.users，顺序不能反）。
+// Google 登录是整页跳转，回来后由 /api/auth/callback 做 ensure，再回到本页面
+// 由上面的 useLayoutEffect 从 sessionStorage 恢复草稿自动提交。
 function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
   const t = useTranslations('auth');
   const locale = useLocale();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') onSuccess();
-    });
-    return () => subscription.unsubscribe();
-  }, [onSuccess]);
+  const callbackUrl = () => `${window.location.origin}/api/auth/callback?next=/onboarding&locale=${locale}`;
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError('');
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/confirm?next=/onboarding` }
-    });
-    if (error) setError(error.message);
-    else setSent(true);
+    const loginClient = createLoginClient();
+    const { data, error } = mode === 'login'
+      ? await loginClient.auth.signInWithPassword({ email, password })
+      : await loginClient.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl() } });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    if (data.session && data.user) {
+      await ensureCurrentUser(createClient(), data.user, locale);
+      setLoading(false);
+      onSuccess();
+      return;
+    }
+    // 注册且 Alethego 开了邮箱确认：提示去邮箱点链接
+    setSent(true);
     setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    await createLoginClient().auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding&locale=${locale}`,
+        redirectTo: callbackUrl(),
         // 强制每次都弹账号选择框，不静默复用浏览器里已有的Google登录状态。
         // 清cookie解决不了这个问题——Google的登录态存在accounts.google.com
         // 自己的域下，跟本站cookie无关。
@@ -678,18 +690,8 @@ function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
     setGoogleLoading(false);
   };
 
-  const handleFacebookLogin = async () => {
-    setFacebookLoading(true);
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding&locale=${locale}` }
-    });
-    setFacebookLoading(false);
-  };
-
   if (sent) {
-    return <div className="text-center" style={{ color: 'hsl(var(--foreground))' }}><p>{t('login.checkEmail')}</p></div>;
+    return <div className="text-center" style={{ color: 'hsl(var(--foreground))' }}><p>{t('login.registerSent')}</p></div>;
   }
 
   return (
@@ -709,30 +711,28 @@ function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
         {googleLoading ? t('login.sending') : t('login.continueWithGoogle')}
       </button>
 
-      <button
-        onClick={handleFacebookLogin}
-        disabled={facebookLoading}
-        className="w-full py-3 rounded-lg font-medium flex items-center justify-center gap-3 disabled:opacity-50 transition-colors"
-        style={{ border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-        {facebookLoading ? t('login.sending') : t('login.continueWithFacebook')}
-      </button>
-
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: 'hsl(var(--border))' }}/>
         <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('login.or')}</span>
         <div className="flex-1 h-px" style={{ background: 'hsl(var(--border))' }}/>
       </div>
-      <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
+      <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
         <input
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           placeholder={t('login.emailPlaceholder')}
           required
+          className="w-full px-4 py-3 rounded-lg focus:outline-none"
+          style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder={mode === 'login' ? t('login.passwordPlaceholder') : t('setPassword.passwordPlaceholder')}
+          required
+          minLength={mode === 'register' ? 8 : undefined}
           className="w-full px-4 py-3 rounded-lg focus:outline-none"
           style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}
         />
@@ -743,7 +743,15 @@ function LoginFormWithCallback({ onSuccess }: { onSuccess: () => void }) {
           className="w-full py-3 rounded-lg font-medium disabled:opacity-50"
           style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
         >
-          {loading ? t('login.sending') : t('login.sendLink')}
+          {loading ? t('login.sending') : mode === 'login' ? t('login.loginTitle') : t('login.registerTitle')}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+          className="text-xs text-center"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          {mode === 'login' ? t('login.registerTitle') : t('login.backToLogin')}
         </button>
       </form>
     </div>

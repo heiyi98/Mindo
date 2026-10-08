@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createStaffClient as createClient } from '@/lib/supabase/client';
 
 // 后台管理员账号专用的登录入口，纯账号+密码（不走magic link/验证码那套面向
 // 普通用户的流程，也没有接第三方OAuth），底层还是用同一个

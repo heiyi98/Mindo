@@ -122,6 +122,7 @@
       "emailSent": "Correo de verificación enviado, por favor revisa tu bandeja de entrada",
       "noEmail": "No hay correo vinculado",
       "bindEmailHint": "Recomendamos vincular un correo para evitar perder el acceso a tu cuenta",
+      "managedByAlethego": "Tu cuenta está gestionada por Alethego y compartida con TaskApp. Cambiar la contraseña afecta a ambos.",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "Vinculado",

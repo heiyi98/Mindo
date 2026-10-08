@@ -33,6 +33,7 @@
 - 数据请求/缓存：TanStack Query（`@tanstack/react-query`），`QueryClientProvider` 在 `apps/web/src/app/[locale]/layout.tsx`，Provider组件在 `components/providers/QueryProvider.tsx`。片语模块+若干其他模块（档案/仪表盘/八字卡片/大五/西洋星盘/私信/用户主页）已改造为使用它（`useQuery`/`useMutation`/`useInfiniteQuery`），支付/AI报告生成链路/账户认证与安全这几类高风险流程明确排除在外，未改造，仍是手写fetch
 - 国际化：next-intl 4.x
 - 数据库：Supabase（PostgreSQL + RLS），项目ID `wsbskrgrkajnzzgpcfws`，表结构见 `Mindo-数据库.md`
+- 账号/登录：**Alethego 身份项目**负责注册登录（与 TaskApp 共用账号），Mindo 只验证 Alethego 签发的令牌、不签发令牌，`auth.uid()` = Alethego 用户编号。详见 `Mindo-认证与账户.md`
 - 图标：lucide-react（部分模块使用自定义SVG图标）
 - 内容库（Codex）：数据库驱动（Supabase表 + 自建Tiptap富文本编辑后台，UI自建），详见 `Mindo-内容库.md`
 - 部署：Vercel（国际版）/ 阿里云（中国版，待定）
@@ -219,7 +220,6 @@ contexts/
 /{locale}/u/[handle]/                   → 通用社交主页（关注状态、发私信入口）
 /{locale}/onboarding/                   → 引导流程
 /{locale}/auth/login/                   → 登录页
-/{locale}/auth/set-password/            → 新用户注册后设置密码
 /{locale}/auth/reset-password/          → 忘记密码后重置密码
 
 ```
@@ -253,7 +253,7 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 2. 去同目录 `supabaseRepository.ts` 写这个方法的Supabase实现
 3. 业务代码里通过 `apps/web/src/lib/{module}/adminClient.ts` 导出的repository对象调用
 
-**认证检查统一收口**：API路由不再各自写`const supabase = await createClient(); const {data:{user}} = await supabase.auth.getUser()`，统一调用 `lib/auth/requireAuth.ts` 里的 `requireApiUser()`，返回`{supabase, user}`——`supabase`是session client（尊重RLS），路由自己的业务查询继续拿它传给对应模块的repository工厂函数。**例外**（不受这次收敛管，仍然直接用Supabase）：`api/auth/callback`、`api/auth/confirm`（OAuth/邮箱验证的真实实现本身，不是重复样板）、`lib/supabase/middleware.ts`（session刷新基础设施）、以及`LoginForm.tsx`/`LanguageSwitcher.tsx`等标了`'use client'`的浏览器端组件（登录/登出/浏览器侧语言切换这类动作，本来就该用browser client直接调，不适合塞进服务端repository）。
+**认证检查统一收口**：API路由不再各自写`const supabase = await createClient(); const {data:{user}} = await supabase.auth.getUser()`，统一调用 `lib/auth/requireAuth.ts` 里的 `requireApiUser()`，返回`{supabase, user}`——`user`是从cookie里的Alethego令牌验签得到的，`supabase`是带着这个令牌的Mindo数据client（尊重RLS），路由自己的业务查询继续拿它传给对应模块的repository工厂函数。**例外**（不受这次收敛管，仍然直接用Supabase）：`api/auth/callback`、`api/auth/confirm`（OAuth/邮箱验证的真实实现本身，不是重复样板）、`lib/supabase/middleware.ts`（session刷新基础设施）、以及`LoginForm.tsx`/`LanguageSwitcher.tsx`等标了`'use client'`的浏览器端组件（登录/登出/浏览器侧语言切换这类动作，本来就该用browser client直接调，不适合塞进服务端repository）。浏览器端查"当前是谁"必须用`createLoginClient().auth`（Alethego），`createClient()`（Mindo数据client）的`.auth.*`不能用。后台管理员不走`requireApiUser()`，走`requireStaffAccount()`（Mindo自己的Supabase Auth）。
 
 **片语模块的特殊情况**：`lib/mindCards/{visibility,favorites,authors,folderCover,behaviorCandidates}.ts`这5个共享业务函数内部是多步强耦合查询（尤其`behaviorCandidates.ts`一个函数六次查询），拆分收益低，这次**没有**把它们内部的`.from()`调用也搬进接口层，继续直接持有`mindCardsAdminClient`——21个route文件自己的直接查询已经全部走`mindCardsRepository`了。
 
@@ -302,7 +302,7 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - **useEffect vs useLayoutEffect**：凡是"设置好某个值/状态之后，希望第一帧绘制就已经是正确结果，不能有一帧是错的"的场景，必须用useLayoutEffect，用useEffect会导致肉眼可见的一帧闪烁或错误初始状态
 - `.single()` **vs** `.maybeSingle()`：Supabase查询如果预期"可能查不到行"，必须用`maybeSingle()`，`single()`在查不到时会把error静默丢在解构结果里不处理
 - **sessionStorage不跨标签页共享，localStorage跨标签页共享**：这个区别可以用来分辨"同一次操作的延续"和"完全不同的人/时机"
-- **手动删测试数据必须走Authentication→Users删除，不要直接删数据表里的行**：`public.users`没有自己的外键指向`auth.users`，直接删数据表的行不会被任何机制自动修复，会导致账号永久卡死
+- **普通用户不在Mindo的`auth.users`里**（2026-10改为Alethego身份项目后）：删测试账号直接删`public.users`那一行（下游CASCADE），下次登录`ensure_current_user`会重新建行；不要去Alethego删账号（TaskApp也在用）。除`public.admin`外任何表都不能有指向`auth.users`的外键
 - `writing-mode: vertical-rl` **会改变** `text-align` **的语义**：横排时控制左右，竖排后实际控制另一个轴——想让竖排文字块整体贴左/居中/贴右，必须交给外层容器的flex `justifyContent`，竖排文字节点不能设`width:100%`
 - **lucide 图标命名里 "xxxVertical" 和 "xxxHorizontal" 的语义**：`AlignStartVertical`等表示"对齐一条竖线基准"（实际控制左右位置）；`AlignStartHorizontal`等表示"对齐一条横线基准"（实际控制上下位置）——命名直觉容易理解反
 - **CSS Grid** `repeat(n, 1fr)` **比 flex+justify-content/justify-between 更适合做"n个元素严格等宽分布"**：多行需要互相对齐时，让所有行共用同一套显式grid列定义，比逐行手工核对像素可靠
@@ -322,7 +322,7 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 ## 已完成模块（一句话+指向详情文档，细节不在本文件展开）
 
 - [x] 全部基础架构（Monorepo/路由/多语言/设计系统/导航框架）
-- [x] Supabase Auth + Onboarding流程，详见 `Mindo-认证与账户.md`
+- [x] 账号体系改为只验证 Alethego 令牌（与 TaskApp 账号互通）+ Onboarding流程，详见 `Mindo-认证与账户.md`
 - [x] 八字引擎/AI报告页/PDF导出，详见 `Mindo-八字.md`
 - [x] 通用时间引擎独立模块（packages/core/src/time/）
 - [x] 大五人格（120题/引擎/常模匹配/T分），详见 `Mindo-大五.md`
@@ -340,8 +340,7 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 
 ## 待完成（项目全局性的留在这里，具体模块内部的待办去对应模块文档看）
 
-- [ ] `public.users`补一个指向`auth.users(id)`的外键，或者写一个对称的`handle_deleted_user`触发器
-- [ ] Supabase OAuth回调URL更新（新Vercel域名）
+- [ ] Alethego项目 Redirect URLs 加上 Mindo 的 `/api/auth/callback`（生产域名+localhost），见 `Mindo-认证与账户.md`
 - [ ] 紫微斗数模块
 - [ ] MBTI模块
 - [ ] 论坛、商城模块

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useRouter } from '@/i18n/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createLoginClient } from '@/lib/supabase/client';
 import { LogOut, Trash2, ChevronRight, Layers, Shield, Check, Pencil, Link as LinkIcon, SquareUser, Ticket } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LanguageSettingRow } from '@/components/os/LanguageSwitcher';
@@ -38,7 +38,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    createLoginClient().auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       supabase
         .from('users')
@@ -108,8 +108,8 @@ export default function ProfilePage() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    // scope:'local' 只退出本浏览器里的 Mindo，不吊销这个 Alethego 账号在 TaskApp 等处的登录
+    await createLoginClient().auth.signOut({ scope: 'local' });
     router.push('/');
   };
 

@@ -122,6 +122,7 @@
       "emailSent": "確認メールを送信しました。受信トレイをご確認ください",
       "noEmail": "メールアドレスが未登録",
       "bindEmailHint": "アカウントの損失を防ぐため、メールアドレスの登録をお勧めします",
+      "managedByAlethego": "アカウントは Alethego で一元管理され、TaskApp と共通です。パスワードの変更は両方に反映されます。",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "連携済み",

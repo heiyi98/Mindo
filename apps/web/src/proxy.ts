@@ -17,8 +17,11 @@ export async function proxy(request: NextRequest) {
   // 去做，不依赖中间件matcher覆盖所有情况，见这两处的说明。必须放在下面
   // 通用/api/放行分支之前判断，否则会被那条分支提前放行（逻辑上一样，
   // 只是顺序上要写在前面避免以后误改）。
+  //
+  // 后台刷新的是 Mindo 项目自己的 Supabase Auth 会话（管理员账号体系），
+  // 其余路径刷新的是 Alethego 身份项目的会话（普通用户），两者cookie名不同、互不干扰。
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    const { supabaseResponse } = await updateSession(request)
+    const { supabaseResponse } = await updateSession(request, 'staff')
     return supabaseResponse
   }
 

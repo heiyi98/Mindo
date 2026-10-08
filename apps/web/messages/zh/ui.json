@@ -249,6 +249,7 @@
       "emailSent": "验证邮件已发送，请查收",
       "noEmail": "未绑定邮箱",
       "bindEmailHint": "建议绑定邮箱，防止账户丢失",
+      "managedByAlethego": "账号由 Alethego 统一管理，与 TaskApp 共用。修改密码会同时对两边生效。",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "已绑定",

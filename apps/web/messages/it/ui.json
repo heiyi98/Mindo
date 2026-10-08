@@ -122,6 +122,7 @@
       "emailSent": "E-mail di verifica inviata, controlla la tua casella di posta",
       "noEmail": "Nessuna e-mail collegata",
       "bindEmailHint": "Consigliamo di collegare un'e-mail per evitare di perdere l'accesso all'account",
+      "managedByAlethego": "Il tuo account è gestito da Alethego ed è condiviso con TaskApp. La modifica della password vale per entrambi.",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "Collegato",

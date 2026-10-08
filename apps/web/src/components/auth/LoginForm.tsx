@@ -1,57 +1,89 @@
 'use client'
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { createClient } from '@/lib/supabase/client'
+import { useLocale, useTranslations } from 'next-intl'
+import { createClient, createLoginClient } from '@/lib/supabase/client'
+import { ensureCurrentUser } from '@/lib/auth/ensureCurrentUser'
+import type { User } from '@supabase/supabase-js'
 
 type Mode = 'login' | 'register' | 'forgot'
 
+// 登录/注册都连 Alethego 身份项目（与 TaskApp 共用同一个账号），只提供
+// 邮箱密码 + Google 两种方式。登录成功后先 ensure_current_user 建好/同步
+// Mindo 自己的 public.users 那一行，再整页跳回落地页，由落地页按"有没有档案"
+// 分流到仪表盘或 onboarding。Google 登录 / 邮件链接则由 /api/auth/callback 处理。
 export function LoginForm() {
   const t = useTranslations('auth')
+  const locale = useLocale()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [facebookLoading, setFacebookLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
-  const handleOAuthLogin = async (
-    provider: 'google' | 'facebook',
-    setProviderLoading: (v: boolean) => void
-  ) => {
-    setProviderLoading(true)
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider,
+  const callbackUrl = (next?: string) =>
+    `${window.location.origin}/api/auth/callback?locale=${locale}${next ? `&next=${encodeURIComponent(next)}` : ''}`
+
+  const finishLogin = async (user: User) => {
+    await ensureCurrentUser(createClient(), user, locale)
+    window.location.assign(`/${locale}`)
+  }
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+    await createLoginClient().auth.signInWithOAuth({
+      provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/`
+        redirectTo: callbackUrl(),
+        queryParams: { prompt: 'select_account' },
       }
     })
-    setProviderLoading(false)
+    setGoogleLoading(false)
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setError(error.message)
-    setLoading(false)
+    const { data, error } = await createLoginClient().auth.signInWithPassword({ email, password })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+    await finishLogin(data.user)
   }
 
-  const handleSendMagicLink = async (e: React.FormEvent, shouldCreateUser: boolean) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
+    const { data, error } = await createLoginClient().auth.signUp({
       email,
-      options: {
-        shouldCreateUser,
-        emailRedirectTo: `${window.location.origin}/api/auth/confirm?next=/`
-      }
+      password,
+      options: { emailRedirectTo: callbackUrl() }
+    })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+    // Alethego 没开邮箱确认时注册即登录；开了就提示去邮箱点确认链接
+    if (data.session && data.user) {
+      await finishLogin(data.user)
+      return
+    }
+    setSent(true)
+    setLoading(false)
+  }
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { error } = await createLoginClient().auth.resetPasswordForEmail(email, {
+      redirectTo: callbackUrl('/auth/reset-password')
     })
     if (error) {
       setError(error.message)
@@ -82,7 +114,7 @@ export function LoginForm() {
     <div className="flex flex-col gap-3">
       {/* OAuth 按钮 */}
       <button
-        onClick={() => handleOAuthLogin('google', setGoogleLoading)}
+        onClick={handleGoogleLogin}
         disabled={googleLoading}
         className="w-full py-3 rounded-lg border border-border text-foreground font-medium flex items-center justify-center gap-3 disabled:opacity-50 hover:bg-muted transition-colors"
       >
@@ -93,17 +125,6 @@ export function LoginForm() {
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
         {googleLoading ? t('login.sending') : t('login.continueWithGoogle')}
-      </button>
-
-      <button
-        onClick={() => handleOAuthLogin('facebook', setFacebookLoading)}
-        disabled={facebookLoading}
-        className="w-full py-3 rounded-lg border border-border text-foreground font-medium flex items-center justify-center gap-3 disabled:opacity-50 hover:bg-muted transition-colors"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path fill="#1877F2" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-        </svg>
-        {facebookLoading ? t('login.sending') : t('login.continueWithFacebook')}
       </button>
 
       <div className="flex items-center gap-3">
@@ -152,7 +173,7 @@ export function LoginForm() {
 
       {/* 注册模式 */}
       {mode === 'register' && (
-        <form onSubmit={e => handleSendMagicLink(e, true)} className="flex flex-col gap-3">
+        <form onSubmit={handleRegister} className="flex flex-col gap-3">
           <input
             type="email"
             value={email}
@@ -161,13 +182,22 @@ export function LoginForm() {
             required
             className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
           />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder={t('setPassword.passwordPlaceholder')}
+            required
+            minLength={8}
+            className="w-full px-4 py-3 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:border-ring"
+          />
           {error && <p className="text-destructive text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50 transition-opacity"
           >
-            {loading ? t('login.sending') : t('login.sendRegisterLink')}
+            {loading ? t('login.sending') : t('login.registerTitle')}
           </button>
           <button
             type="button"
@@ -182,7 +212,7 @@ export function LoginForm() {
 
       {/* 忘记密码模式 */}
       {mode === 'forgot' && (
-        <form onSubmit={e => handleSendMagicLink(e, false)} className="flex flex-col gap-3">
+        <form onSubmit={handleForgot} className="flex flex-col gap-3">
           <input
             type="email"
             value={email}

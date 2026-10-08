@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireApiUser } from '@/lib/auth/requireAuth';
 import { createAccountRepository } from '@/lib/account/adminClient';
+import { createLoginServerClient } from '@/lib/supabase/server';
 
+// 注销 = 清空这个人在 Mindo 的全部数据并退出登录。
+// 账号本身属于 Alethego（与 TaskApp 共用），Mindo 不删、也没有权限删；
+// 之后再用同一个账号登录 Mindo，会被当作全新用户（ensure_current_user 重新建行）。
 export async function DELETE(request: Request) {
   const { supabase, user } = await requireApiUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -13,23 +17,21 @@ export async function DELETE(request: Request) {
 
   const accountRepo = createAccountRepository(supabase);
 
-  // 删除所有用户数据（RLS确保只能删自己的）
+  // 先删各业务表（RLS确保只能删自己的）
   await accountRepo.deleteAllUserData(user.id);
 
-  // 真正删除 Auth 层身份——只有 service_role 权限的 admin API 能做这件事，
-  // 普通客户端 SDK（包括下面的 supabase.auth.signOut()）完全没有能力删除
-  // 一个 auth.users 记录，之前只调 signOut 是这个功能"删不干净"的根因。
-  //
-  // 放在业务表删除之后执行：这样即便这一步失败，至少业务数据已经清空，
-  // 不会出现"auth身份没了、业务数据却还残留"这种更难排查的反向不一致。
-  const { error: deleteAuthError } = await accountRepo.deleteAuthUser(user.id);
+  // 再删 public.users 这一行——指向它的外键都是 CASCADE，
+  // 上面没覆盖到的下游表（片语、私信等）也会随之清空
+  const { error: deleteUserError } = await accountRepo.deleteMindoUser(user.id);
 
-  if (deleteAuthError) {
-    console.error('Delete auth user error:', deleteAuthError);
-    return NextResponse.json({ error: deleteAuthError.message }, { status: 500 });
+  if (deleteUserError) {
+    console.error('Delete Mindo user error:', deleteUserError);
+    return NextResponse.json({ error: deleteUserError.message }, { status: 500 });
   }
 
-  await supabase.auth.signOut();
+  // scope:'local' 只清掉本浏览器的 Mindo 会话，不影响这个账号在 TaskApp 的登录
+  const login = await createLoginServerClient();
+  await login.auth.signOut({ scope: 'local' });
 
   return NextResponse.json({ success: true });
 }

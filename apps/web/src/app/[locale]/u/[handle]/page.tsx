@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createLoginClient } from '@/lib/supabase/client';
 import { useUserByHandle } from '@/hooks/queries/useUserByHandle';
 import { useFollowStatus, followStatusQueryKey, type FollowStatus } from '@/hooks/queries/useFollowStatus';
 
@@ -20,7 +20,7 @@ export default function UserProfilePage() {
   // 挂载时检查，不需要用查询机制包一层。
   const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
+    createLoginClient().auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.replace(`/${locale}/auth/login`);
         return;

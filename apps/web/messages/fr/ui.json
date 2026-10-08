@@ -249,6 +249,7 @@
       "emailSent": "E-mail de vérification envoyé, veuillez vérifier votre boîte de réception",
       "noEmail": "Aucun e-mail lié",
       "bindEmailHint": "Nous recommandons de lier un e-mail pour éviter de perdre l'accès à votre compte",
+      "managedByAlethego": "Votre compte est géré par Alethego et partagé avec TaskApp. Un changement de mot de passe s'applique aux deux.",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "Lié",

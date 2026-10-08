@@ -233,6 +233,7 @@
       "emailSent": "驗證郵件已發送，請查收",
       "noEmail": "未綁定電子郵件",
       "bindEmailHint": "建議綁定電子郵件，防止帳戶丟失",
+      "managedByAlethego": "帳號由 Alethego 統一管理，與 TaskApp 共用。修改密碼會同時對兩邊生效。",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "已綁定",

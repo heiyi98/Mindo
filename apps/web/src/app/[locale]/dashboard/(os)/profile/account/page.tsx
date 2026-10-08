@@ -2,29 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
-import { Link2, Link2Off } from 'lucide-react';
+import { createLoginClient } from '@/lib/supabase/client';
 
-type Identity = {
-  id: string;
-  user_id: string;
-  identity_id: string;
-  provider: string;
-  identity_data?: Record<string, unknown>;
-}
-
+// 账号由 Alethego 统一管理（Mindo 与 TaskApp 共用同一个账号），这里只读显示
+// 邮箱，可以修改/设置密码（改的是 Alethego 账号的密码，两个产品同时生效）。
+// 换邮箱、绑定/解绑第三方登录不在 Mindo 里提供。
 export default function AccountPage() {
   const t = useTranslations('account');
   const [user, setUser] = useState<any>(null);
-  const [identities, setIdentities] = useState<Identity[]>([]);
   const [hasPassword, setHasPassword] = useState(false);
-  const [showChangeEmail, setShowChangeEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [unlinkError, setUnlinkError] = useState('');
-  const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
-  const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,30 +19,13 @@ export default function AccountPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const loadUser = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await createLoginClient().auth.getUser();
     setUser(user);
-    const { data } = await supabase.auth.getUserIdentities();
-    setIdentities((data?.identities ?? []) as Identity[]);
-    const res = await fetch('/api/account/has-password');
-    const json = await res.json();
-    setHasPassword(json.hasPassword);
+    // 用邮箱密码注册过的账号会有一条 provider='email' 的身份记录
+    setHasPassword(!!user?.identities?.some(i => i.provider === 'email'));
   };
 
   useEffect(() => { loadUser(); }, []);
-
-  const handleChangeEmail = async () => {
-    if (!newEmail) return;
-    setEmailLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ email: newEmail });
-    if (!error) {
-      setEmailSent(true);
-      setNewEmail('');
-      setShowChangeEmail(false);
-    }
-    setEmailLoading(false);
-  };
 
   const handleChangePassword = async () => {
     setPasswordError('');
@@ -65,8 +34,7 @@ export default function AccountPage() {
       return;
     }
     setPasswordLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { error } = await createLoginClient().auth.updateUser({ password: newPassword });
     if (error) {
       setPasswordError(error.message);
     } else {
@@ -78,42 +46,6 @@ export default function AccountPage() {
     }
     setPasswordLoading(false);
   };
-
-  const handleLink = async (provider: 'google' | 'facebook') => {
-    setLinkingProvider(provider);
-    const supabase = createClient();
-    await supabase.auth.linkIdentity({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/dashboard/profile/account`
-      }
-    });
-    setLinkingProvider(null);
-  };
-
-  const handleUnlink = async (identity: Identity) => {
-    setUnlinkError('');
-    if (identities.length <= 1) {
-      setUnlinkError(t('linkedAccounts.unlinkError'));
-      return;
-    }
-    setUnlinkingProvider(identity.provider);
-    const supabase = createClient();
-    const { error } = await supabase.auth.unlinkIdentity(identity);
-    if (error) {
-      setUnlinkError(error.message);
-    } else {
-      await loadUser();
-    }
-    setUnlinkingProvider(null);
-  };
-
-  const isOAuthOnly = identities.length > 0 && !identities.find(i => i.provider === 'email');
-
-  const providers: { key: 'google' | 'facebook'; label: string }[] = [
-    { key: 'google', label: t('linkedAccounts.google') },
-    { key: 'facebook', label: t('linkedAccounts.facebook') },
-  ];
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -149,105 +81,12 @@ export default function AccountPage() {
                   )}
                 </p>
               </div>
-              {!emailSent && (
-                <button
-                  onClick={() => setShowChangeEmail(!showChangeEmail)}
-                  className="text-xs font-light"
-                  style={{ color: 'hsl(var(--muted-foreground))' }}
-                >
-                  {t('linkedAccounts.changeEmail')}
-                </button>
-              )}
             </div>
 
-            {isOAuthOnly && !user.email && (
-              <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                {t('linkedAccounts.bindEmailHint')}
-              </p>
-            )}
-
-            {showChangeEmail && !emailSent && (
-              <div className="flex flex-col gap-2 pt-1">
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)}
-                  placeholder={t('linkedAccounts.newEmailPlaceholder')}
-                  className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none"
-                  style={{
-                    background: 'hsl(var(--muted))',
-                    color: 'hsl(var(--foreground))',
-                    border: '1px solid hsl(var(--border))',
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setShowChangeEmail(false); setNewEmail(''); }}
-                    className="flex-1 py-2 rounded-xl text-xs font-light"
-                    style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--foreground))' }}
-                  >
-                    {t('linkedAccounts.cancel')}
-                  </button>
-                  <button
-                    onClick={handleChangeEmail}
-                    disabled={!newEmail || emailLoading}
-                    className="flex-1 py-2 rounded-xl text-xs font-light disabled:opacity-30"
-                    style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
-                  >
-                    {emailLoading ? '...' : t('linkedAccounts.confirm')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {emailSent && (
-              <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                {t('linkedAccounts.emailSent')}
-              </p>
-            )}
-          </div>
-
-          <div style={{ height: 1, background: 'hsl(var(--border))' }} />
-
-          {/* 社交账号绑定 */}
-          {unlinkError && (
-            <p className="px-4 pt-2 text-xs" style={{ color: 'hsl(var(--destructive))' }}>
-              {unlinkError}
+            <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              {t('linkedAccounts.managedByAlethego')}
             </p>
-          )}
-
-          {providers.map((p, i) => {
-            const identity = identities.find(id => id.provider === p.key);
-            const isLinked = !!identity;
-            const isLoadingThis = linkingProvider === p.key || unlinkingProvider === p.key;
-
-            return (
-              <div key={p.key}>
-                {i > 0 && <div style={{ height: 1, background: 'hsl(var(--border))' }} />}
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm font-light" style={{ color: 'hsl(var(--foreground))' }}>
-                    {p.label}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                      {isLinked ? t('linkedAccounts.linked') : t('linkedAccounts.notLinked')}
-                    </span>
-                    <button
-                      onClick={() => isLinked && identity ? handleUnlink(identity) : handleLink(p.key)}
-                      disabled={isLoadingThis}
-                      className="flex items-center gap-1 text-xs font-light disabled:opacity-30 transition-colors"
-                      style={{ color: isLinked ? 'hsl(var(--destructive))' : 'hsl(var(--primary))' }}
-                    >
-                      {isLoadingThis ? '...' : isLinked
-                        ? <><Link2Off size={13} />{t('linkedAccounts.unlink')}</>
-                        : <><Link2 size={13} />{t('linkedAccounts.link')}</>
-                      }
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          </div>
 
           <div style={{ height: 1, background: 'hsl(var(--border))' }} />
 

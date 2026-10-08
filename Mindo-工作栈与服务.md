@@ -19,7 +19,7 @@
 ## 数据库
 - **Supabase**（项目ID：wsbskrgrkajnzzgpcfws）
   - PostgreSQL + RLS行级安全
-  - Auth认证（Magic Link + Google OAuth）
+  - 普通用户的登录/注册**不在这个项目**：由 Alethego 身份项目（`https://ibtwrccctdsqdygjebsp.supabase.co`）负责，本项目通过 Third-Party Auth 只验证 Alethego 签发的令牌，详见 `Mindo-认证与账户.md`。本项目自己的 Supabase Auth 只剩后台管理员账号（`public.admin`）在用
   - 本地和Vercel共用同一个实例
   - 重要规范：新增字段必须先在Supabase执行SQL，再写代码
 
@@ -52,6 +52,8 @@
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_ALETHEGO_URL               ← Alethego 身份项目地址（登录/注册）
+NEXT_PUBLIC_ALETHEGO_PUBLISHABLE_KEY   ← Alethego 的 publishable key
 GEMINI_API_KEY
 LEMONSQUEEZY_WEBHOOK_SECRET
 LEMONSQUEEZY_API_KEY

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createLoginClient } from '@/lib/supabase/client'
 
 export default function ResetPasswordPage() {
   const t = useTranslations('auth.resetPassword')
@@ -20,8 +20,8 @@ export default function ResetPasswordPage() {
     }
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password })
+    // 改的是 Alethego 账号的密码（与 TaskApp 共用），会话由 /api/auth/callback 兑换忘记密码邮件里的授权码得到
+    const { error } = await createLoginClient().auth.updateUser({ password })
     if (error) {
       setError(error.message)
       setLoading(false)

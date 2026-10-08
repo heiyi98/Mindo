@@ -1,34 +1,55 @@
 # Mindo 认证与账户模块 — 完整文档
 
-## 一、登录方式
-
-- Google OAuth：`queryParams: { prompt: 'select_account' }`强制每次弹账号选择框，不静默复用浏览器已有登录状态
-- Facebook OAuth：onboarding内嵌登录表单和独立`/auth/login`页面都要有，两处UI是分开维护的，容易漏同步
-- 邮箱验证链接：`/api/auth/confirm`
-
-## 二、语言优先级（OAuth回调 `/api/auth/callback/route.ts`）
+## 一、总体结构：Mindo 只验证 Alethego 的令牌（2026-10 改造）
 
 ```
-登录那一刻界面正在用的语言（通过redirectTo的locale参数传递）
-→ 浏览器 Accept-Language
-→ 数据库 users.language_preference（历史遗留，几乎不会命中）
-→ 英文兜底
+【Alethego 身份项目】 https://ibtwrccctdsqdygjebsp.supabase.co
+  只负责：注册、登录（邮箱密码、Google）、签发 access token、续期
+        │ access token（sub = 用户编号，带 email，ES256 签名）
+        ├───────────────────────┐
+        ▼                       ▼
+   TaskApp 的数据             Mindo 的数据
+ （Mindo项目 taskapp schema）（Mindo项目 public schema）
 ```
 
-解析出的语言会顺手写回 `users.language_preference`（如果原本是空的）。触发OAuth的按钮（`handleGoogleLogin`/`handleFacebookLogin`）必须在`redirectTo`里带上`&locale=${locale}`，不然这个优先级链条的第一环就拿不到值。
+- 账号互通、内容不互通：同一个 Alethego 账号能登录 TaskApp 和 Mindo，两边业务数据完全分开，各有各的用户资料表。
+- Mindo **不签发、不换发**任何令牌，不持有签名密钥。Mindo 项目对 Alethego 的 Third-Party Auth 信任登记是 TaskApp 也在用的，**绝对不要动**。
+- `auth.uid()` = Alethego 用户编号；`auth.jwt() ->> 'email'` = 邮箱。这些用户在 Mindo 的 `auth.users` 里**没有记录**，所以任何业务表外键都只能指向 `public.users`，不能指向 `auth.users`。
+- 不要往 Alethego 里加任何 Mindo 专属字段/表。
+- 例外：后台管理员（`public.admin`）仍然是 Mindo 项目自己 Supabase Auth 里的真实账号，登录入口 `/admin/login`，跟这套完全独立。
 
-## 三、自愈机制（callback/route.ts + confirm/route.ts）
+## 二、代码里的几个 client（`lib/supabase/`）
 
-- 查`public.users`用`maybeSingle()`不用`single()`——`single()`查不到行时会把error静默丢在解构里不处理，等同于把"这行不存在"这件事吞掉
-- 如果查不到，用admin客户端补一份最小版本（`{id, email}`，跟`handle_new_user()`触发器一致），防止后续写`profiles`时因为外键约束失败
-- `confirm/route.ts`（邮箱登录）也补上了handle自动生成逻辑，之前只有`callback/route.ts`（Google登录）有这段，邮箱注册用户一直没有handle
+| 位置 | 函数 | 连哪里 | 用途 |
+|---|---|---|---|
+| 浏览器 `client.ts` | `createLoginClient()` | Alethego | 登录/注册/改密码/退出/读"当前是谁"。会话存 cookie（`@supabase/ssr`），PKCE |
+| 浏览器 `client.ts` | `createClient()` | Mindo | 只读写业务数据，`accessToken` 选项每次带上登录client当前的令牌。**它的 `.auth.*` 不能用**（会报错），查当前用户一律用 `createLoginClient().auth` |
+| 浏览器 `client.ts` | `createStaffClient()` | Mindo 自己的 Auth | 只给 `/admin/login` 用 |
+| 服务器 `server.ts` | `getVerifiedSession()` | Alethego + Mindo | 从 cookie 取 Alethego 令牌 → `getClaims()` 用 Alethego 公钥本地验签 → 返回 `{ supabase: 带令牌的Mindo数据client, user }`。`requireApiUser()`/`requireAuth()`/`requireProfile()` 和服务端页面都走它 |
+| 服务器 `server.ts` | `createLoginServerClient()` | Alethego | 兑换授权码、服务器端退出 |
+| 服务器 `server.ts` | `createClient()` | Mindo | 带当前令牌（没有就匿名）的数据client，只查数据，不用来认人 |
+| 服务器 `server.ts` | `createStaffServerClient()` | Mindo 自己的 Auth | 只给 `requireStaffAccount()` 用 |
+| `middleware.ts` | `updateSession(req, 'user' \| 'staff')` | — | `proxy.ts` 每个请求续期 cookie：`/admin`、`/api/admin` 续管理员会话，其余续 Alethego 会话 |
 
-`handle_new_user()`触发器本身的定义、挂载位置，见`Mindo-数据库.md`，本节只记应用层的自愈逻辑。
+- 退出登录一律 `signOut({ scope: 'local' })`：只清本浏览器的 Mindo 会话，不吊销这个账号在 TaskApp 那边的登录。
+
+## 三、登录方式与"登录后建档"（ensure_current_user）
+
+- 只有 **邮箱密码** 和 **Google** 两种（Alethego 只提供这两种）。Facebook、邮箱验证码（magic link）、换邮箱、绑定/解绑第三方、注册后设密码页（`/auth/set-password`）都已删除。
+- Google 登录：`queryParams: { prompt: 'select_account' }` 强制弹账号选择框；`redirectTo` 带 `&locale=${locale}`。
+- 所有"带授权码跳回来"的入口（Google、注册确认邮件、忘记密码邮件）都汇到 `/api/auth/callback`：服务器端兑换会话 → `ensure_current_user` → `next` 在白名单里（目前只有 `/auth/reset-password`）就去 `next`，否则按"有没有档案"去仪表盘或 onboarding。`/api/auth/confirm` 只是 token_hash 形式邮件链接的备用入口。
+- **`public.ensure_current_user(p_email, p_display_name, p_language)`**：登录后、读写任何业务数据之前调用一次（前端封装在 `lib/auth/ensureCurrentUser.ts`）。第一次建 `public.users` 行（自动生成 `mindo_xxxxxx` handle、写入当时界面语言），之后每次只同步 email；`display_name` 建好后只由用户在 Mindo 里改，不被 Alethego 覆盖。默认名字：`full_name` / `name` / `display_name` → 邮箱 @ 前面那段。以调用者身份执行（不是 security definer），受 RLS 约束。调用点：
+  - 邮箱密码登录/注册成功（`LoginForm.tsx`、onboarding 内嵌登录表单）——先 ensure 再提交档案，顺序不能反（`profiles.user_id` 外键指向 `public.users`）
+  - `/api/auth/callback`、`/api/auth/confirm`
+- 语言优先级（callback）：登录那一刻界面语言（`locale` 参数）→ 浏览器 Accept-Language → `users.language_preference` → 英文。
+- 以前 `handle_new_user()` 触发器 + callback/confirm 里"用 admin client 补一行"的自愈逻辑已全部被 `ensure_current_user` 取代（触发器已删）。
+- 改密码（账户安全页）/ 忘记密码（`/auth/reset-password`）改的是 **Alethego 账号**的密码，TaskApp 同时生效，页面上有提示。
+- 需要在 **Alethego** 项目 Authentication → URL Configuration 的 Redirect URLs 里加上 Mindo 的 `/api/auth/callback`（生产域名 + localhost），否则 Google 登录/邮件链接会被 Alethego 拒绝或跳回 Site URL。这是配置项，不是往 Alethego 加字段。
 
 ## 四、Onboarding "先体验后注册"流程的认证保护逻辑
 
 - 正常流程：填生日→时间地点→性别（全程匿名，不需要登录）→ teaser预览 → 登录 → 提交
-- Google/Facebook登录是**整页跳转**（离开网站去对方平台，再跳回来），这会让onboarding页面组件被销毁重建，之前"监听登录成功就自动提交"的机制会跟着页面一起消失，永远不会被触发
+- Google登录是**整页跳转**（离开网站去对方平台，再跳回来），这会让onboarding页面组件被销毁重建，之前"监听登录成功就自动提交"的机制会跟着页面一起消失，永远不会被触发
 - **修复方案**：页面挂载时检测`sessionStorage`（`SESSION_KEY`，tab-scoped）里有没有已填写的表单数据
   - 有数据+已登录 → 判定为"OAuth跳转返回，同一个标签页"，直接用恢复出来的数据自动完成提交
   - 无数据+已登录 → 判定为"共用设备场景，不同的人碰到了残留登录状态"（sessionStorage不跨标签页共享，能利用这一点区分），主动登出，保证不会有人在不知情的情况下把资料填进别人账号
@@ -43,9 +64,9 @@
 
 ## 六、账户注销（`/api/account/delete/route.ts`）
 
-- 必须调用`adminClient.auth.admin.deleteUser(user.id)`真正删除Auth身份，只调`supabase.auth.signOut()`只是清本地会话，不会删除`auth.users`记录——这是这次修复前的实际bug，导致"注销"后账号还留在Authentication列表里
-- 删除顺序：先清各业务表（RLS保证只能删自己的）→ 再删Auth身份（写在最后，即便这步失败，业务数据至少已经清空，不会出现"身份没了、数据却还残留"的反向不一致）
-- 已知架构缺口（`public.users`没有指向`auth.users`的外键）见`Mindo-数据库.md`，直接影响这里"删除顺序"这条规则为什么要这么设计
+- 注销 = **只清空这个人在 Mindo 的数据** + 退出本浏览器会话。账号本身在 Alethego（TaskApp 也在用），Mindo 不删、也没有权限删；之后再用同一账号登录 Mindo 会被当作全新用户（`ensure_current_user` 重新建行）。
+- 顺序：先 `deleteAllUserData`（session client，RLS 只能删自己的）→ 再 `deleteMindoUser`（service role 删 `public.users` 这一行，指向它的外键 CASCADE 清空剩余下游表）→ `signOut({ scope: 'local' })`。
+- 已知限制：如果某张表指向 `public.users` 的外键不是 CASCADE（比如 `pro_transactions.user_id`），删 `public.users` 会失败，接口返回 500。改造前通过删 auth.users 级联也是同样结果，不是这次引入的。
 
 ## 七、前端架构
 
@@ -60,10 +81,10 @@
 - `components/dashboard/ProfileEditModal.tsx`——新建/编辑档案的弹窗表单，各字段独立`useState`，保存时`fetch` POST（新建）或PATCH（编辑）
 - `app/[locale]/dashboard/(os)/profile/profiles/page.tsx`——档案管理页，拖拽排序（`@dnd-kit`，本人档案锁顶不参与排序，见`CLAUDE.md`"档案管理页面"）
 - `app/[locale]/dashboard/(os)/profile/assets/page.tsx`——资产管理页，列出所有`bazi_readings`记录（不过滤status，支持中断恢复入口），出生地完整显示不截断，含真太阳时展示
-- `app/[locale]/dashboard/(os)/profile/account/page.tsx`——账户安全（换邮箱、改密码、第三方登录解绑/绑定），`loadUser`函数里既调`supabase.auth`又`fetch` `/api/account/has-password`
+- `app/[locale]/dashboard/(os)/profile/account/page.tsx`——账户安全：只读显示邮箱 + 修改/设置密码（Alethego 账号密码），"有没有密码"按 `user.identities` 里有没有 `provider='email'` 判断（`/api/account/has-password` 已删除）
 - `app/[locale]/dashboard/(os)/profile/page.tsx`——账户注销入口（见第六节）+ handle/display_name修改
 
 ## 八、待完成
 
-- [ ] `public.users`补一个指向`auth.users(id)`的外键——见`Mindo-数据库.md`
-- [ ] Supabase OAuth回调URL更新（新Vercel域名）
+- [ ] Alethego 项目的 Redirect URLs 加上 Mindo 回调地址（见第三节最后一条），由用户在 Alethego Dashboard 手动配置
+- [ ] `apps/web-cn`（独立仓库）未同步这次改造

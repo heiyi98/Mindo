@@ -238,6 +238,7 @@
       "emailSent": "Verification email sent, please check your inbox",
       "noEmail": "No email linked",
       "bindEmailHint": "We recommend linking an email to prevent account loss",
+      "managedByAlethego": "Your account is managed by Alethego and shared with TaskApp. Password changes apply to both.",
       "google": "Google",
       "facebook": "Facebook",
       "linked": "Linked",

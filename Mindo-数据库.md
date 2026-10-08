@@ -7,8 +7,11 @@ Supabase项目ID：`wsbskrgrkajnzzgpcfws`，PostgreSQL + RLS行级安全。
 ## 一、核心表结构
 
 ```
-users
-  id, email, vip_tier(free/lifetime/pro), vip_expires_at
+users                      ← id = Alethego 用户编号（auth.uid()），不指向 auth.users，
+                                见下方"二、外键关系"和 Mindo-认证与账户.md
+  id(default auth.uid()), email, display_name(NOT NULL，不能是空白)
+  created_at, updated_at(触发器自动更新)
+  vip_tier(free/lifetime/pro), vip_expires_at
   language_preference, dashboard_layout(JSONB)
   handle, display_name, avatar_url
 
@@ -105,29 +108,28 @@ celebrities
   id, stem_id, name, portrait_url, display_order, locale, is_active
 ```
 
-## 二、外键关系（已用SQL核实，不是猜测）
+## 二、外键关系
 
 ```
-public.users.id            → auth.users(id)         ON DELETE CASCADE   ← 本来就存在，删Auth用户会正确级联清空users及其下所有表
+public.users.id            → （无外键）  ← 2026-10 起 id 是 Alethego 用户编号，Mindo 的 auth.users 里没有这些人
 profiles.user_id           → users.id                ON DELETE CASCADE
 bazi_readings.profile_id   → profiles.id             ON DELETE SET NULL  ← profile_id列允许NULL，原本是NOT NULL
 bazi_readings.purchase_id  → purchases.id            ON DELETE SET NULL
-(其余 profile_id/user_id 外键均为 CASCADE)
+(其余 profile_id/user_id 外键均指向 users.id，CASCADE；pro_transactions.user_id 例外，无 CASCADE)
+public.admin.id            → auth.users(id)          ON DELETE CASCADE   ← 唯一允许指向 auth.users 的表（后台管理员）
 ```
 
-**已知架构缺口（未修复，留作待办）**：`public.users` 表本身没有指向 `auth.users` 的外键（只是id恰好相同，数据库不知道这是同一个人）。这意味着：**通过 Authentication → Users 删除一个账户，能正确级联清空** `users`**及其下游所有表**（因为users.id有FK指向auth.users），但**反过来直接操作** `public.users` **单独一行（比如手动删测试数据）不会有任何反向保护**。以后重置测试账号必须从 Authentication → Users 删除，不要直接在数据表里删行——这条操作纪律比任何代码兜底都重要，已同步记入`CLAUDE.md`"关键教训"。
+**铁律**：除 `public.admin` 外，任何表都不能有指向 `auth.users` 的外键——终端用户只存在于 Alethego，不在 Mindo 的 `auth.users` 里。新建业务表的用户列一律 `references public.users(id) on delete cascade`。
 
-## 三、`handle_new_user()` 触发器（auth schema）
+迁移脚本：`supabase/migrations/20261008000000_alethego_identity.sql`（删掉 users→auth.users 外键、把其他表上指向 auth.users 的终端用户列改指向 public.users、删掉 handle_new_user 触发器、加 ensure_current_user 函数和 users 表的 insert/select/update RLS 策略）。
 
-```sql
-begin
-  insert into public.users (id, email)
-  values (new.id, new.email);
-  return new;
-end;
-```
+## 三、`public.users` 的行怎么来：`ensure_current_user()`
 
-挂在 `auth.users` 的 `AFTER INSERT` 事件（触发器名`on_auth_user_created`，在auth schema，不在public schema，Database Triggers页面要切schema才能看到）。**只在真正发生一次INSERT时触发**——如果只删了`public.users`这一行、`auth.users`那个身份还在，这个账户会永久卡死（新登录不算INSERT，触发器不会再跑，`public.users`的行永远补不回来）。应用层的自愈逻辑见`Mindo-认证与账户.md`第三节。
+`auth.users` 上原来的 `handle_new_user()` 触发器（`on_auth_user_created`）**已删除**——终端用户不再进 `auth.users`，留着它只会在创建后台管理员账号时插一条不完整的 `public.users` 行（`display_name` NOT NULL 后会直接报错导致创建失败）。
+
+现在由 `public.ensure_current_user(p_email, p_display_name, p_language default null)` 建行：登录后前端/回调调用，第一次插入（handle 随机生成、冲突重试），之后只更新 email。函数定义见上面的迁移脚本，调用时机见 `Mindo-认证与账户.md` 第三节。
+
+**删测试账号**：直接删 `public.users` 这一行即可（下游 CASCADE）。不要去 Alethego 删账号——TaskApp 也在用。
 
 ## 四、重要业务规则
 
@@ -140,4 +142,5 @@ end;
 
 ## 五、待完成
 
-- [ ] `public.users`补一个指向`auth.users(id)`的外键（ON DELETE CASCADE），或者写一个对称的`handle_deleted_user`触发器——目前删Auth用户不会自动清空public.users这一层
+（暂无）
+

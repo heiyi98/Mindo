@@ -224,7 +224,7 @@ Water: #1976D2
 
 ## 五、数据库
 
-`bazi_snapshots`/`bazi_readings`两张表的具体字段、外键关系、`handle_new_user()`触发器等，详见 `Mindo-数据库.md`，本文档不重复列出，避免两处各记一份容易不同步。
+`bazi_snapshots`/`bazi_readings`两张表的具体字段、外键关系、`public.users`建行机制（`ensure_current_user`）等，详见 `Mindo-数据库.md`，本文档不重复列出，避免两处各记一份容易不同步。
 
 ## 六、AI 解读功能以外，尚未开工的部分
 

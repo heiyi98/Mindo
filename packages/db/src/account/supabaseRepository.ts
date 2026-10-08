@@ -15,10 +15,9 @@ function toDbError(error: { message: string; code?: string } | null): DbError | 
 
 /**
  * sessionClient：尊重RLS的session client，档案/资产这类"本来就该只查自己"
- * 的操作用它。adminClient：service role，只用于 Auth Admin API（删除
- * auth.users行、查是否设置过密码）——这两件事session client无论如何做不到，
- * 不是本项目"支付/账本表用service role"那条规矩的延伸，是Supabase Auth
- * Admin API本身的硬性要求。
+ * 的操作用它。adminClient：service role，只用于注销时删 public.users 这一行
+ * （users 表没给 authenticated 开 delete 权限）。账号本身在 Alethego 身份项目，
+ * Mindo 不再调用任何 Auth Admin API。
  */
 export function createSupabaseAccountRepository(
   sessionClient: SupabaseClient,
@@ -141,11 +140,6 @@ export function createSupabaseAccountRepository(
       return { error: toDbError(error) };
     },
 
-    async getAuthUserHasPassword(userId) {
-      const { data } = await adminClient.auth.admin.getUserById(userId);
-      return !!(data?.user as { encrypted_password?: string } | undefined)?.encrypted_password;
-    },
-
     async listBaziAssets(userId) {
       const { data } = await sessionClient
         .from('bazi_readings')
@@ -166,8 +160,8 @@ export function createSupabaseAccountRepository(
       await sessionClient.from('users').delete().eq('id', userId);
     },
 
-    async deleteAuthUser(userId) {
-      const { error } = await adminClient.auth.admin.deleteUser(userId);
+    async deleteMindoUser(userId) {
+      const { error } = await adminClient.from('users').delete().eq('id', userId);
       return { error: toDbError(error) };
     },
   };

@@ -1,81 +1,27 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createLoginServerClient, verifyAccessToken } from '@/lib/supabase/server'
+import { ensureCurrentUser } from '@/lib/auth/ensureCurrentUser'
 
-const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
-
-function generateHandle(): string {
-  let suffix = ''
-  for (let i = 0; i < 6; i++) {
-    suffix += CHARS[Math.floor(Math.random() * CHARS.length)]
-  }
-  return `mindo_${suffix}`
-}
-
+// 备用入口：只有当 Alethego 的邮件模板用的是 token_hash 形式的链接
+// （/api/auth/confirm?token_hash=...&type=...）时才会走到这里。默认模板走的是
+// PKCE 授权码形式，汇到 /api/auth/callback，那边是主路径。
+// 验证成功后同样先 ensure_current_user，确保 public.users 里有这个人。
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/'
+  const rawNext = searchParams.get('next') ?? '/'
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/'
 
   if (token_hash && type) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash })
+    const login = await createLoginServerClient()
+    const { data: verified, error } = await login.auth.verifyOtp({ type, token_hash })
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { supabase, user } = await verifyAccessToken(login, verified.session?.access_token)
+      if (user) await ensureCurrentUser(supabase, user)
 
-      if (user) {
-        const adminClient = createAdminClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        )
-
-        // 自愈：确保 public.users 这一行存在。maybeSingle 而不是
-        // single——避免"查不到行"这个情况被静默吞掉。
-        let { data: userData } = await supabase
-          .from('users')
-          .select('handle')
-          .eq('id', user.id)
-          .maybeSingle()
-
-        if (!userData) {
-          await adminClient
-            .from('users')
-            .upsert(
-              { id: user.id, email: user.email },
-              { onConflict: 'id', ignoreDuplicates: true }
-            )
-          userData = { handle: null } as any
-        }
-
-        // 邮箱注册这条路径之前一直没有这段——补上，跟 Google 登录
-        // 那条路径（callback/route.ts）保持一致
-        if (!userData?.handle) {
-          let handle = ''
-          let isUnique = false
-
-          while (!isUnique) {
-            handle = generateHandle()
-            const { data: existing } = await adminClient
-              .from('users')
-              .select('id')
-              .eq('handle', handle)
-              .maybeSingle()
-            isUnique = !existing
-          }
-
-          await adminClient
-            .from('users')
-            .update({ handle })
-            .eq('id', user.id)
-        }
-      }
-
-      if (type === 'signup') {
-        return NextResponse.redirect(`${origin}/auth/set-password`)
-      }
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/auth/reset-password`)
       }
