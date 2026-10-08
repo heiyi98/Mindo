@@ -101,6 +101,11 @@ $$;
 alter table public.users alter column id set default auth.uid();
 
 alter table public.users add column if not exists display_name text;
+-- 已有行里 display_name 为空/空白的，先补成邮箱@前面那段（没有邮箱就是 'User'），
+-- 否则下面加 NOT NULL 会因为旧数据报 23502 整体失败
+update public.users
+   set display_name = coalesce(nullif(split_part(coalesce(email, ''), '@', 1), ''), 'User')
+ where display_name is null or btrim(display_name) = '';
 alter table public.users alter column display_name set not null;
 alter table public.users drop constraint if exists users_display_name_not_blank;
 alter table public.users add constraint users_display_name_not_blank check (btrim(display_name) <> '');
