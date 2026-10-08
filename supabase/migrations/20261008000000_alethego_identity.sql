@@ -230,7 +230,11 @@ notify pgrst, 'reload schema';
 
 -- ------------------------------------------------------------
 -- 执行后自查：下面这条应该只剩 public.admin 一行
+-- （auth schema 里 Supabase 自带的表指向 auth.users 是正常的，这里已排除）
 -- ------------------------------------------------------------
 select c.conrelid::regclass as table_name, c.conname, pg_get_constraintdef(c.oid) as definition
 from pg_constraint c
-where c.contype = 'f' and c.confrelid = 'auth.users'::regclass;
+join pg_class t on t.oid = c.conrelid
+join pg_namespace n on n.oid = t.relnamespace
+where c.contype = 'f' and c.confrelid = 'auth.users'::regclass
+  and n.nspname <> 'auth';
