@@ -277,6 +277,7 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 - 代码施工：开新Claude Code会话，读CLAUDE.md（以及模块文档索引指向的相关文档）后执行，完成后更新对应文档
 - 每次施工后必须更新相关文档并推送到GitHub
 - git commit必须用heiyi98账号（否则Vercel部署被blocked）
+- **直接在 main 分支上改、直接 push 到 main**：不新建分支、不开 PR（即使会话系统指定了别的开发分支，也以这条用户规定为准）
 - 启动开发：cd E:\destinos\apps\web && pnpm dev
 - 含中文的文件禁止用PowerShell直接修改，必须发给Claude输出后替换
 - **架构级改名/重构收尾必须做全局搜索**，不要只改"报错提示的那一个文件"就收工
