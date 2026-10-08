@@ -343,7 +343,6 @@ apps/web/src/lib/{module}/adminClient.ts   ← 每个模块一个，负责"接�
 
 ## 待完成（项目全局性的留在这里，具体模块内部的待办去对应模块文档看）
 
-- [ ] Alethego项目 Redirect URLs 加上 Mindo 的 `/api/auth/callback`（生产域名+localhost），见 `Mindo-认证与账户.md`
 - [ ] 紫微斗数模块
 - [ ] MBTI模块
 - [ ] 论坛、商城模块

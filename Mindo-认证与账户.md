@@ -44,7 +44,7 @@
 - 语言优先级（callback）：登录那一刻界面语言（`locale` 参数）→ 浏览器 Accept-Language → `users.language_preference` → 英文。
 - 以前 `handle_new_user()` 触发器 + callback/confirm 里"用 admin client 补一行"的自愈逻辑已全部被 `ensure_current_user` 取代（触发器已删）。
 - 改密码（账户安全页）/ 忘记密码（`/auth/reset-password`）改的是 **Alethego 账号**的密码，TaskApp 同时生效，页面上有提示。
-- 需要在 **Alethego** 项目 Authentication → URL Configuration 的 Redirect URLs 里加上 Mindo 的 `/api/auth/callback`（生产域名 + localhost），否则 Google 登录/邮件链接会被 Alethego 拒绝或跳回 Site URL。这是配置项，不是往 Alethego 加字段。
+- **Alethego** 项目 Authentication → URL Configuration 的 Redirect URLs 里已加上 Mindo 的 `/api/auth/callback`（`https://mindo-gold.vercel.app` + `http://localhost:3000`，2026-10-08 用户手动配置）。以后换生产域名必须同步改这里，否则 Google 登录/邮件链接会被 Alethego 拒绝或跳回 Site URL。
 
 ## 四、Onboarding "先体验后注册"流程的认证保护逻辑
 
@@ -86,5 +86,4 @@
 
 ## 八、待完成
 
-- [ ] Alethego 项目的 Redirect URLs 加上 Mindo 回调地址（见第三节最后一条），由用户在 Alethego Dashboard 手动配置
 - [ ] `apps/web-cn`（独立仓库）未同步这次改造
