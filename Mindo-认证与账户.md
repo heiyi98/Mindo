@@ -12,6 +12,7 @@
  （Mindo项目 taskapp schema）（Mindo项目 public schema）
 ```
 
+- 2026-10-08 生产环境实测通过：邮箱注册、Google 登录、用 TaskApp 已有账号登录 Mindo、Mindo 退出不影响 TaskApp、后台管理员登录。
 - 账号互通、内容不互通：同一个 Alethego 账号能登录 TaskApp 和 Mindo，两边业务数据完全分开，各有各的用户资料表。
 - Mindo **不签发、不换发**任何令牌，不持有签名密钥。Mindo 项目对 Alethego 的 Third-Party Auth 信任登记是 TaskApp 也在用的，**绝对不要动**。
 - `auth.uid()` = Alethego 用户编号；`auth.jwt() ->> 'email'` = 邮箱。这些用户在 Mindo 的 `auth.users` 里**没有记录**，所以任何业务表外键都只能指向 `public.users`，不能指向 `auth.users`。
